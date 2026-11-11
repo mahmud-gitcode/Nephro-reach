@@ -216,7 +216,7 @@ export default function DesignSystemPage() {
       <div
         role="tablist"
         aria-label="Design system sections"
-        className="flex gap-inline-md border-b border-line"
+        className="flex flex-wrap gap-inline-md border-b border-line"
       >
         {(
           [

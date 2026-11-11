@@ -20,6 +20,7 @@ import {
   isFull,
   recordingLinkError,
   seatsLeft,
+  settingNumberError,
   toDraft,
   type ClassDraft,
   type ClassStatus,
@@ -747,9 +748,13 @@ export function SettingModal({
   const linkFields = SETTING_FIELDS[id].filter(
     (field) => field.kind === "text" && field.placeholder?.startsWith("http"),
   );
-  const error = linkFields
-    .map((field) => recordingLinkError(String(draft[field.key] ?? "")))
-    .find((problem) => problem !== null);
+  const error =
+    linkFields
+      .map((field) => recordingLinkError(String(draft[field.key] ?? "")))
+      .find((problem) => problem !== null) ??
+    SETTING_FIELDS[id]
+      .map((field) => settingNumberError(field, draft[field.key]))
+      .find((problem) => problem !== null);
 
   return (
     <Modal

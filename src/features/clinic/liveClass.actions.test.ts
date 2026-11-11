@@ -12,6 +12,7 @@ import {
   isFull,
   recordingLinkError,
   seatsLeft,
+  settingNumberError,
   settingSummary,
   sortClasses,
   toDraft,
@@ -277,5 +278,30 @@ describe("pastClasses", () => {
 
   it("shows no sample history when nothing has been held", () => {
     expect(pastClasses()).toEqual([]);
+  });
+});
+
+describe("settingNumberError", () => {
+  const capacity = SETTING_FIELDS.limits.find((f) => f.key === "capacity")!;
+  const attendance = SETTING_FIELDS.certificates.find(
+    (f) => f.key === "minAttendance",
+  )!;
+  it("accepts a whole number inside the range", () => {
+    expect(settingNumberError(capacity, 1)).toBeNull();
+    expect(settingNumberError(capacity, 1000)).toBeNull();
+    expect(settingNumberError(attendance, 0)).toBeNull();
+  });
+  it("refuses an emptied (0), too large or fractional value", () => {
+    expect(settingNumberError(capacity, 0)).toBe(
+      "Default capacity must be between 1 and 1000.",
+    );
+    expect(settingNumberError(capacity, 1001)).not.toBeNull();
+    expect(settingNumberError(attendance, 101)).not.toBeNull();
+    expect(settingNumberError(capacity, 2.5)).toBe(
+      "Default capacity must be a whole number.",
+    );
+  });
+  it("ignores fields that are not numbers", () => {
+    expect(settingNumberError(SETTING_FIELDS.zoom[0], "anything")).toBeNull();
   });
 });

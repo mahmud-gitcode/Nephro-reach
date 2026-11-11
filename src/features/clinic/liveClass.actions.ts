@@ -356,6 +356,25 @@ export const SETTING_FIELDS: Record<SettingId, SettingField[]> = {
   ],
 };
 
+/**
+ * A number setting outside its range (an emptied field reads as 0): the
+ * server refuses it, so the dialog says so instead of closing as if saved.
+ */
+export function settingNumberError(
+  field: SettingField,
+  value: unknown,
+): string | null {
+  if (field.kind !== "number") return null;
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isInteger(n)) return `${field.label} must be a whole number.`;
+  if (
+    (field.min !== undefined && n < field.min) ||
+    (field.max !== undefined && n > field.max)
+  )
+    return `${field.label} must be between ${field.min ?? 0} and ${field.max ?? n}.`;
+  return null;
+}
+
 export type SettingValue = string | number | boolean;
 export type SettingValues = Record<string, SettingValue>;
 
