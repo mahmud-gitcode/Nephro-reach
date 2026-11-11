@@ -415,14 +415,17 @@ async function checkSince(
       /* An expired access cookie: the API's guard sends a bare 401, the
          client refreshes once and retries (src/lib/api/client.ts). Fine
          when that refresh succeeded. */
-      if (
-        h.status === 401 &&
-        h.code === "" &&
+      /* The refresh can come back after this check on a busy machine (run
+         9: 1.7 s): wait for it, bounded. */
+      const refreshed = () =>
         mon.api.some(
           (x) =>
             x.path === "/auth/refresh" && x.status < 400 && x.at >= h.at - 2000,
-        )
-      ) {
+        );
+      if (h.status === 401 && h.code === "" && !refreshed())
+        for (let w = 0; w < 20 && !refreshed(); w++)
+          await ctx.page.waitForTimeout(250);
+      if (h.status === 401 && h.code === "" && refreshed()) {
         ctx.cov.notes.push(
           `${ctx.current}: bare 401 ${h.method} ${h.path} then a successful refresh (access cookie expired; the client retried)`,
         );
@@ -961,7 +964,9 @@ async function fillInvalid(scope: Locator): Promise<{
       meta.maxLength < 0 &&
       !/search|filter|code|otp/.test(name)
     ) {
-      v = "x".repeat(5001);
+      /* Past every text limit a caregiver can reach (the largest server
+         limit is 50,000; a 5,001 one was within some of them). */
+      v = "x".repeat(60_001);
       kind = "over-long text";
     }
     if (v === null) continue;
@@ -1005,9 +1010,37 @@ async function invalidPass(
     return true;
   }
   const label = ((await submit.textContent()) ?? "").trim();
+  /* A page form may answer in the page's own alert (above the form). */
+  const pageAlerts = () =>
+    page
+      .locator('main [role="alert"]')
+      .filter({ visible: true })
+      .allTextContents()
+      .then((t) => t.join("|"))
+      .catch(() => "");
+  const alertsBefore = await pageAlerts();
+  const dialogsBefore = await page.getByRole("dialog").count();
   const m = mon.mark();
   await submit.click({ timeout: 3_000 }).catch(() => undefined);
   await page.waitForTimeout(700);
+  /* A confirmation step (the messaging safety notice) opened: answer it,
+     so what is judged is what the form does with the input. */
+  if ((await page.getByRole("dialog").count()) > dialogsBefore) {
+    const confirm = page
+      .getByRole("dialog")
+      .last()
+      .getByRole("button", {
+        name: /continue|confirm|understand|agree|send|^ok|yes/i,
+      })
+      .last();
+    if (await confirm.isVisible().catch(() => false)) {
+      ctx.cov.notes.push(
+        `${ctx.current}: "${opener}" with invalid input: a confirmation step opened and was confirmed`,
+      );
+      await confirm.click({ timeout: 3_000 }).catch(() => undefined);
+      await page.waitForTimeout(900);
+    }
+  }
   ctx.cov.formsSubmitted++;
   ctx.cov.invalidSubmitted++;
   const control = `${opener} > ${label} (invalid: ${what})`;
@@ -1019,20 +1052,23 @@ async function invalidPass(
   const saved = writes.filter((h) => h.status < 400);
   const refused400 = writes.filter((h) => [400, 422].includes(h.status));
   const open = await scope.isVisible().catch(() => false);
+  const alertsAfter = await pageAlerts();
+  const pageMessage = alertsAfter !== "" && alertsAfter !== alertsBefore;
   const message =
-    open &&
-    ((await scope
-      .getByText(VALIDATION)
-      .count()
-      .catch(() => 0)) > 0 ||
-      (await scope
-        .locator('[aria-invalid="true"], [role="alert"]')
+    pageMessage ||
+    (open &&
+      ((await scope
+        .getByText(VALIDATION)
         .count()
         .catch(() => 0)) > 0 ||
-      (await scope
-        .locator("input:invalid, textarea:invalid, select:invalid")
-        .count()
-        .catch(() => 0)) > 0);
+        (await scope
+          .locator('[aria-invalid="true"], [role="alert"]')
+          .count()
+          .catch(() => 0)) > 0 ||
+        (await scope
+          .locator("input:invalid, textarea:invalid, select:invalid")
+          .count()
+          .catch(() => 0)) > 0));
   if (saved.length)
     await issue(
       ctx,
@@ -2128,12 +2164,18 @@ test("anonymous: every public page and control @phase16", async ({ page }) => {
   await page.getByLabel("Code").fill("000000");
   await page.getByRole("button", { name: "Verify email" }).click();
   cov.formsSubmitted++;
+  /* The form's own alert (in main): Next's route announcer is also a
+     role=alert, and matching it let the real code be typed while the wrong
+     one was still being checked; the page then cleared the field (run 9). */
   await expect(
     page
-      .locator('[role="alert"]')
-      .or(page.getByText(/invalid|incorrect|expired|wrong/i))
+      .locator('main [role="alert"]')
+      .filter({ hasText: /invalid|incorrect|expired|wrong/i })
       .first(),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(
+    page.getByRole("button", { name: "Verify email" }),
+  ).not.toHaveAttribute("aria-busy", "true");
   await page.getByLabel("Code").fill(extractOtp(mail));
   await page.getByRole("button", { name: "Verify email" }).click();
   cov.formsSubmitted++;
@@ -2236,7 +2278,10 @@ test("anonymous: every public page and control @phase16", async ({ page }) => {
     await pw.nth(1).fill(newPass);
     await go.click();
     cov.formsSubmitted++;
-    await expect(page.locator('[role="alert"]').first()).toBeVisible();
+    await expect(page.locator('main [role="alert"]').first()).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(go).not.toHaveAttribute("aria-busy", "true");
     await code.fill(extractOtp(resetMail));
     await pw.nth(1).fill(`${newPass}y`);
     await go.click();
@@ -2267,7 +2312,9 @@ test("anonymous: every public page and control @phase16", async ({ page }) => {
   await rpw.nth(1).fill("Synthetic-P16b-pass1");
   await page.locator('form button[type="submit"]').first().click();
   cov.formsSubmitted++;
-  await expect(page.locator('[role="alert"]').first()).toBeVisible();
+  await expect(page.locator('main [role="alert"]').first()).toBeVisible({
+    timeout: 15_000,
+  });
   await checkSince(ctx, m, "reset password", "a made-up token", {
     invalidSubmit: true,
   });
