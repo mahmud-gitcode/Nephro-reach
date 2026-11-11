@@ -75,6 +75,17 @@ describe("useMessages (deprecated read-only adapter)", () => {
   });
 });
 
+describe("useMessages({ enabled: false }) (P16d)", () => {
+  it("asks the server for no inbox at all", async () => {
+    const { result } = renderHook(() => useMessages({ enabled: false }), {
+      wrapper,
+    });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.current.conversations).toEqual([]);
+  });
+});
+
 describe("New Message dialog when the send throws (Check-In Reminder)", () => {
   function renderReminder(onSend: () => void) {
     const onClose = vi.fn();

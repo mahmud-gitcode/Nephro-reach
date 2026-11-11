@@ -52,18 +52,21 @@ function unavailable(): never {
   throw new MessagingWriteUnavailableError();
 }
 
-/** @deprecated See above: read-only; use the hooks in useConversations.ts. */
-export function useMessages() {
+/** @deprecated See above: read-only; use the hooks in useConversations.ts.
+ *  `enabled: false` reads nothing: a caller whose user has no Messages page
+ *  (a hospital, or staff without messages access) must not ask the server
+ *  for an inbox it would refuse (P16d: a 403 on every page load). */
+export function useMessages({ enabled = true }: { enabled?: boolean } = {}) {
   const role = useOptionalAuth()?.user?.role;
   const office = useActiveOffice();
   const isMember = role === "user" || role === "caregiver";
   /* Only the signed-in side's inbox is read; the other is switched off. */
-  const member = useMemberInbox(undefined, { enabled: isMember });
+  const member = useMemberInbox(undefined, { enabled: enabled && isMember });
   const officeInbox = useOfficeInbox(
     isMember ? null : office.organizationId,
     "all",
     office.contact,
-    { enabled: !isMember },
+    { enabled: enabled && !isMember },
   );
   const read = isMember ? member : officeInbox;
   const conversations: Conversation[] = useMemo(

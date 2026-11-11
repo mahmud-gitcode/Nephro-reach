@@ -549,7 +549,14 @@ function MemberNotifications() {
  *  (Phase 11): nothing is filtered by a name here. */
 function useInbox(): { inbox: Inbox; fromOf: (c: Conversation) => string } {
   const { user } = useAuth();
-  const { conversations } = useMessages();
+  /* The office inbox is read only for a role whose Messages page lists it;
+     anyone else (a hospital, staff without messages access, the access
+     center) would get a 403 from the server on every page (P16d). */
+  const readsInbox =
+    isMemberRole(user?.role) ||
+    ((user?.role === "clinic" || user?.role === "nephrology") &&
+      userCan(user, "messages.view"));
+  const { conversations } = useMessages({ enabled: readsInbox });
   if (isMemberRole(user?.role)) {
     return {
       inbox: {

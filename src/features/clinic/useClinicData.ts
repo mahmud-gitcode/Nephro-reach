@@ -12,6 +12,7 @@ import {
   sourceSlug,
   splitName,
   toPatientRow,
+  type ApiProgramEnrollment,
 } from "./enrollment.mapping";
 import {
   enrollInProgram,
@@ -24,6 +25,8 @@ import {
 } from "./roster.repository";
 import { officeKey, requireOffice, useOfficeScope } from "./office.scope";
 import type { Page } from "@/lib/api/paging";
+import { useOptionalAuth } from "@/features/auth/AuthContext";
+import { userCan } from "@/features/staff/staff";
 
 /* ==========================================================================
    The office's shared reads (Phase 8; ADR 0007)
@@ -49,7 +52,26 @@ import type { Page } from "@/lib/api/paging";
    Seats come from the contract (read-only; a role without billing read
    simply sees no seat figure). Courses for the program picker come from
    the published catalog. Neither failing blocks the roster.
+
+   A read the active membership's levels do not allow (D4: programs read
+   for the enrollments, billing read for the contract) is not sent: the
+   server would refuse it with a 403 on every page load (P16d, a care
+   coordinator). The enrollments then fail on the client with the same
+   403-shaped error, so the page shows the same no-access state; the seat
+   figure is simply unknown. The server still enforces both.
    ========================================================================== */
+
+/** The client-side code for a read this membership's levels do not allow. */
+export const NO_PERMISSION_CODE = "client.no_permission";
+
+/** Which of the shared office reads the active membership may make. */
+export function useOfficeReadAccess(): { programs: boolean; billing: boolean } {
+  const user = useOptionalAuth()?.user ?? null;
+  return {
+    programs: userCan(user, "programs.view"),
+    billing: userCan(user, "billing.view"),
+  };
+}
 
 export const ROSTER_WINDOW = 150;
 
@@ -86,18 +108,34 @@ export const clinicKeys = {
 
 /** The office's newest program enrollments (enrolledAt desc), one bounded
  *  page. Shared by the window below and by `useRosterPage`'s join. */
-export function enrollmentWindowQuery(organizationId: string | null) {
+export function enrollmentWindowQuery(
+  organizationId: string | null,
+  allowed = true,
+) {
   return {
-    queryKey: clinicKeys.enrollments(organizationId),
-    queryFn: () =>
-      listProgramEnrollments(requireOffice(organizationId), {
-        limit: ROSTER_WINDOW,
-      }),
+    /* A refusal has its own key, so it is never served once the level
+       allows the read. */
+    queryKey: allowed
+      ? clinicKeys.enrollments(organizationId)
+      : [...clinicKeys.enrollments(organizationId), "refused"],
+    queryFn: (): Promise<Page<ApiProgramEnrollment>> =>
+      allowed
+        ? listProgramEnrollments(requireOffice(organizationId), {
+            limit: ROSTER_WINDOW,
+          })
+        : Promise.reject(
+            new ApiError(
+              403,
+              "Not available for your role.",
+              NO_PERMISSION_CODE,
+            ),
+          ),
   };
 }
 
 export function useClinicData(filters: Pick<RosterQuery, "program"> = {}) {
   const { organizationId } = useOfficeScope();
+  const access = useOfficeReadAccess();
   const rosterQuery: RosterQuery = {
     status: "ACTIVE",
     limit: ROSTER_WINDOW,
@@ -108,11 +146,13 @@ export function useClinicData(filters: Pick<RosterQuery, "program"> = {}) {
     queryKey: clinicKeys.roster(organizationId, rosterQuery),
     queryFn: () => listRoster(requireOffice(organizationId), rosterQuery),
   });
-  const enrollments = useQuery(enrollmentWindowQuery(organizationId));
+  const enrollments = useQuery(
+    enrollmentWindowQuery(organizationId, access.programs),
+  );
   const seats = useQuery({
     queryKey: clinicKeys.seats(organizationId),
     queryFn: () => getSeats(requireOffice(organizationId)),
-    enabled: organizationId !== null,
+    enabled: organizationId !== null && access.billing,
   });
 
   const reads = combineReads(roster, enrollments);
@@ -161,7 +201,8 @@ export function useClinicData(filters: Pick<RosterQuery, "program"> = {}) {
     updatedAt: Math.min(roster.dataUpdatedAt, enrollments.dataUpdatedAt),
     refetch: () => {
       reads.onRetry();
-      void seats.refetch();
+      /* refetch() ignores `enabled`: a refused contract is never asked. */
+      if (organizationId !== null && access.billing) void seats.refetch();
     },
   };
 }
