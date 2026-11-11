@@ -44,6 +44,12 @@ vi.mock("@/features/travel/useTrips", () => ({
   ArrangementError: class extends Error {},
 }));
 
+/* The signed-in role's travel.manage permission (true unless a test says). */
+let canManage = true;
+vi.mock("@/features/staff/useStaffAccounts", () => ({
+  useCan: () => canManage,
+}));
+
 const { default: ClinicTravel } = await import("./ClinicTravel");
 
 const render = (ui: React.ReactElement) =>
@@ -93,6 +99,7 @@ beforeEach(() => {
   list.error = null;
   detail.trip = openTrip;
   detail.error = null;
+  canManage = true;
 });
 
 describe("Travel Requests", () => {
@@ -155,6 +162,35 @@ describe("Travel Requests", () => {
     expect(
       within(dialog).getByRole("button", { name: "Save changes" }),
     ).toBeDisabled();
+    expect(saveArrangement).not.toHaveBeenCalled();
+  });
+
+  it("a role that cannot manage travel sees the arrangement with every field disabled", async () => {
+    /* P16c crawl: an Office Manager could edit the fields and "Add" times
+       with no Save button, so nothing typed was ever kept. */
+    canManage = false;
+    const user = userEvent.setup();
+    render(<ClinicTravel />);
+    await user.click(
+      screen.getByRole("button", { name: /Manage Avery Testpatient's trip/ }),
+    );
+    const dialog = screen.getByRole("dialog");
+    expect(
+      within(dialog).getByText(/can see this arrangement but not change it/),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole("button", { name: "Save changes" }),
+    ).not.toBeInTheDocument();
+    for (const field of [
+      within(dialog).getByRole("combobox", { name: "Status" }),
+      within(dialog).getByRole("textbox", { name: "Receiving facility" }),
+      within(dialog).getByRole("textbox", { name: "Facility address" }),
+      within(dialog).getByLabelText("Treatment date"),
+      within(dialog).getByLabelText("Treatment time"),
+      within(dialog).getByRole("button", { name: "Add" }),
+      within(dialog).getByRole("textbox", { name: /Message to the patient/ }),
+    ])
+      expect(field).toBeDisabled();
     expect(saveArrangement).not.toHaveBeenCalled();
   });
 
