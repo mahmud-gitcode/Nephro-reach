@@ -46,12 +46,12 @@ export function fromApiExtraTreatment(raw: ApiExtraTreatment): ExtraTreatment {
   };
 }
 
-/** Throws for a reason the server would refuse (never sent). */
 /** The server's limit on an extra treatment's notes; the form stops typing
  *  there, so the slice below never cuts a note without a word (P16b QA
  *  round 2 crawl). */
 export const EXTRA_TREATMENT_NOTES_MAX_LENGTH = 4000;
 
+/** Throws for a reason the server would refuse (never sent). */
 export function toExtraTreatmentBody(draft: {
   dateKey: string;
   reason: string;
