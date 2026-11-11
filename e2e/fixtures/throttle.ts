@@ -57,6 +57,21 @@ export async function pace(kind: Kind): Promise<void> {
   }
 }
 
+/** Wait, without sending, until `room` requests of this kind fit in the
+ *  window, so a test's next sign-ins go out back to back (tests run on one
+ *  worker). For tests whose sessions must not age in between, e.g. on the
+ *  short-session API. */
+export async function waitForRoom(kind: Kind, room: number): Promise<void> {
+  for (;;) {
+    const now = Date.now();
+    const recent = load()[kind].filter((t) => now - t < WINDOW_MS);
+    if (LIMITS[kind] - recent.length >= room) return;
+    await new Promise((r) =>
+      setTimeout(r, Math.min(...recent) + WINDOW_MS - now + 100),
+    );
+  }
+}
+
 /** After a test that exhausted a bucket on purpose. */
 export async function drain(kind: Kind): Promise<void> {
   const sent = load();

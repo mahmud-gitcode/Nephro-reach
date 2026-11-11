@@ -8,6 +8,7 @@
 import { ACCOUNTS, appOrigin, env } from "./fixtures/env";
 import { HOME } from "./fixtures/session";
 import { expect, requireEnv, test } from "./fixtures/test";
+import { waitForRoom } from "./fixtures/throttle";
 
 /* The idle warning, not the first-visit tour (also a dialog). */
 const idleWarning = (page: import("@playwright/test").Page) =>
@@ -136,6 +137,12 @@ test.describe("revocation", () => {
     asUser,
     api,
   }) => {
+    /* Both sign-ins go out back to back. A login-throttle wait between
+       them could outlast the short-session API's 15 s access token: of the
+       browser (the page then opens as a plain signed-out visit, not the
+       revoked session) or of the other device (its DELETE then fails). */
+    await waitForRoom("login", 2);
+    const other = await api(ACCOUNTS.grace);
     const { context, page } = await asUser(ACCOUNTS.grace);
     await page.goto("/dashboard");
     await expect(page).toHaveURL(HOME.member);
@@ -150,12 +157,23 @@ test.describe("revocation", () => {
     ).data as Array<{ id: string; current: boolean }>;
     const browserSession = mine.find((s) => s.current);
     expect(browserSession, "browser session is listed as current").toBeTruthy();
-    /* Revoke it from another device (a separate bearer session). */
-    const other = await api(ACCOUNTS.grace);
+    /* Revoke it from the other device (a separate bearer session). */
     expect(
       (await other.delete(`/auth/sessions/${browserSession!.id}`)).ok(),
     ).toBeTruthy();
-    await page.goto("/dashboard/personal-log");
+    /* The open page may notice the revoked session first and already be
+       leaving for /login?reason=expired. Chromium then reports this
+       navigation as "interrupted by another navigation" or as
+       net::ERR_ABORTED. Only those two are tolerated; the URL expectation
+       below is what proves the revocation. */
+    await page.goto("/dashboard/personal-log").catch((error: unknown) => {
+      if (
+        !/interrupted by another navigation|net::ERR_ABORTED/.test(
+          String(error),
+        )
+      )
+        throw error;
+    });
     await expect(page).toHaveURL(/\/login\?reason=expired/, {
       timeout: 15_000,
     });
