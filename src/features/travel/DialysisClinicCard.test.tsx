@@ -93,6 +93,21 @@ describe("dialysis center card save", () => {
     expect(put(calls)).toEqual({ organizationId: ORG, phone: "5555550100" });
   });
 
+  it("spaces around the same center name keep the NephroReach link", async () => {
+    const { calls } = clinicApi();
+    render(<DialysisClinicCard />, { wrapper });
+    fireEvent.click(await screen.findByRole("button", { name: "Edit center" }));
+    fireEvent.change(screen.getByLabelText("Center name"), {
+      target: { value: "  Synthetic Dialysis Center  " },
+    });
+    fireEvent.change(screen.getByLabelText("Phone number"), {
+      target: { value: "5555550100" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(put(calls)).toBeDefined());
+    expect(put(calls)).toEqual({ organizationId: ORG, phone: "5555550100" });
+  });
+
   it("a new center name is a typed-in center: no organizationId", async () => {
     const { calls } = clinicApi();
     render(<DialysisClinicCard />, { wrapper });
