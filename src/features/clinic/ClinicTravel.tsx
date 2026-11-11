@@ -231,7 +231,9 @@ function ManageModal({
   onResolveTimeChange: (reply: string) => void;
 }) {
   /* Placing a traveller is the social worker's or coordinator's; anyone
-     else on staff can see the arrangement but not change it. */
+     else on staff can see the arrangement but not change it, so its fields
+     are disabled for them (P16c crawl: an Office Manager could edit and
+     "Add" times that no button would ever save). */
   const canEdit = useCan("travel.manage");
   const [status, setStatus] = useState<TripStatus>(trip.status);
   const [placement, setPlacement] = useState<TripPlacement>(
@@ -385,6 +387,7 @@ function ManageModal({
               {(props) => (
                 <Select
                   {...props}
+                  disabled={!canEdit}
                   value={status}
                   onChange={(event) =>
                     setStatus(event.target.value as TripStatus)
@@ -406,6 +409,7 @@ function ManageModal({
                 {(props) => (
                   <Input
                     {...props}
+                    disabled={!canEdit}
                     value={placement.facilityName}
                     onChange={(event) =>
                       setPlacement({
@@ -422,6 +426,7 @@ function ManageModal({
                   <Input
                     {...props}
                     type="tel"
+                    disabled={!canEdit}
                     value={placement.phone}
                     onChange={(event) =>
                       setPlacement({ ...placement, phone: event.target.value })
@@ -435,6 +440,7 @@ function ManageModal({
               {(props) => (
                 <Input
                   {...props}
+                  disabled={!canEdit}
                   value={placement.address}
                   onChange={(event) =>
                     setPlacement({ ...placement, address: event.target.value })
@@ -456,6 +462,7 @@ function ManageModal({
                 <Input
                   type="date"
                   aria-label="Treatment date"
+                  disabled={!canEdit}
                   value={date}
                   min={trip.departDate}
                   max={trip.returnDate}
@@ -465,6 +472,7 @@ function ManageModal({
                 <Input
                   type="time"
                   aria-label="Treatment time"
+                  disabled={!canEdit}
                   value={time}
                   onChange={(event) => setTime(event.target.value)}
                   className="flex-1"
@@ -472,7 +480,7 @@ function ManageModal({
                 <Button
                   variant="neutral"
                   appearance="fill-stroke"
-                  disabled={!date || !time}
+                  disabled={!canEdit || !date || !time}
                   onClick={() =>
                     setPlacement(addConfirmedTreatment(placement, date, time))
                   }
@@ -496,6 +504,7 @@ function ManageModal({
                         variant="danger"
                         appearance="ghost"
                         iconOnly
+                        disabled={!canEdit}
                         aria-label={`Remove ${treatment.date} ${treatment.time}`}
                         onClick={() =>
                           setPlacement(
@@ -523,6 +532,7 @@ function ManageModal({
                 <Textarea
                   {...props}
                   rows={3}
+                  disabled={!canEdit}
                   value={note}
                   onChange={(event) => setNote(event.target.value)}
                 />

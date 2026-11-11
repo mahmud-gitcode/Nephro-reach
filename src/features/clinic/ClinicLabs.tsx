@@ -504,7 +504,7 @@ export default function ClinicLabs() {
             <UpdatedBar
               updatedAt={chart.updatedAt}
               isFetching={chart.isFetching}
-              refetch={chart.refetch}
+              refetch={selected ? chart.refetch : roster.refetch}
             />
             {canUpload ? (
               <Button

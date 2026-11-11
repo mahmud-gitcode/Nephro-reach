@@ -356,6 +356,33 @@ describe("ClinicLabs on the API", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("Refresh with no patient to chart reloads the roster, never /patients/null/labs", async () => {
+    /* P16c crawl: a role without patients access (roster 403) clicked
+       Refresh and the chart query asked for /patients/null/labs. */
+    const { calls } = stubApi(
+      labsHandler((c) =>
+        c.path === org("/patients")
+          ? apiError(403, "access.organization_access_denied")
+          : undefined,
+      ),
+      CLINIC,
+    );
+    const user = userEvent.setup();
+    render(<ClinicLabs />, { wrapper });
+    expect(
+      await screen.findByText("This has not been shared with you"),
+    ).toBeInTheDocument();
+    const rosterReads = () =>
+      calls.filter((c) => c.path === org("/patients")).length;
+    const before = rosterReads();
+    await user.click(screen.getByRole("button", { name: "Refresh" }));
+    await waitFor(() => expect(rosterReads()).toBeGreaterThan(before));
+    expect(calls.some((c) => c.path.includes("/null"))).toBe(false);
+    expect(calls.some((c) => /\/patients\/[^/]+\/labs/.test(c.path))).toBe(
+      false,
+    );
+  });
+
   it("a 403 on the chart shows not shared, never an empty chart", async () => {
     stubApi(
       labsHandler((c) =>
