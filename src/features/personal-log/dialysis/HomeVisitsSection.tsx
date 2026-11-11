@@ -196,8 +196,9 @@ export default function HomeVisitsSection({
                 <button
                   type="button"
                   onClick={() => log.remove(visit.id)}
+                  disabled={log.isRemoving(visit.id)}
                   aria-label={`${isEs ? "Eliminar visita" : "Delete visit"} — ${formatVisitDate(visit.date, visit.time, isEs)}`}
-                  className="cursor-pointer rounded-control p-1.5 text-fg-muted transition-colors hover:bg-danger-surface hover:text-danger"
+                  className="cursor-pointer rounded-control p-1.5 text-fg-muted transition-colors hover:bg-danger-surface hover:text-danger disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
