@@ -24,7 +24,12 @@
    evidence directory) or test-results/p16b. */
 import fs from "node:fs";
 import path from "node:path";
-import { request, type Locator, type Page } from "@playwright/test";
+import {
+  request,
+  type Locator,
+  type Page,
+  type Request,
+} from "@playwright/test";
 import { ApiClient, currentConsent, json } from "./fixtures/api";
 import {
   ACCOUNTS,
@@ -182,6 +187,8 @@ type ApiHit = {
   status: number;
   code: string;
   at: number;
+  /** Sent during an invalid-input submit (its 400 is judged there). */
+  invalid?: boolean;
 };
 
 class Monitor {
@@ -192,6 +199,12 @@ class Monitor {
   downloads: string[] = [];
   /** Other-origin addresses the page asked window.open for (not opened). */
   externalOpens: string[] = [];
+  /** API calls sent and not yet recorded (a 4xx is recorded only after
+   *  its body is read, which can land after the step that caused it). */
+  pending = new Set<Request>();
+  /** True while an invalid-input submit runs: its calls are tagged. */
+  invalidMode = false;
+  private invalidReqs = new WeakSet<Request>();
 
   constructor(readonly page: Page) {
     page.on("console", (m) => {
@@ -203,7 +216,13 @@ class Monitor {
     page.on("pageerror", (e) =>
       this.pageErrors.push(`${e.name}: ${e.message}`.slice(0, 300)),
     );
-    page.on("request", () => this.requests++);
+    page.on("request", (req) => {
+      this.requests++;
+      if (new URL(req.url()).origin !== apiOrigin) return;
+      this.pending.add(req);
+      if (this.invalidMode) this.invalidReqs.add(req);
+    });
+    page.on("requestfailed", (req) => this.pending.delete(req));
     page.on("response", async (res) => {
       const u = new URL(res.url());
       if (u.origin !== apiOrigin) return;
@@ -221,7 +240,9 @@ class Monitor {
         status,
         code,
         at: Date.now(),
+        invalid: this.invalidReqs.has(res.request()),
       });
+      this.pending.delete(res.request());
     });
     page.on("download", async (d) => {
       const name = d.suggestedFilename();
@@ -400,7 +421,10 @@ async function checkSince(
         ctx.cov.notes.push(`429 throttle on ${h.method} ${h.path}`);
         continue;
       }
-      if (opts.invalidSubmit && [400, 422].includes(h.status)) continue;
+      /* An invalid-input submit's 400 is judged by invalidPass (shown in
+         the form or a finding), also when it is recorded after that pass. */
+      if ((opts.invalidSubmit || h.invalid) && [400, 422].includes(h.status))
+        continue;
       const handled = HANDLED_4XX.find(
         (x) => x.status === h.status && x.code.test(h.code),
       );
@@ -1021,6 +1045,7 @@ async function invalidPass(
   const alertsBefore = await pageAlerts();
   const dialogsBefore = await page.getByRole("dialog").count();
   const m = mon.mark();
+  mon.invalidMode = true;
   await submit.click({ timeout: 3_000 }).catch(() => undefined);
   await page.waitForTimeout(700);
   /* A confirmation step (the messaging safety notice) opened: answer it,
@@ -1047,6 +1072,11 @@ async function invalidPass(
       await page.waitForTimeout(900);
     }
   }
+  /* Wait (bounded) for the calls this submit sent: a refused over-long body
+     is recorded only once its error body is read. */
+  const writing = () => [...mon.pending].some((r) => r.method() !== "GET");
+  for (let w = 0; w < 40 && writing(); w++) await page.waitForTimeout(250);
+  mon.invalidMode = false;
   ctx.cov.formsSubmitted++;
   ctx.cov.invalidSubmitted++;
   const control = `${opener} > ${label} (invalid: ${what})`;
@@ -1260,7 +1290,26 @@ async function exerciseDialog(
   /* 3. Valid synthetic data, then submit. */
   await fillValid(dialog, marker);
   const m1 = mon.mark();
-  const s2 = await submitOf(dialog);
+  let s2 = await submitOf(dialog);
+  /* A notice that must be acknowledged first (the export / share notice:
+     "I understand ..." then "Confirm & Download"): tick its boxes, as a
+     person would, so the export itself is reached (P16b round 4: no CSV
+     export had been downloaded). */
+  if (s2 && !(await s2.isEnabled().catch(() => false))) {
+    const boxes = dialog.getByRole("checkbox").filter({ visible: true });
+    const nb = await boxes.count();
+    for (let b = 0; b < nb; b++)
+      await boxes
+        .nth(b)
+        .check({ timeout: 2_000 })
+        .catch(() => undefined);
+    if (nb) {
+      ctx.cov.notes.push(
+        `${ctx.current}: "${opener}": ${nb} acknowledgement box(es) ticked before the valid submit`,
+      );
+      s2 = await submitOf(dialog);
+    }
+  }
   if (!s2 || !(await s2.isEnabled().catch(() => false))) {
     ctx.cov.notes.push(
       `${ctx.current}: "${opener}": submit stays disabled after the generic fill (form needs specific input)`,
