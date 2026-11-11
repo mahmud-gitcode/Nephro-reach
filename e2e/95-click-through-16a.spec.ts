@@ -13,8 +13,14 @@
    - deletes, archives or cancels only rows that carry the crawler's marker;
    - checks the layout at desktop width and at 390px.
    After every action it records console errors, uncaught exceptions, API
-   5xx, unexpected API 4xx (a 403 must show the "not shared" state), Next
-   error screens, stuck loading, 404 links and controls that do nothing.
+   5xx, unexpected API 4xx (a 403 must show the "not shared" state), files
+   from the app or the storage stand-in that do not load, Next error
+   screens, stuck loading, 404 links and controls that do nothing.
+   A seed record's edit form that the crawler saved is put back to its own
+   values; the photos it uploaded are deleted by id when the role ends.
+   Each page has a control budget and a time budget (larger for the
+   dialysis management page and the two long add forms); what is left is
+   counted, never silently dropped.
 
    It never clicks sign-out, security, password, MFA or account controls,
    and never deletes, revokes or archives seed records (brief §1).
@@ -40,6 +46,8 @@ type Issue = {
   expected: string;
   actual: string;
   screenshot?: string;
+  /** Set when the issue matches an EXPLAINED entry (see REPORT.md). */
+  explained?: string;
 };
 type PageStats = {
   page: string;
@@ -50,6 +58,13 @@ type PageStats = {
   submits: number;
   downloads: number;
   deleted: number;
+  /** Seed edit forms put back to their values after a valid save. */
+  restored: number;
+  /** Controls not clicked because 3 of the same shape (a row action
+   *  repeated on every row) were already clicked. */
+  repeats: number;
+  /** Controls left when the control budget or the time budget ran out. */
+  budgetLeft: number;
   skipped: string[];
 };
 
@@ -58,6 +73,23 @@ const OUT = path.resolve(
 );
 const MARK = "P16a";
 const PAGE_BUDGET_MS = 8 * 60_000;
+/* The dialysis management page (team-questions redirects to it, on its
+   questions tab) and the two long add forms have 70-240 controls: a larger
+   control and time budget there (QA round 1, M4). */
+const BIG_PAGES = new Set([
+  "/dashboard/personal-log/dialysis-management",
+  "/dashboard/team-questions",
+  "/dashboard/personal-log/dialysis-treatment/add",
+  "/dashboard/personal-log/lab-tracking/add",
+]);
+const budgetFor = (href: string) =>
+  BIG_PAGES.has(href)
+    ? { controls: 240, ms: 16 * 60_000 }
+    : { controls: 90, ms: PAGE_BUDGET_MS };
+/* The crawler stops clicking this long before the hard page budget, so a
+   slow page ends with its remaining controls counted as "budget left"
+   instead of a page-budget failure (QA round 1, H2). */
+const SOFT_MARGIN_MS = 150_000;
 const API_BUDGET = Math.max(10, Number(process.env.E2E_API_BUDGET ?? 75) || 75);
 
 const ROLES: { id: string; account: Account }[] = [
@@ -184,6 +216,29 @@ const storageOrigin = (() => {
   return u.origin;
 })();
 
+/** A URL without its query string or hash: a presigned link's signature
+ *  never reaches the evidence (QA round 1, L4). */
+const bare = (raw: string) => {
+  try {
+    const u = new URL(raw);
+    return `${u.origin}${u.pathname}`;
+  } catch {
+    return raw.split(/[?#]/)[0];
+  }
+};
+
+/* next dev's own traffic (hot reload, overlay source maps): not the app. */
+const DEV_NOISE = /\/_next\/webpack-hmr|\.hot-update\.|\/__nextjs/;
+
+/** UUIDs and numbers out of a path, to group the same failure on many rows. */
+const pathShape = (p: string) =>
+  p
+    .replace(
+      /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
+      ":id",
+    )
+    .replace(/\/\d+(?=\/|$)/g, "/:n");
+
 const today = () =>
   new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/New_York",
@@ -220,6 +275,17 @@ class Recorder {
     status: number;
     code: string;
   }[] = [];
+  /** Non-2xx answers from the app origin and the storage stand-in (images,
+   *  attachments, static files): QA round 1, M2. */
+  resources: {
+    origin: string;
+    method: string;
+    path: string;
+    status: number;
+  }[] = [];
+  /** Access photos this crawl uploaded (they carry no text marker): deleted
+   *  through the API when the role ends. Path + id, no query. */
+  createdPhotos: string[] = [];
   downloads: string[] = [];
   /** File pickers opened (answered with the synthetic files). */
   fileChoosers = 0;
@@ -254,8 +320,38 @@ class Recorder {
     });
     page.on("response", async (res) => {
       const u = new URL(res.url());
-      if (u.origin !== apiOrigin) return;
       const status = res.status();
+      if (u.origin !== apiOrigin) {
+        if (
+          status >= 400 &&
+          (u.origin === appOrigin || u.origin === storageOrigin) &&
+          !DEV_NOISE.test(u.pathname) &&
+          // a page navigation that 404s is judged by open() (route-404)
+          !res.request().isNavigationRequest()
+        )
+          this.resources.push({
+            origin: u.origin === appOrigin ? "app" : "storage",
+            method: res.request().method(),
+            path: u.pathname,
+            status,
+          });
+        return;
+      }
+      if (
+        res.request().method() === "POST" &&
+        status < 300 &&
+        /\/patients\/[^/]+\/dialysis\/access-photos$/.test(
+          u.pathname.replace(/^\/api\/v1/, ""),
+        )
+      ) {
+        const body = (await res.json().catch(() => null)) as {
+          data?: { id?: unknown };
+        } | null;
+        if (typeof body?.data?.id === "string")
+          this.createdPhotos.push(
+            `${u.pathname.replace(/^\/api\/v1/, "")}/${body.data.id}`,
+          );
+      }
       let code = "";
       if (status >= 400) {
         const body = (await res.json().catch(() => null)) as {
@@ -309,6 +405,7 @@ class Recorder {
       console: this.consoleErrors.splice(0),
       errors: this.pageErrors.splice(0),
       api: this.api.splice(0),
+      resources: this.resources.splice(0),
     };
     return out;
   }
@@ -340,12 +437,19 @@ class Recorder {
         .screenshot({ path: screenshot, timeout: 5_000 })
         .catch(() => (screenshot = undefined));
     }
+    const why = EXPLAINED.find(
+      (e) =>
+        e.kind === i.kind &&
+        e.actual.test(i.actual) &&
+        (!e.page || e.page.test(this.current)),
+    )?.why;
     this.issues.push({
       role: this.role,
       page: this.current,
       control: i.control ?? this.control,
       ...i,
       screenshot,
+      ...(why ? { explained: why } : {}),
     });
   }
 
@@ -398,26 +502,31 @@ async function judge(
 ) {
   const seen = rec.checkpoint();
   /* An expired access cookie answers every request in flight with a bare
-     401; the client then refreshes once and retries them. The page can be
-     drawn before that refresh lands: wait briefly for it and judge the
-     whole exchange together. */
-  const bare401 = (api: typeof seen.api) =>
+     401; the client then refreshes once and retries them
+     (src/lib/api/client.ts). Under five parallel lanes the refresh and the
+     retries can take several seconds: wait up to 12 s for the refresh and
+     for a 2xx retry of every refused path, then judge the whole exchange
+     together (QA round 1, M3). */
+  type Api = typeof seen.api;
+  const bare401 = (r: Api[number]) =>
+    r.status === 401 && !r.code && !r.path.startsWith("/auth/");
+  const retriedIn = (api: Api, r: Api[number]) =>
     api.some(
-      (r) => r.status === 401 && !r.code && !r.path.startsWith("/auth/"),
+      (x) =>
+        x !== r && x.method === r.method && x.path === r.path && x.status < 300,
     );
-  const refreshedIn = (api: typeof seen.api) =>
-    api.some(
-      (r) =>
-        r.method === "POST" && r.path === "/auth/refresh" && r.status < 300,
-    );
-  if (bare401(seen.api) && !refreshedIn(seen.api)) {
-    for (let t = 0; t < 15 && !refreshedIn(rec.api); t += 1)
+  const unrecovered = (api: Api) =>
+    api.filter((r, n) => bare401(r) && !retriedIn(api.slice(n + 1), r));
+  if (unrecovered(seen.api).length) {
+    for (let t = 0; t < 60; t += 1) {
+      const more = rec.checkpoint();
+      seen.api.push(...more.api);
+      seen.console.push(...more.console);
+      seen.errors.push(...more.errors);
+      seen.resources.push(...more.resources);
+      if (!unrecovered(seen.api).length) break;
       await page.waitForTimeout(200);
-    await page.waitForTimeout(800); // the retries after the refresh
-    const more = rec.checkpoint();
-    seen.api.push(...more.api);
-    seen.console.push(...more.console);
-    seen.errors.push(...more.errors);
+    }
   }
   for (const e of seen.errors)
     await rec.add(page, {
@@ -435,28 +544,26 @@ async function judge(
       expected: "no console error",
       actual: c,
     });
+  /* Images, attachments and static files that did not load (QA round 1,
+     M2): one issue per path shape. */
+  for (const r of seen.resources)
+    await rec.add(page, {
+      kind: `resource-${r.status >= 500 ? "5xx" : r.status}`,
+      severity: r.status >= 500 ? "high" : "medium",
+      steps: step,
+      expected: `the ${r.origin} file loads`,
+      actual: `${r.method} ${r.origin} ${pathShape(r.path)} -> ${r.status}`,
+    });
   const notShared = await page
     .getByText(NOT_SHARED)
     .count()
     .catch(() => 0);
-  /* The API client answers a bare 401 (expired access cookie) with one
-     refresh and one retry (src/lib/api/client.ts): that is the designed
-     session flow, not an error, when the refresh succeeded. */
-  const refreshed = seen.api.some(
-    (r) => r.method === "POST" && r.path === "/auth/refresh" && r.status < 300,
-  );
+  /* Re-GETs of a refused read: at most three per checkpoint, so a page
+     with a hundred failing photo links cannot hold the crawl (QA round 1,
+     H2). */
+  let reGets = 0;
   for (const [n, r] of seen.api.entries()) {
-    if (
-      r.status === 401 &&
-      !r.code &&
-      !r.path.startsWith("/auth/") &&
-      (refreshed ||
-        seen.api
-          .slice(n + 1)
-          .some(
-            (x) => x.method === r.method && x.path === r.path && x.status < 300,
-          ))
-    ) {
+    if (bare401(r) && retriedIn(seen.api.slice(n + 1), r)) {
       rec.refreshRetries += 1;
       continue;
     }
@@ -470,24 +577,24 @@ async function judge(
       )
     )
       continue;
-    if (
-      r.method === "GET" &&
-      (r.status >= 500 || (r.status === 401 && !r.path.startsWith("/auth/")))
-    ) {
-      /* Same request again, same session. A 2xx now means the failure was
-         transient (in this env: the shared Postgres timing out a pool
-         connection under five parallel lanes, see the API log); it is
-         recorded as such, never dropped. */
+    let rechecked = false;
+    if (r.method === "GET" && (r.status >= 500 || bare401(r)) && reGets < 3) {
+      reGets += 1;
+      rechecked = true;
+      /* Same request again, same session: a 2xx now means the failure was
+         transient. It is recorded, never dropped: a 5xx stays high (it
+         fails the summary unless REPORT.md explains it); a bare 401 the
+         client did not retry within 12 s is medium. */
       const again = await page.request
-        .get(r.url, { timeout: 20_000 })
+        .get(r.url, { timeout: 10_000 })
         .catch(() => null);
       if (again && again.ok()) {
         await rec.add(page, {
-          kind: `api-${r.status}-transient`,
-          severity: "medium",
+          kind: `api-${r.status >= 500 ? "5xx" : r.status}-transient`,
+          severity: r.status >= 500 ? "high" : "medium",
           steps: step,
           expected: `no API ${r.status}`,
-          actual: `${what} (the same GET answered ${again.status()} right after)`,
+          actual: `${r.method} ${pathShape(r.path)} -> ${r.status}${r.code ? ` ${r.code}` : ""} (the same GET answered ${again.status()} right after)`,
         });
         continue;
       }
@@ -519,10 +626,18 @@ async function judge(
       });
     else if (r.status === 401 && r.path.startsWith("/auth/"))
       continue; // refresh probing
+    else if (bare401(r))
+      await rec.add(page, {
+        kind: rechecked ? "api-401-unrecovered" : "api-401-transient",
+        severity: rechecked ? "high" : "medium",
+        steps: step,
+        expected: "the client refreshes the session and retries",
+        actual: `${r.method} ${pathShape(r.path)} -> 401 (no 2xx retry within 12 s${rechecked ? "; the re-GET failed too" : "; not re-checked: three re-GETs per step"})`,
+      });
     else if (r.status >= 400 && !opts.expect4xx)
       await rec.add(page, {
         kind: "api-4xx",
-        severity: r.status === 404 ? "medium" : "medium",
+        severity: "medium",
         steps: step,
         expected: "no unexpected API 4xx",
         actual: what,
@@ -993,8 +1108,30 @@ async function formPass(
     return;
   }
   stats.forms += 1;
-  const mutations = (api: { method: string; status: number; path: string }[]) =>
-    api.filter((r) => r.method !== "GET");
+  /* A seed record's edit form: its values before the crawler touched it,
+     put back at the end if any submission was saved (QA round 1, L3). */
+  let seedSnapshot = (await prefilledSeed(root))
+    ? await snapshotFields(root)
+    : null;
+  /* The same record's form behind another opener (the dialysis center's
+     "Add phone number" disappears once a phone is saved; "Edit center"
+     opens the same form): it takes over the restore that could not run. */
+  if (pendingRestore && pendingRestore.page === rec.current) {
+    const now = await snapshotFields(root);
+    const keys = new Set(now.map((f) => `${f.kind}|${f.key}`));
+    if (
+      pendingRestore.snapshot.every(
+        (f) => f.kind === "skip" || keys.has(`${f.kind}|${f.key}`),
+      )
+    ) {
+      seedSnapshot = pendingRestore.snapshot;
+      stats.skipped.push(
+        `${label}: restores the seed values '${pendingRestore.label}' could not`,
+      );
+      pendingRestore = null;
+    }
+  }
+  let seedChanged = false;
 
   for (const mode of ["empty", "invalid", "valid"] as FillMode[]) {
     root = rootSel();
@@ -1066,6 +1203,7 @@ async function formPass(
           .catch(() => 0));
       const text = stillOpen ? await root.innerText().catch(() => "") : "";
       const ok2xx = muts.some((r) => r.status < 300);
+      if (edited(muts)) seedChanged = true;
       if (ok2xx)
         await rec.add(page, {
           kind: `${mode}-submit-accepted`,
@@ -1115,15 +1253,163 @@ async function formPass(
             .map((r) => `${r.method} ${r.path} ${r.status}`)
             .join(", "),
         });
-      if (muts.some((r) => r.status < 300)) createdMarkers.push(marker);
+      if (edited(muts)) seedChanged = true;
+      /* A save that created a row (a prefilled default such as the
+         member's name is not a seed record) is the crawler's own row. */
+      if (
+        muts.some((r) => r.status < 300 && r.method === "POST") ||
+        (!seedSnapshot && muts.some((r) => r.status < 300))
+      )
+        createdMarkers.push(marker);
     }
     if (stillOpen && isDialog) {
       await closeDialog(page);
     }
   }
+  if (seedSnapshot && seedChanged)
+    await restoreSeed(page, rec, stats, rootSel, reopen, seedSnapshot, label);
+}
+
+/** A saved change to an existing record (not a new row). */
+const edited = (api: { method: string; status: number }[]) =>
+  api.some(
+    (r) => r.status < 300 && (r.method === "PUT" || r.method === "PATCH"),
+  );
+
+/** Writes (not reads, not the session refresh) in an API log. */
+const mutations = (api: { method: string; status: number; path: string }[]) =>
+  api.filter((r) => r.method !== "GET" && r.path !== "/auth/refresh");
+
+type FieldValue = {
+  /** The field's label, name and placeholder: fields are matched by it,
+   *  because a form can show or hide fields as a select changes. */
+  key: string;
+  kind: "select" | "check" | "text" | "skip";
+  value: string;
+  checked: boolean;
+};
+
+async function readFields(root: Locator): Promise<FieldValue[]> {
+  const fields = await fieldsOf(root);
+  const n = await fields.count();
+  const out: FieldValue[] = [];
+  for (let i = 0; i < n; i += 1) {
+    const f = fields.nth(i);
+    const key = (await labelOf(f)).replace(/\s+/g, " ").trim();
+    const v = await f
+      .evaluate((e) => {
+        const el = e as HTMLInputElement;
+        const tag = el.tagName.toLowerCase();
+        const type = (el.getAttribute("type") ?? "").toLowerCase();
+        if (tag === "select")
+          return { kind: "select" as const, value: el.value, checked: false };
+        if (type === "file")
+          return { kind: "skip" as const, value: "", checked: false };
+        if (type === "checkbox" || type === "radio")
+          return { kind: "check" as const, value: "", checked: el.checked };
+        return { kind: "text" as const, value: el.value, checked: false };
+      })
+      .catch(() => ({ kind: "skip" as const, value: "", checked: false }));
+    out.push({ key, ...v });
+  }
+  return out;
+}
+
+/** Every field's value and key, before the crawler touches the form. */
+const snapshotFields = readFields;
+
+/** Puts `snapshot` back into the form: selects first (a select can show or
+ *  hide other fields), then every other field matched by its key. */
+async function applySnapshot(root: Locator, snapshot: FieldValue[]) {
+  for (const kinds of [["select"], ["check", "text"]] as const) {
+    const now = await readFields(root);
+    const fields = await fieldsOf(root);
+    const used = new Set<number>();
+    for (const v of snapshot) {
+      if (!(kinds as readonly string[]).includes(v.kind)) continue;
+      const i = now.findIndex(
+        (f, n) => !used.has(n) && f.key === v.key && f.kind === v.kind,
+      );
+      if (i < 0) continue;
+      used.add(i);
+      if (
+        now[i].value === v.value &&
+        now[i].checked === v.checked &&
+        v.kind !== "check"
+      )
+        continue;
+      const f = fields.nth(i);
+      try {
+        if (v.kind === "select")
+          await f.selectOption(v.value, { timeout: 2_000 });
+        else if (v.kind === "check")
+          await f.setChecked(v.checked, { timeout: 2_000, force: true });
+        else if (await f.isVisible().catch(() => false))
+          await f.fill(v.value, { timeout: 2_000 });
+      } catch {
+        /* a custom widget keeps the crawler's value: checked below */
+      }
+    }
+    await root.page().waitForTimeout(300);
+  }
+}
+
+/** A seed record's edit form was saved with crawler data: put its own
+ *  values back and save again, so the seed accounts stay as seeded for the
+ *  next run (QA round 1, L3). */
+async function restoreSeed(
+  page: Page,
+  rec: Recorder,
+  stats: PageStats,
+  rootSel: () => Locator,
+  reopen: (() => Promise<boolean>) | null,
+  snapshot: FieldValue[],
+  label: string,
+) {
+  /* Start from a fresh copy of the form: the page refetches the record
+     after the save and would otherwise put the crawler's values back into
+     the fields while they are being restored. */
+  if (await page.locator(OPEN_DIALOG).count()) await closeDialog(page);
+  await page.waitForTimeout(800);
+  let root = rootSel();
+  if (reopen) {
+    if (!(await reopen())) {
+      stats.skipped.push(
+        `${label}: seed values NOT restored here (form did not reopen); the next form of the same record restores them`,
+      );
+      pendingRestore = { page: rec.current, label, snapshot };
+      return;
+    }
+    await page.waitForTimeout(500);
+    root = rootSel();
+  }
+  await applySnapshot(root, snapshot);
+  const btn = await submitButton(root);
+  if (!btn || (await btn.isDisabled().catch(() => true))) {
+    stats.skipped.push(`${label}: seed values NOT restored (no enabled save)`);
+    return;
+  }
+  rec.control = `${label} > restore the seed values`;
+  trace(rec.control);
+  await rec.pace(page);
+  rec.checkpoint();
+  await btn.click({ timeout: 3_000 }).catch(() => undefined);
+  await page.waitForTimeout(1_200);
+  const seen = await judge(page, rec, `${label}: restore the seed values`);
+  if (mutations(seen.api).some((r) => r.status < 300)) stats.restored += 1;
+  else stats.skipped.push(`${label}: seed values NOT restored (save refused)`);
+  if (await page.locator(OPEN_DIALOG).count()) await closeDialog(page);
 }
 
 const createdMarkers: string[] = [];
+
+/** A seed restore whose form did not reopen, for the next form of the same
+ *  record on the same page. */
+let pendingRestore: {
+  page: string;
+  label: string;
+  snapshot: FieldValue[];
+} | null = null;
 
 const trace = (msg: string) => {
   if (process.env.E2E_CRAWL_TRACE)
@@ -1153,7 +1439,13 @@ async function closeDialog(page: Page) {
 /* ------------------------------------------------------------------ */
 /* One page                                                            */
 /* ------------------------------------------------------------------ */
-async function crawlPage(page: Page, rec: Recorder, href: string) {
+async function crawlPage(
+  page: Page,
+  rec: Recorder,
+  href: string,
+  /** Stop clicking at this time (the soft end of the page's budget). */
+  softEnd: number,
+) {
   rec.current = href;
   rec.control = "(page load)";
   const stats: PageStats = {
@@ -1165,6 +1457,9 @@ async function crawlPage(page: Page, rec: Recorder, href: string) {
     submits: 0,
     downloads: 0,
     deleted: 0,
+    restored: 0,
+    repeats: 0,
+    budgetLeft: 0,
     skipped: [],
   };
   rec.stats.push(stats);
@@ -1196,10 +1491,20 @@ async function crawlPage(page: Page, rec: Recorder, href: string) {
   const visited = new Set<string>();
   const shapes = new Map<string, number>();
   const links = new Set<string>();
-  let budget = 90;
+  const { controls: budgetMax } = budgetFor(href);
+  let budget = budgetMax;
   for (;;) {
-    if (budget <= 0) {
-      stats.skipped.push("control budget (90) reached");
+    if (budget <= 0 || Date.now() > softEnd) {
+      const left = (await enumerate(page)).filter(
+        (c) => !visited.has(c.sig),
+      ).length;
+      stats.budgetLeft = left;
+      if (left)
+        stats.skipped.push(
+          budget <= 0
+            ? `control budget (${budgetMax}) reached: ${left} control(s) left`
+            : `time budget reached: ${left} control(s) left`,
+        );
       break;
     }
     /* A dialog an in-page form or an earlier click left open would cover
@@ -1216,7 +1521,10 @@ async function crawlPage(page: Page, rec: Recorder, href: string) {
     const shape = `${next.kind}|${nameShape(next.name)}`;
     const nShape = (shapes.get(shape) ?? 0) + 1;
     shapes.set(shape, nShape);
-    if (nShape > 3) continue; // the same row action on many rows: 3 suffice
+    if (nShape > 3) {
+      stats.repeats += 1; // the same row action on many rows: 3 suffice
+      continue;
+    }
     if (NEVER.test(next.name)) {
       stats.skipped.push(`never-click: ${next.name}`);
       continue;
@@ -1394,13 +1702,17 @@ async function crawlPage(page: Page, rec: Recorder, href: string) {
   }
   stats.downloads = rec.downloads.length - dl0;
 
-  /* Destructive actions only on rows this crawler created. */
-  if (createdMarkers.length) {
+  /* Destructive actions only on rows this crawler created. A round
+     starts only before the soft end plus 90 s, so a slow page cannot hold
+     the crawl (QA round 1, H2); each round's steps have their own
+     timeouts. */
+  if (createdMarkers.length && Date.now() < softEnd + 60_000) {
     await open(page, rec, href);
-    await deleteOwn(page, rec, stats);
-  }
+    await deleteOwn(page, rec, stats, softEnd + 90_000);
+  } else if (createdMarkers.length)
+    stats.skipped.push("own-row delete pass skipped: time budget reached");
 
-  /* Dynamic child pages (one of each). */
+  /* Dynamic child pages (one of each), with a budget of their own. */
   const child = CHILDREN[href];
   if (child) {
     const target = (await enumerate(page)).find(
@@ -1415,7 +1727,12 @@ async function crawlPage(page: Page, rec: Recorder, href: string) {
     if (target) {
       const u = new URL(target.href, page.url());
       const childHref = u.pathname + u.search;
-      await crawlPage(page, rec, childHref);
+      await crawlPage(
+        page,
+        rec,
+        childHref,
+        Date.now() + PAGE_BUDGET_MS - SOFT_MARGIN_MS,
+      );
     } else
       rec.stats
         .find((s) => s.page === href)
@@ -1423,8 +1740,13 @@ async function crawlPage(page: Page, rec: Recorder, href: string) {
   }
 }
 
-async function deleteOwn(page: Page, rec: Recorder, stats: PageStats) {
-  for (let round = 0; round < 3; round += 1) {
+async function deleteOwn(
+  page: Page,
+  rec: Recorder,
+  stats: PageStats,
+  end: number,
+) {
+  for (let round = 0; round < 3 && Date.now() < end; round += 1) {
     const row = page
       .locator("main tr, main li, main article, main [data-row]")
       .filter({ hasText: new RegExp(`${MARK} crawl`) })
@@ -1454,8 +1776,7 @@ async function deleteOwn(page: Page, rec: Recorder, stats: PageStats) {
       await page.waitForTimeout(800);
     }
     const seen = await judge(page, rec, `delete own crawler row`);
-    if (seen.api.some((r) => r.method !== "GET" && r.status < 300))
-      stats.deleted += 1;
+    if (mutations(seen.api).some((r) => r.status < 300)) stats.deleted += 1;
     await closeDialog(page);
   }
 }
@@ -1528,8 +1849,31 @@ async function layout(page: Page, rec: Recorder, href: string) {
 test.use({ trace: "off", screenshot: "off" });
 
 /* Issues judged and explained in REPORT.md (role-independent). Each entry
-   names the issue it explains; anything else of blocker/high fails. */
-const EXPLAINED: { kind: string; actual: RegExp; why: string }[] = [];
+   names the issue it explains, and the issue carries the reason in the
+   crawl JSON; anything else of blocker/high fails the summary. */
+const EXPLAINED: {
+  kind: string;
+  actual: RegExp;
+  page?: RegExp;
+  why: string;
+}[] = [
+  {
+    kind: "console-error",
+    actual:
+      /^Loading media from\s+'https:\/\/example\.com\/nephroreach-demo\/[^']+\.mp4' violates the following Content Security Policy directive: "media-src /,
+    why: "REPORT.md E1: the seeded testimonial and Table Talk videos are placeholder URLs on example.com; the CSP media-src (self, blob, data, the API and the storage origin) blocks them by design. Seed data, not an app fault.",
+  },
+  {
+    kind: "empty-submit-accepted",
+    actual: /^saved: POST \/patients\/[^/]+\/dialysis\/schedule 201$/,
+    why: "REPORT.md E2: Edit Week has no text field to leave empty; every day and time has a value (EditWeekModal), so the save is valid by design.",
+  },
+  {
+    kind: "empty-submit-accepted",
+    actual: /^saved: POST \/patients\/[^/]+\/dialysis\/extra-treatments 201$/,
+    why: "REPORT.md E2: Take extra treatment defaults to the picked date and 'Fluid Overload'; notes are optional (ExtraTreatmentModal.tsx:62-66), so the save is valid by design.",
+  },
+];
 
 async function session(
   browser: Browser,
@@ -1556,7 +1900,7 @@ async function session(
     (route) => {
       const req = route.request();
       if (!req.isNavigationRequest()) return route.fallback();
-      external.push(req.url());
+      external.push(bare(req.url()));
       return route.abort("blockedbyclient");
     },
   );
@@ -1566,7 +1910,7 @@ async function session(
     // one tab, but count the tab as the control's result (not a dead
     // control). Its navigation is aborted by the route above.
     if (mainPage && p !== mainPage) {
-      external.push(`new tab: ${p.url()}`);
+      external.push(`new tab: ${bare(p.url())}`);
       void p.close().catch(() => undefined);
     }
   });
@@ -1601,6 +1945,8 @@ for (const role of ROLES) {
     let replace: () => Promise<Page>;
     const blocked: BlockedLog = [];
     const external: string[] = [];
+    /** Photo uploads deleted through the API when the role ends. */
+    const cleanup = { photos: 0, deleted: 0, failed: [] as string[] };
 
     test.beforeAll(async ({ browser }) => {
       fs.mkdirSync(OUT, { recursive: true });
@@ -1633,6 +1979,7 @@ for (const role of ROLES) {
             downloads: rec.downloads,
             fileChoosers: rec.fileChoosers,
             refreshRetries: rec.refreshRetries,
+            cleanup,
           },
           null,
           2,
@@ -1647,20 +1994,29 @@ for (const role of ROLES) {
 
     for (const href of ROUTES) {
       test(`${role.id} ${href} @phase16`, async () => {
-        test.setTimeout(PAGE_BUDGET_MS + 3 * 60_000);
+        /* Hard budget: the page's own, plus one page budget for a dynamic
+           child page crawled from it. */
+        const hardMs =
+          budgetFor(href).ms + (CHILDREN[href] ? PAGE_BUDGET_MS : 0);
+        test.setTimeout(hardMs + 3 * 60_000);
         /* A page that hangs (a frozen tab, a dev server under memory
            pressure) must not time the test out: in serial mode that would
            skip every later page of the role. After the budget the tab is
            replaced and the page recorded. */
         let timer: ReturnType<typeof setTimeout> | undefined;
-        const crawl = crawlPage(page, rec, href).then(
+        const crawl = crawlPage(
+          page,
+          rec,
+          href,
+          Date.now() + budgetFor(href).ms - SOFT_MARGIN_MS,
+        ).then(
           () => "done" as const,
           (e: unknown) => e,
         );
         const outcome = await Promise.race([
           crawl,
           new Promise<"timeout">((resolve) => {
-            timer = setTimeout(() => resolve("timeout"), PAGE_BUDGET_MS);
+            timer = setTimeout(() => resolve("timeout"), hardMs);
           }),
         ]);
         clearTimeout(timer);
@@ -1675,7 +2031,7 @@ for (const role of ROLES) {
             expected: "the crawler finishes the page",
             actual:
               outcome === "timeout"
-                ? `no result within ${PAGE_BUDGET_MS / 60_000} min (last control: ${rec.control})`
+                ? `no result within ${hardMs / 60_000} min (last control: ${rec.control})`
                 : String(outcome).split("\n")[0].slice(0, 200),
           });
         }
@@ -1691,6 +2047,32 @@ for (const role of ROLES) {
       });
     }
 
+    /* The access photos this crawl uploaded carry no text marker, so the
+       own-row pass cannot find them: delete them by the ids the API gave
+       (only these ids; QA round 1, the photo list grew to 191 across runs
+       and slowed the dialysis page). */
+    test(`${role.id} cleanup: delete this crawl's photo uploads @phase16`, async () => {
+      test.setTimeout(5 * 60_000);
+      const ids = [...new Set(rec.createdPhotos)];
+      cleanup.photos = ids.length;
+      for (const p of ids) {
+        const res = await page.request
+          .delete(`${apiOrigin}/api/v1${p}`, {
+            headers: { Origin: appOrigin },
+            timeout: 20_000,
+          })
+          .catch(() => null);
+        if (res && (res.ok() || res.status() === 404)) cleanup.deleted += 1;
+        else
+          cleanup.failed.push(
+            `${pathShape(p)} -> ${res?.status() ?? "no answer"}`,
+          );
+        await page.waitForTimeout(150);
+      }
+      save();
+      expect(cleanup.failed, "photo uploads not deleted").toEqual([]);
+    });
+
     test(`${role.id} summary: no unexplained blocker/high issue @phase16`, () => {
       save();
       const fatal = rec.issues
@@ -1701,12 +2083,7 @@ for (const role of ROLES) {
             // the page itself scrolls sideways on a phone (fixed in P16a)
             (i.kind === "layout-overflow-390" && i.severity === "medium"),
         )
-        .filter(
-          (i) =>
-            !EXPLAINED.some(
-              (e) => e.kind === i.kind && e.actual.test(i.actual),
-            ),
-        );
+        .filter((i) => !i.explained);
       expect(
         fatal.map((i) => `${i.page} | ${i.control} | ${i.kind}: ${i.actual}`),
         `${role.id}: unexplained blocker/high issues`,
