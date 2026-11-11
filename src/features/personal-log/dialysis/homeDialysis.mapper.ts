@@ -309,6 +309,11 @@ export function fromApiProviderOrder(raw: ApiProviderOrder): ProviderOrder {
   };
 }
 
+/** The server's limit on an order's text (CreateProviderOrderDto). The
+ *  form stops typing there, so the slice below never cuts what the member
+ *  wrote without telling them (P16b QA round 2 crawl). */
+export const PROVIDER_ORDER_MAX_LENGTH = 2000;
+
 export function toProviderOrderBody(draft: {
   date: string;
   order: string;
@@ -318,7 +323,7 @@ export function toProviderOrderBody(draft: {
   if (!DAY.test(draft.date)) throw new RangeError(`Not a day: ${draft.date}`);
   return {
     orderDate: draft.date,
-    order: draft.order.trim().slice(0, 2000),
+    order: draft.order.trim().slice(0, PROVIDER_ORDER_MAX_LENGTH),
     ...(draft.completed === undefined ? {} : { completed: draft.completed }),
     ...(draft.remindAt ? { remindAt: toZonedInstant(draft.remindAt) } : {}),
   };
