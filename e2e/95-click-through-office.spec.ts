@@ -795,7 +795,7 @@ async function collect(page: Page): Promise<Ctl[]> {
            "Change role of". */
         const rowLabel = !inRow
           ? ""
-          : words && words !== name && name.includes(words)
+          : words && words !== name
             ? words
             : !words && /\b(of|for|to|from)\b/i.test(name)
               ? name.replace(/\b(of|for|to|from)\b.*$/i, "$1")
@@ -1367,20 +1367,27 @@ async function act(
   const row = await rowText(el);
   /* A destructive control runs only on a row the crawler made. The marker
      test ignores case: the crawler's emails are p16c.<ts>@example.test
-     (QA-SEC round 1, F5: a case-sensitive test skipped them all). */
+     (QA-SEC round 1, F5: a case-sensitive test skipped them all). The
+     row is the crawler's when the control's own label names it, or (for a
+     destructive action) the row's first line does; anywhere else in the
+     row is not enough: a seeded person whose title the crawler edited
+     carries "P16C" too. Staff administration (GUARDED) needs the label. */
   let ownDestructive = "";
+  const guarded = GUARDED.test(ctl.name);
   if (
-    (DESTRUCTIVE.test(ctl.name) || GUARDED.test(ctl.name)) &&
+    (DESTRUCTIVE.test(ctl.name) || guarded) &&
     !(await el
       .getAttribute("type")
       .then((t) => t === "submit")
       .catch(() => false))
   ) {
-    if (!OWN.test(row) && !OWN.test(ctl.name)) {
+    const firstLine = row.trim().split("\n")[0] ?? "";
+    const own = OWN.test(ctl.name) || (!guarded && OWN.test(firstLine));
+    if (!own) {
       c.coverage.skippedDestructive++;
       return "ok";
     }
-    ownDestructive = OWN_TOKEN.exec(`${ctl.name} ${row}`)?.[0] ?? "p16c";
+    ownDestructive = OWN_TOKEN.exec(`${ctl.name} ${firstLine}`)?.[0] ?? "p16c";
   }
 
   const preSelected = await el
@@ -1498,7 +1505,7 @@ async function act(
         /* Menu actions that destroy are left alone; on the crawler's own
            row they are counted as skipped with the reason in the notes. */
         c.coverage.skippedDestructive++;
-        if (OWN.test(row))
+        if (OWN.test(row.trim().split("\n")[0] ?? ""))
           c.notes.push(
             `${href}: menu item "${text.trim()}" on the crawler's own row not run (menu destructive actions are out of the crawl)`,
           );
