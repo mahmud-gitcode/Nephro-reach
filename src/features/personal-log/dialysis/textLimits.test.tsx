@@ -61,6 +61,7 @@ describe("dialysis text fields stop at the server's limit", () => {
           onClose={vi.fn()}
           initialDate={new Date(2026, 10, 11)}
           sessionFor={() => ({
+            sessionNumber: "2.1",
             intervalName: "Mon-Wed",
             intervalLabel: "Monday to Wednesday",
             extraIndex: 1,
