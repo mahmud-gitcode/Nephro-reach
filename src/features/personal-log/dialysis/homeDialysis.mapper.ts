@@ -196,6 +196,10 @@ export function fromApiHomeVisit(raw: ApiHomeVisit): HomeVisit {
 
 const OPTIONAL_HH_MM = /^$|^([01]\d|2[0-3]):[0-5]\d$/;
 
+/** The server's limit on a visit's purpose (CreateHomeVisitDto); the form
+ *  stops typing there (P16b QA round 2 crawl). */
+export const HOME_VISIT_PURPOSE_MAX_LENGTH = 300;
+
 export function toHomeVisitBody(draft: HomeVisitDraft): HomeVisitBody {
   if (!DAY.test(draft.date)) throw new RangeError(`Not a day: ${draft.date}`);
   const time = draft.time.trim();
@@ -204,7 +208,7 @@ export function toHomeVisitBody(draft: HomeVisitDraft): HomeVisitBody {
     visitDate: draft.date,
     time,
     provider: draft.provider,
-    purpose: draft.purpose.trim().slice(0, 300),
+    purpose: draft.purpose.trim().slice(0, HOME_VISIT_PURPOSE_MAX_LENGTH),
     status: draft.status,
     remind: draft.remind,
     ...(draft.modality ? { modality: draft.modality } : {}),
