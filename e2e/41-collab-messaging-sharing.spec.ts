@@ -252,6 +252,20 @@ test("member <-> office thread: start, unread, reply, read @phase11", async ({
   await noMessagingStore(clinicUi.page);
 });
 
+/* Opens John's thread in an office inbox. The row is found by patient, not
+   by its preview: when the office is closed the server adds its automatic
+   reply after John's message, so the preview shows that reply and not the
+   message the test looks for (the same cause as in the thread test above;
+   P16f saw it on the nephrology inbox after office hours). */
+async function openJohnThread(page: Page) {
+  const row = page
+    .getByRole("listitem")
+    .filter({ hasText: ACCOUNTS.john.name })
+    .first();
+  await expect(row).toBeVisible({ timeout: 20_000 });
+  await row.click();
+}
+
 test("two-office isolation: one account, two memberships, one inbox at a time @phase11 @needs-mail", async ({
   page,
   api,
@@ -289,6 +303,9 @@ test("two-office isolation: one account, two memberships, one inbox at a time @p
     expect(res.status()).toBe(201);
   }
 
+  /* John's threads hold the crawler's synthetic attachments (see
+     allowLocalStorage). */
+  await allowLocalStorage(page.context());
   const calls = recordApiCalls(page);
   await loginViaUi(page, person);
   await expect(page).toHaveURL(/\/select-portal/, { timeout: 20_000 });
@@ -296,6 +313,7 @@ test("two-office isolation: one account, two memberships, one inbox at a time @p
     .getByRole("button", { name: "Open: Riverside Dialysis Center" })
     .click();
   await page.goto("/dashboard/clinic/messages");
+  await openJohnThread(page);
   await expect(page.getByText(toA).first()).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText(toB)).toHaveCount(0);
 
@@ -305,6 +323,7 @@ test("two-office isolation: one account, two memberships, one inbox at a time @p
     .getByRole("button", { name: "Open: Riverside Nephrology Associates" })
     .click();
   await page.goto("/dashboard/nephrology/messages");
+  await openJohnThread(page);
   await expect(page.getByText(toB).first()).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText(toA)).toHaveCount(0);
 
