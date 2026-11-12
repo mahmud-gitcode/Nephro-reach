@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, isApiError } from "@/lib/api/client";
 import { combineReads } from "@/lib/data/asyncState";
@@ -15,8 +15,7 @@ import {
   type ApiProgramEnrollment,
 } from "./enrollment.mapping";
 import {
-  enrollInProgram,
-  enrollOnRoster,
+  enrollWithProgram,
   getSeats,
   listProgramCourses,
   listProgramEnrollments,
@@ -235,9 +234,6 @@ export type EnrollFailure = {
   field: "name" | "mrn" | "program" | "form";
   /** The server's code when it sent one. */
   code: string | null;
-  /** ① succeeded and ② failed: the patient is on the roster with no
-   *  program; only ② may be retried (never ① again). */
-  partial: boolean;
   error: unknown;
 };
 
@@ -253,29 +249,29 @@ export class EnrollError extends Error {
 }
 
 /** The form field a server refusal belongs on (spec 019 §4 codes). */
-export function enrollFieldFor(
-  error: unknown,
-  partial: boolean,
-): EnrollFailure["field"] {
-  if (partial) return "form";
+export function enrollFieldFor(error: unknown): EnrollFailure["field"] {
   if (isApiError(error, { code: "patients.mrn_taken" })) return "mrn";
   if (isApiError(error, { code: "patients.seats_full" })) return "name";
+  if (
+    isApiError(error, { code: "education.program_unknown" }) ||
+    isApiError(error, { code: "education.enrollment_course_unavailable" })
+  )
+    return "program";
   return "form";
 }
 
 /**
- * Enrolls a patient in two server operations (not atomic):
- * ① POST /organizations/:id/patients puts them on the roster;
- * ② POST /organizations/:id/program-enrollments enrolls them in a program.
- * A failure after ① keeps the patientId, so "retry" runs ② only.
- * Every outcome invalidates the roster, the enrollments and the seats, so
- * the server's answer is what shows.
+ * Enrolls a new patient in ONE server operation (backend spec 067):
+ * POST /organizations/:id/program-enrollments/with-patient puts them on
+ * the roster and in the program in one transaction, so a refusal (a 403
+ * for a role without programs edit, a full contract, a taken MRN) leaves
+ * nothing behind and nothing half-done to retry (P16F-1). Every outcome
+ * invalidates the roster, the enrollments and the seats, so the server's
+ * answer is what shows.
  */
 export function useEnrollPatient() {
   const queryClient = useQueryClient();
   const { organizationId } = useOfficeScope();
-  /* The patient ① created when ② failed: retry runs ② for them only. */
-  const [pendingPatientId, setPendingPatientId] = useState<string | null>(null);
 
   const invalidate = () =>
     Promise.all([
@@ -298,7 +294,6 @@ export function useEnrollPatient() {
         throw new EnrollError({
           field: "name",
           code: "client.first_and_last_name",
-          partial: false,
           error: new ApiError(400, "Enter first and last name."),
         });
       let program = programFor(draft.program);
@@ -310,46 +305,26 @@ export function useEnrollPatient() {
         throw new EnrollError({
           field: "program",
           code: "client.program_unknown",
-          partial: false,
           error: new ApiError(400, "Choose a program."),
         });
 
-      let patientId = pendingPatientId;
-      if (!patientId) {
-        try {
-          const mrn = draft.mrn.trim();
-          const created = await enrollOnRoster(orgId, {
-            firstName: name.firstName,
-            lastName: name.lastName,
-            ...(mrn ? { mrn } : {}),
-          });
-          patientId = created.patientId;
-        } catch (error) {
-          throw new EnrollError({
-            field: enrollFieldFor(error, false),
-            code: isApiError(error) ? error.code : null,
-            partial: false,
-            error,
-          });
-        }
-      }
       try {
+        const mrn = draft.mrn.trim();
         const source = sourceSlug(draft.source);
-        const enrolled = await enrollInProgram(orgId, {
-          patientId,
+        const created = await enrollWithProgram(orgId, {
+          firstName: name.firstName,
+          lastName: name.lastName,
+          ...(mrn ? { mrn } : {}),
           program: program.program,
           ...(program.courseId ? { courseId: program.courseId } : {}),
           ...(source ? { source } : {}),
           ...(draft.startDate ? { startDate: draft.startDate } : {}),
         });
-        setPendingPatientId(null);
-        return enrolled;
+        return created.programEnrollment;
       } catch (error) {
-        setPendingPatientId(patientId);
         throw new EnrollError({
-          field: "form",
+          field: enrollFieldFor(error),
           code: isApiError(error) ? error.code : null,
-          partial: true,
           error,
         });
       }
@@ -357,11 +332,5 @@ export function useEnrollPatient() {
     onSettled: invalidate,
   });
 
-  return {
-    ...mutation,
-    /** ① succeeded, ② did not: the next mutate retries ② only. */
-    partialPatientId: pendingPatientId,
-    /** Drop a half-done enrollment (closing the form). */
-    forgetPartial: () => setPendingPatientId(null),
-  };
+  return mutation;
 }

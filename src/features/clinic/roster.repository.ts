@@ -81,8 +81,9 @@ export function listProgramEnrollments(
   );
 }
 
-/** ① Puts the patient on the office roster. No email or phone is sent
- *  (D11 enroll-by-email is open). */
+/** Puts the patient on the office roster only. No email or phone is sent
+ *  (D11 enroll-by-email is open). The hospital's two-step admission uses
+ *  it; the clinic's enroll form uses `enrollWithProgram`. */
 export function enrollOnRoster(
   organizationId: string,
   body: {
@@ -98,21 +99,30 @@ export function enrollOnRoster(
   });
 }
 
-/** ② Enrolls a roster patient in a program. */
-export function enrollInProgram(
+/** Puts a new patient on the roster AND enrolls them in a program in one
+ *  server transaction (backend spec 067): both are saved or neither is.
+ *  The server needs programs edit and patients edit before it writes
+ *  anything, so a refusal never leaves a roster patient without a program
+ *  (P16F-1). No email or phone is sent (D11). */
+export function enrollWithProgram(
   organizationId: string,
   body: {
-    patientId: string;
+    firstName: string;
+    lastName: string;
+    mrn?: string;
     program: string;
     courseId?: string;
     source?: string;
     startDate?: string;
   },
 ) {
-  return api<ApiProgramEnrollment>(
-    officePath(organizationId, "/program-enrollments"),
-    { method: "POST", body },
-  );
+  return api<{
+    careRelationship: ApiEnrolledPatient;
+    programEnrollment: ApiProgramEnrollment;
+  }>(officePath(organizationId, "/program-enrollments/with-patient"), {
+    method: "POST",
+    body,
+  });
 }
 
 /** The contract's seats (read-only here; billing is its own page). */

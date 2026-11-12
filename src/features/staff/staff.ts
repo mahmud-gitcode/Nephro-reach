@@ -287,6 +287,11 @@ export const PERMISSIONS = [
     detail: "Add patients to the clinic and its programs",
   },
   {
+    id: "programs.enroll",
+    label: "Enroll patients in programs",
+    detail: "Choose the program when enrolling a patient",
+  },
+  {
     id: "messages.reply",
     label: "Message patients",
     detail: "Write to patients and reply in their conversations",

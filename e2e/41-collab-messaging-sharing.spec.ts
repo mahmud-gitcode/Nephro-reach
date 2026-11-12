@@ -16,7 +16,12 @@
    - API failure: an error state with Try again (never an empty inbox),
      recovery, and a 403 shows "not shared" with no retry.
    Synthetic data only: seed accounts and fresh *.example.test accounts. */
-import { request, type Page, type Request } from "@playwright/test";
+import {
+  request,
+  type BrowserContext,
+  type Page,
+  type Request,
+} from "@playwright/test";
 import { ApiClient, currentConsent, json } from "./fixtures/api";
 import {
   ACCOUNTS,
@@ -106,6 +111,32 @@ async function acceptAllStaff(account: Account) {
   }
 }
 
+/* The env's LOCAL S3 stand-in (E2E_STORAGE_ORIGIN, loopback only), exactly
+   as e2e/52 allows it. Why here (P16f): John's Riverside thread is shared
+   seed data, and other suites (the P16a member crawler) send messages with
+   synthetic PNG attachments into it. The API has no way to delete a sent
+   message (messages are part of the record), so the crawler cannot clean
+   them up, and the thread view then loads the image from the stand-in. Every
+   other host stays blocked by the shared guard. */
+const storageOrigin = (() => {
+  const raw = process.env.E2E_STORAGE_ORIGIN ?? "";
+  if (!raw) return null;
+  const u = new URL(raw);
+  if (!["localhost", "127.0.0.1"].includes(u.hostname))
+    throw new Error("E2E_STORAGE_ORIGIN must be the local S3 stand-in");
+  return u.origin;
+})();
+
+/** Lets this context reach the env's local S3 stand-in (and nothing else).
+ *  On the context, not the page, so a file opened in a new tab is covered. */
+async function allowLocalStorage(context: BrowserContext) {
+  if (!storageOrigin) return;
+  await context.route(
+    (url) => url.origin === storageOrigin,
+    (route) => route.continue(),
+  );
+}
+
 test.beforeEach(async ({ api }) => {
   const john = await api(ACCOUNTS.john);
   await john.post("/me/preferences/tour-completed");
@@ -121,6 +152,7 @@ test("member <-> office thread: start, unread, reply, read @phase11", async ({
   const answer = `${t} Office answer: please call us today.`;
 
   const member = await asUser(ACCOUNTS.john);
+  await allowLocalStorage(member.context);
   const calls = recordApiCalls(member.page);
   await member.page.goto("/dashboard/messages");
   await skipTour(member.page);
@@ -160,6 +192,7 @@ test("member <-> office thread: start, unread, reply, read @phase11", async ({
     expect(c.headers["x-organization-id"]).toBeUndefined();
 
   const clinicUi = await asUser(ACCOUNTS.clinic);
+  await allowLocalStorage(clinicUi.context);
   await clinicUi.page.goto("/dashboard/clinic/messages");
   /* The row by patient, not by its preview: when the office is closed the
      server adds its automatic reply after John's message, so the preview

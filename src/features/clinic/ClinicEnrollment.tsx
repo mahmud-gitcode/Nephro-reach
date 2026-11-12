@@ -66,7 +66,7 @@ import {
   type EnrollmentStatus,
   type Patient,
 } from "./enrollment.data";
-import { EnrollPatientModal } from "./EnrollPatientModal";
+import { EnrollPatientModal, useCanEnrollPatient } from "./EnrollPatientModal";
 import { UpdatedBar } from "./UpdatedBar";
 import { useClinicData, type ClinicData } from "./useClinicData";
 import { programFor } from "./enrollment.mapping";
@@ -147,16 +147,23 @@ function PanelHeading({
 
 /* ------------------------------------------------------- summary cards */
 
+/** Why "Enroll New Patient" is off for a role the server would refuse
+ *  (no programs edit, P16F-1): the same words as the form's own notice. */
+const NO_ENROLL = "Your role cannot enroll patients in a program.";
+
 function SummaryCards({
   total,
   seats,
   onEnroll,
+  canEnroll,
 }: {
   /** The server's roster count. */
   total: number;
   /** The contract's seats (null: unknown to this role). */
   seats: ClinicData["seats"];
   onEnroll: () => void;
+  /** The role can complete the enroll form (roster and a program). */
+  canEnroll: boolean;
 }) {
   const enrolled = total;
   /* The contract decides (allowed null: no seat limit). Unknown shows "—";
@@ -209,9 +216,11 @@ function SummaryCards({
       <Card as="article" padding="small" className="flex flex-col">
         <p className="text-heading-5 text-fg-secondary">Enroll New Patient</p>
         <p className="mt-stack-xs text-body-sm text-fg-muted">
-          {full
-            ? "Every contract seat is filled."
-            : "Add a new patient to your program."}
+          {!canEnroll
+            ? NO_ENROLL
+            : full
+              ? "Every contract seat is filled."
+              : "Add a new patient to your program."}
         </p>
         {/* The spacing goes on a wrapper, not on the button. `pt-stack-md`
             was on the Button itself, which added padding INSIDE a control
@@ -223,8 +232,14 @@ function SummaryCards({
             size="small"
             fullWidth
             onClick={onEnroll}
-            disabled={full}
-            title={full ? "All contract seats are filled" : undefined}
+            disabled={full || !canEnroll}
+            title={
+              !canEnroll
+                ? NO_ENROLL
+                : full
+                  ? "All contract seats are filled"
+                  : undefined
+            }
           >
             <Plus />
             Enroll New Patient
@@ -820,6 +835,7 @@ function EnrollmentView() {
   });
 
   const [enrolling, setEnrolling] = useState(false);
+  const canEnroll = useCanEnrollPatient();
   const [justEnrolled, setJustEnrolled] = useState<{
     name: string;
     patientId: string | null;
@@ -937,6 +953,7 @@ function EnrollmentView() {
         total={clinic.data?.rosterTotal ?? list.length}
         seats={clinic.data?.seats ?? null}
         onEnroll={() => setEnrolling(true)}
+        canEnroll={canEnroll}
       />
 
       {list.length === 0 ? (
@@ -945,7 +962,12 @@ function EnrollmentView() {
           title="No patients enrolled yet"
           description="Enroll your first patient to start their program."
           action={
-            <Button size="small" onClick={() => setEnrolling(true)}>
+            <Button
+              size="small"
+              onClick={() => setEnrolling(true)}
+              disabled={!canEnroll}
+              title={canEnroll ? undefined : NO_ENROLL}
+            >
               <Plus className="h-4 w-4" />
               Enroll New Patient
             </Button>

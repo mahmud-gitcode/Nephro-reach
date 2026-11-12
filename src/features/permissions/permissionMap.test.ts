@@ -139,6 +139,21 @@ describe("the fixed table", () => {
     expect(canWith(DIALYSIS.owner, "staff.manage")).toBe(true);
   });
 
+  it("enrolls in a program only with patients edit AND programs edit (P16F-1, spec 067)", () => {
+    /* The seeded dialysis Office Manager may put a patient on the roster
+       but not in a program: the server refuses the one-call enrollment. */
+    expect(canWith(DIALYSIS.officeManager, "patients.enroll")).toBe(true);
+    expect(canWith(DIALYSIS.officeManager, "programs.enroll")).toBe(false);
+    expect(canWith(DIALYSIS.socialWorker, "programs.enroll")).toBe(false);
+    expect(canWith(DIALYSIS.owner, "programs.enroll")).toBe(true);
+    expect(
+      canWith(office({ patients: 2, programs: 2 }), "programs.enroll"),
+    ).toBe(true);
+    expect(
+      canWith(office({ patients: 1, programs: 3 }), "programs.enroll"),
+    ).toBe(false);
+  });
+
   it("keeps platform pages to platform contexts", () => {
     const content: PermissionContext = {
       kind: "platform",

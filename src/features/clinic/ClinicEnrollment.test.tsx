@@ -38,6 +38,9 @@ const programs = (call: StubCall) =>
   call.path === `/organizations/${ORG}/program-enrollments`;
 const rosterPost = (call: StubCall) =>
   call.method === "POST" && call.path === `/organizations/${ORG}/patients`;
+const atomicPost = (call: StubCall) =>
+  call.method === "POST" &&
+  call.path === `/organizations/${ORG}/program-enrollments/with-patient`;
 
 function api(extra: StubHandler = () => undefined, context = officeContext()) {
   return stubApi((call) => {
@@ -150,7 +153,22 @@ describe("the roster read", () => {
   });
 });
 
-describe("enrolling a patient: two server calls", () => {
+/** A staff member (not the owner) with these levels. */
+function staffContext(permissions: Record<string, number>, role: string) {
+  const context = officeContext(permissions);
+  context.memberships[0] = {
+    ...context.memberships[0],
+    role,
+    isOwner: false,
+  };
+  return context;
+}
+
+/* The seeded dialysis Office Manager's levels: patients edit, programs
+   view only (backend built-in-roles.constants.ts). */
+const OFFICE_MANAGER = { patients: 2, programs: 1, billing: 1, reports: 1 };
+
+describe("enrolling a patient: one atomic server call (spec 067)", () => {
   it("explains what is missing before sending anything", async () => {
     const { calls } = api();
     renderPage();
@@ -165,18 +183,24 @@ describe("enrolling a patient: two server calls", () => {
     expect(calls.some((c) => c.method === "POST")).toBe(false);
   });
 
-  it("puts them on the roster, then in the program, and re-reads", async () => {
+  it("puts them on the roster and in the program in one call, and re-reads", async () => {
     const newId = testPatientId(77);
-    const { calls } = api((call) => {
-      if (rosterPost(call))
-        return {
-          status: 201,
-          data: { patientId: newId, mrn: "700001", status: "ACTIVE" },
-        };
-      if (call.method === "POST" && programs(call))
-        return { status: 201, data: { ...enrollments[0], patientId: newId } };
-      return undefined;
-    });
+    const { calls } = api((call) =>
+      atomicPost(call)
+        ? {
+            status: 201,
+            data: {
+              careRelationship: {
+                patientId: newId,
+                mrn: "700001",
+                status: "ACTIVE",
+                startedOn: "2026-11-12",
+              },
+              programEnrollment: { ...enrollments[0], patientId: newId },
+            },
+          }
+        : undefined,
+    );
     renderPage();
     await showing();
     const dialog = await openForm();
@@ -186,18 +210,15 @@ describe("enrolling a patient: two server calls", () => {
       await screen.findByText("Riley Q. Synthetic is enrolled."),
     ).toBeInTheDocument();
     const posts = calls.filter((c) => c.method === "POST");
+    /* One write: never the roster POST and the program POST apart. */
     expect(posts.map((c) => c.path)).toEqual([
-      `/organizations/${ORG}/patients`,
-      `/organizations/${ORG}/program-enrollments`,
+      `/organizations/${ORG}/program-enrollments/with-patient`,
     ]);
     /* Split on the last space; no email or phone is sent (D11). */
     expect(posts[0].body).toEqual({
       firstName: "Riley Q.",
       lastName: "Synthetic",
       mrn: "700001",
-    });
-    expect(posts[1].body).toEqual({
-      patientId: newId,
       program: "journey-21-day",
       source: "office-referral",
     });
@@ -211,7 +232,7 @@ describe("enrolling a patient: two server calls", () => {
 
   it("shows a taken MRN (409) on the MRN field", async () => {
     api((call) =>
-      rosterPost(call) ? apiError(409, "patients.mrn_taken") : undefined,
+      atomicPost(call) ? apiError(409, "patients.mrn_taken") : undefined,
     );
     renderPage();
     const dialog = await openForm();
@@ -225,7 +246,7 @@ describe("enrolling a patient: two server calls", () => {
 
   it("shows a full contract (409 seats_full) on the name field", async () => {
     api((call) =>
-      rosterPost(call) ? apiError(409, "patients.seats_full") : undefined,
+      atomicPost(call) ? apiError(409, "patients.seats_full") : undefined,
     );
     renderPage();
     const dialog = await openForm();
@@ -235,62 +256,34 @@ describe("enrolling a patient: two server calls", () => {
     ).toBeInTheDocument();
   });
 
-  it("after ① succeeds and ② fails, says so and retries ② only", async () => {
-    const newId = testPatientId(78);
-    let programFails = true;
-    const { calls } = api((call) => {
-      if (rosterPost(call))
-        return { status: 201, data: { patientId: newId, mrn: "700003" } };
-      if (call.method === "POST" && programs(call))
-        return programFails
-          ? apiError(500, null)
-          : { status: 201, data: { ...enrollments[0], patientId: newId } };
-      return undefined;
-    });
+  it("a 403 says the role cannot, never 'try again', and leaves nothing half-done (P16F-1)", async () => {
+    const { calls } = api((call) =>
+      atomicPost(call)
+        ? apiError(403, "access.organization_access_denied")
+        : undefined,
+    );
     renderPage();
     const dialog = await openForm();
-    await fill(dialog, "Riley Synthetic", "700003");
+    await fill(dialog, "Riley Synthetic", "700004");
     expect(
       await within(dialog).findByText(
-        "Patient added, program enrollment failed",
+        "Your role cannot enroll patients in this program. Nothing was saved.",
       ),
     ).toBeInTheDocument();
-
-    /* The retry runs ② for the patient ① created: the name and MRN they
-       were added with cannot be edited any more (QA round 1). */
+    expect(within(dialog).queryByText(/try/i)).not.toBeInTheDocument();
+    expect(within(dialog).queryByText(/Patient added/)).not.toBeInTheDocument();
+    /* Nothing is locked for a retry of a second step: there is none. */
     expect(
       within(dialog).getByRole("textbox", { name: /Full name/ }),
-    ).toHaveAttribute("readonly");
-    expect(
-      within(dialog).getByRole("textbox", { name: /MRN/ }),
-    ).toHaveAttribute("readonly");
-    await userEvent.type(
-      within(dialog).getByRole("textbox", { name: /Full name/ }),
-      "x",
-    );
-    expect(
-      within(dialog).getByRole("textbox", { name: /Full name/ }),
-    ).toHaveValue("Riley Synthetic");
-
-    programFails = false;
-    await userEvent.click(
-      within(dialog).getByRole("button", { name: "Enroll Patient" }),
-    );
-    expect(
-      await screen.findByText("Riley Synthetic is enrolled."),
-    ).toBeInTheDocument();
-    const programPosts = calls.filter(
-      (c) => c.method === "POST" && programs(c),
-    );
-    /* Never re-POST ① (it would 409 patient_already_enrolled). */
-    expect(calls.filter(rosterPost)).toHaveLength(1);
-    expect(programPosts).toHaveLength(2);
-    expect(programPosts[1].body).toMatchObject({ patientId: newId });
+    ).not.toHaveAttribute("readonly");
+    /* The roster-only POST is never sent. */
+    expect(calls.filter(rosterPost)).toHaveLength(0);
+    expect(calls.filter((c) => c.method === "POST")).toHaveLength(1);
   });
 
   it("has no accessibility violations with a server error on a field", async () => {
     api((call) =>
-      rosterPost(call) ? apiError(409, "patients.mrn_taken") : undefined,
+      atomicPost(call) ? apiError(409, "patients.mrn_taken") : undefined,
     );
     renderPage();
     const dialog = await openForm();
@@ -299,6 +292,42 @@ describe("enrolling a patient: two server calls", () => {
       "A patient with this MRN is already enrolled.",
     );
     expect(await axe(dialog)).toHaveNoViolations();
+  });
+});
+
+describe("a role without programs edit (P16F-1)", () => {
+  it("the dialysis Office Manager cannot open a program step it cannot complete", async () => {
+    const { calls } = api(
+      () => undefined,
+      staffContext(OFFICE_MANAGER, "Office Manager"),
+    );
+    renderPage();
+    await showing();
+    const buttons = screen.getAllByRole("button", {
+      name: /Enroll New Patient/,
+    });
+    for (const button of buttons) expect(button).toBeDisabled();
+    expect(
+      screen.getAllByText("Your role cannot enroll patients in a program.")
+        .length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryByRole("dialog", { name: "Enroll New Patient" }),
+    ).not.toBeInTheDocument();
+    expect(calls.some((c) => c.method === "POST")).toBe(false);
+  });
+
+  it("a role with patients edit and programs edit can enroll", async () => {
+    api(
+      () => undefined,
+      staffContext({ patients: 2, programs: 2, billing: 1 }, "Enrollment Lead"),
+    );
+    renderPage();
+    await showing();
+    const [button] = screen.getAllByRole("button", {
+      name: /Enroll New Patient/,
+    });
+    expect(button).toBeEnabled();
   });
 });
 

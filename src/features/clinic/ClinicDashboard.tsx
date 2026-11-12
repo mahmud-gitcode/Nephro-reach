@@ -48,8 +48,7 @@ import { cn } from "@/lib/utils/cn";
 import { tableIconButton } from "./tableButton";
 import { statusIconSolid, statusKeyTone } from "./StatusIconsSolid";
 import { UsersSolid } from "@/components/icons/solid";
-import { EnrollPatientModal } from "./EnrollPatientModal";
-import { useCan } from "@/features/staff/useStaffAccounts";
+import { EnrollPatientModal, useCanEnrollPatient } from "./EnrollPatientModal";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { UpdatedBar } from "./UpdatedBar";
 import {
@@ -833,7 +832,9 @@ function ToolUsagePanel() {
 export default function ClinicDashboard() {
   const dashboard = useClinicData();
   const [enrolling, setEnrolling] = useState(false);
-  const canEnroll = useCan("patients.enroll");
+  /* Roster AND a program to choose (P16F-1): a role the server would
+     refuse gets no "Enroll Patient" here. */
+  const canEnroll = useCanEnrollPatient();
   const [justEnrolled, setJustEnrolled] = useState<{
     name: string;
     patientId: string | null;

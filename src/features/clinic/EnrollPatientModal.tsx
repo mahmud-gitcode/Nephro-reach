@@ -19,6 +19,7 @@ import {
 } from "./enrollment.store";
 import {
   EnrollError,
+  type EnrollFailure,
   useClinicData,
   useEnrollPatient,
   useProgramCourses,
@@ -28,6 +29,7 @@ import { useOptionalAuth } from "@/features/auth/AuthContext";
 import { organizationFor } from "@/features/staff/staff";
 import { CcmEnrollPartialError, useCcm, type CcmActions } from "./useCcm";
 import { actionErrorText } from "./officeContext";
+import { isApiError } from "@/lib/api/client";
 import { ConditionSelect } from "./ConditionSelect";
 import { useConditionLibrary } from "./useConditionLibrary";
 import { chronicCount, type CcmCondition } from "./ccmConditions";
@@ -48,6 +50,32 @@ type EnrollProps = {
    *  the patient went onto the CCM dashboard instead of the roster. */
   onEnrolled: (name: string, patientId: string | null, ccm?: boolean) => void;
 };
+
+/** No program the role may enroll into, so the form cannot be completed. */
+const NO_PROGRAM_ACCESS =
+  "Your role cannot enroll patients in a program. The office owner, or a role with programs edit, can.";
+
+/** A 403 is "your role can't", never "try again" (P16F-1). The server
+ *  enrolls in one transaction, so a refusal saved nothing. */
+function notEnrolledText(failure: EnrollFailure | null, error: Error): string {
+  if (isApiError(failure?.error, { status: 403 }))
+    return "Your role cannot enroll patients in this program. Nothing was saved.";
+  return enrollErrorText(failure?.code ?? null, error.message);
+}
+
+/**
+ * Whether the signed-in role can complete the enroll form: it puts
+ * patients on the roster (patients edit) and has a program to choose —
+ * programs edit (the server checks both before writing, spec 067), or CCM
+ * at the nephrology office. Pages hide or disable "Enroll" without it.
+ */
+export function useCanEnrollPatient(): boolean {
+  const offersCcm =
+    organizationFor(useOptionalAuth()?.user)?.portal === "nephrology";
+  const roster = useCan("patients.enroll");
+  const program = useCan("programs.enroll");
+  return roster && (program || offersCcm);
+}
 
 export function EnrollPatientModal(props: EnrollProps) {
   /* Only the nephrology office runs CCM, so only its form offers it — and
@@ -77,36 +105,45 @@ function EnrollForm({
   /** The CCM record and condition library, for the nephrology office. */
   ccm?: { store: CcmActions; library: CcmCondition[] };
 }) {
-  const [draft, setDraft] = useState<EnrollmentDraft>(emptyDraft);
+  const offersCcm = Boolean(ccm);
+  /* Programs edit as well as patients edit: the server refuses the whole
+     enrollment without it (spec 067), so no program is offered then. */
+  const canProgram = useCan("programs.enroll");
+  const [draft, setDraft] = useState<EnrollmentDraft>(() =>
+    canProgram || !offersCcm
+      ? emptyDraft()
+      : { ...emptyDraft(), program: CCM_PROGRAM },
+  );
   const [attempted, setAttempted] = useState(false);
   const enroll = useEnrollPatient();
   const courses = useProgramCourses();
-  const programs = useMemo(() => enrollablePrograms(courses), [courses]);
+  const programs = useMemo(
+    () => (canProgram ? enrollablePrograms(courses) : []),
+    [courses, canProgram],
+  );
   const seats = useClinicData().data?.seats ?? null;
   const failure =
     enroll.error instanceof EnrollError ? enroll.error.failure : null;
   const serverError = (field: "name" | "mrn" | "program") =>
-    failure && !failure.partial && failure.field === field
+    failure && failure.field === field
       ? enrollErrorText(
           failure.code,
           enroll.error instanceof Error ? enroll.error.message : "",
         )
       : undefined;
-  const canEnroll = useCan("patients.enroll");
-  /* ① put this patient on the roster and ② failed: the retry runs ② for
-     that patient only, so the name and MRN they were added with stay as
-     they are (an edit here would never reach the server, QA round 1). */
-  /* The same for CCM "enroll new": (1) roster, (2) CCM enrolment. When (2)
+  const canRoster = useCan("patients.enroll");
+  /* Nothing to choose: no programs edit and no CCM here. */
+  const noProgram = !canProgram && !offersCcm;
+  const canEnroll = canRoster && !noProgram;
+  /* CCM "enroll new" is still two calls: (1) roster, (2) CCM enrolment. When (2)
      fails, the patient (1) created is kept and the retry runs (2) only
      (adding them again would be refused as patients.mrn_taken). */
   const [ccmPatientId, setCcmPatientId] = useState<string | null>(null);
   const ccmLocked = ccmPatientId !== null;
-  const locked = enroll.partialPatientId !== null || ccmLocked;
-  const lockedHint = ccmLocked
-    ? "Already added to your roster. Only the CCM enrollment is tried again."
-    : "Already added to your roster. Only the program is tried again.";
+  const locked = ccmLocked;
+  const lockedHint =
+    "Already added to your roster. Only the CCM enrollment is tried again.";
 
-  const offersCcm = Boolean(ccm);
   const isCcm = offersCcm && (ccmLocked || draft.program === CCM_PROGRAM);
   const library = ccm?.library ?? [];
   const [dob, setDob] = useState("");
@@ -240,10 +277,14 @@ function EnrollForm({
       }
     >
       <form id="enroll-form" onSubmit={submit} noValidate>
-        {!canEnroll ? (
+        {!canRoster ? (
           <Alert tone="info" className="mb-stack-lg">
             Your role cannot enroll patients. A care coordinator, the front desk
             or an administrator can.
+          </Alert>
+        ) : noProgram ? (
+          <Alert tone="info" className="mb-stack-lg">
+            {NO_PROGRAM_ACCESS}
           </Alert>
         ) : null}
         {ccmFailure ? (
@@ -260,24 +301,12 @@ function EnrollForm({
             {ccmLocked ? " Press Enroll in CCM to try the CCM step again." : ""}
           </Alert>
         ) : null}
-        {failure?.partial ? (
-          <Alert
-            tone="danger"
-            className="mb-stack-lg"
-            title="Patient added, program enrollment failed"
-          >
-            {enrollErrorText(
-              failure.code,
-              "The program enrollment did not save.",
-            )}{" "}
-            Press Enroll Patient to try the program again.
-          </Alert>
-        ) : enroll.error &&
-          failure?.field !== "name" &&
-          failure?.field !== "mrn" &&
-          failure?.field !== "program" ? (
+        {enroll.error &&
+        failure?.field !== "name" &&
+        failure?.field !== "mrn" &&
+        failure?.field !== "program" ? (
           <Alert tone="danger" className="mb-stack-lg" title="Not enrolled">
-            {enrollErrorText(failure?.code ?? null, enroll.error.message)}
+            {notEnrolledText(failure, enroll.error)}
           </Alert>
         ) : null}
 

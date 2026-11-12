@@ -136,6 +136,12 @@ export const REQUIREMENTS = {
   /* No resource: the owner's alone (matrix.md ⚠B). */
   "account.manage": office(),
   "patients.enroll": office([["patients", 2]]),
+  /* The clinic's enroll form puts the patient on the roster AND in a
+     program in one server call, which needs both (backend spec 067). */
+  "programs.enroll": office([
+    ["patients", 2],
+    ["programs", 2],
+  ]),
   "messages.reply": office([["messages", 2]]),
   "messages.team": office([["team_messages", 2]]),
   /* D4: rides to access visits are the `transport` resource (PM-2). */

@@ -141,11 +141,11 @@ test("J8-1 office roster and enrollment, ?patient=<uuid> URLs @phase8", async ({
       timeout: 20_000,
     });
 
-    /* Two server calls, in order, for the office picked. */
+    /* One server call (roster + program in one transaction, backend
+       spec 067), for the office picked. */
     const posts = calls.filter((c) => c.method === "POST");
     expect(posts.map((c) => c.path)).toEqual([
-      `/organizations/${riverside}/patients`,
-      `/organizations/${riverside}/program-enrollments`,
+      `/organizations/${riverside}/program-enrollments/with-patient`,
     ]);
     const roster = await json(
       await clinicApi.get(
