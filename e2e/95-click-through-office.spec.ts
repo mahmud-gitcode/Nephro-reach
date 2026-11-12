@@ -1755,8 +1755,12 @@ for (const role of ROLES) {
     const me = await (await api(role.account)).context();
     expect(me.memberships.length, "an office account").toBeGreaterThan(0);
     const { page } = await asUser(role.account);
+    /* On the context, not the page: a sent file opens its short-lived
+       storage link in a new tab (openAttachment, target=_blank), which a
+       page route does not cover. Only this one loopback origin is let
+       through; every other host stays blocked by the shared guard. */
     if (STORAGE_ORIGIN)
-      await page.route(
+      await page.context().route(
         (url) => url.origin === STORAGE_ORIGIN,
         (route) => route.continue(),
       );
