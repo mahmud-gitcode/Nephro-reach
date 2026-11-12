@@ -14,7 +14,11 @@ import { AuthProvider, useOptionalAuth } from "@/features/auth/AuthContext";
 import type { MeContext } from "@/features/auth/auth.types";
 import { pageOf, stubApi } from "@/features/profile/memberApiStub";
 import { apiRoster, officeContext } from "./rosterTestData";
-import { EnrollPatientModal, useCanEnrollPatient } from "./EnrollPatientModal";
+import {
+  CCM_PROGRAM,
+  EnrollPatientModal,
+  useCanEnrollPatient,
+} from "./EnrollPatientModal";
 
 /* P16F-1: the enroll form puts a patient on the roster AND in a program in
    one server call (backend spec 067), which needs patients edit and
@@ -141,6 +145,80 @@ describe("useCanEnrollPatient (P16F-1)", () => {
         ),
       ),
     ).toBe(true);
+  });
+
+  it("is false at the nephrology office without ccm edit or programs edit: the CCM step would be refused", async () => {
+    expect(
+      await canEnroll(
+        staffContext(
+          { patients: 2, ccm: 1, programs: 1 },
+          "Front Desk",
+          "NEPHROLOGY_OFFICE",
+        ),
+      ),
+    ).toBe(false);
+    cleanup();
+    expect(
+      await canEnroll(
+        staffContext({ patients: 2 }, "Front Desk", "NEPHROLOGY_OFFICE"),
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("the nephrology enroll form for a role without ccm edit", () => {
+  it("shows the no-access notice and no CCM choice without programs edit", async () => {
+    const { calls } = api(
+      staffContext(
+        { patients: 2, ccm: 1, programs: 1 },
+        "Front Desk",
+        "NEPHROLOGY_OFFICE",
+      ),
+    );
+    render(<EnrollPatientModal onClose={vi.fn()} onEnrolled={vi.fn()} />, {
+      wrapper,
+    });
+    const dialog = await screen.findByRole("dialog", {
+      name: "Enroll New Patient",
+    });
+    expect(
+      await within(dialog).findByText(
+        /Your role cannot enroll patients in a program\./,
+      ),
+    ).toBeInTheDocument();
+    const program = within(dialog).getByRole("combobox", { name: /Program/ });
+    expect(within(program).queryAllByRole("option")).toEqual([]);
+    expect(
+      within(dialog).getByRole("button", { name: "Enroll Patient" }),
+    ).toBeDisabled();
+    expect(calls.some((c) => c.method === "POST")).toBe(false);
+  });
+
+  it("offers the programs but not CCM with programs edit", async () => {
+    api(
+      staffContext(
+        { patients: 2, ccm: 1, programs: 2 },
+        "Enrollment Lead",
+        "NEPHROLOGY_OFFICE",
+      ),
+    );
+    render(<EnrollPatientModal onClose={vi.fn()} onEnrolled={vi.fn()} />, {
+      wrapper,
+    });
+    const dialog = await screen.findByRole("dialog", {
+      name: "Enroll New Patient",
+    });
+    await waitFor(() =>
+      expect(
+        within(dialog).getByRole("button", { name: "Enroll Patient" }),
+      ).toBeEnabled(),
+    );
+    const program = within(dialog).getByRole("combobox", { name: /Program/ });
+    const options = within(program)
+      .getAllByRole("option")
+      .map((o) => o.textContent);
+    expect(options.length).toBeGreaterThan(0);
+    expect(options).not.toContain(CCM_PROGRAM);
   });
 });
 

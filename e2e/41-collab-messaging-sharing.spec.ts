@@ -111,9 +111,12 @@ async function acceptAllStaff(account: Account) {
   }
 }
 
-/* The env's LOCAL S3 stand-in (E2E_STORAGE_ORIGIN, loopback only), exactly
-   as e2e/52 allows it. Why here (P16f): John's Riverside thread is shared
-   seed data, and other suites (the P16a member crawler) send messages with
+/* The env's LOCAL S3 stand-in (E2E_STORAGE_ORIGIN, loopback only), with the
+   same origin check as e2e/52. One difference: e2e/52 routes it on the page,
+   this file on the browser context, so a file opened in a new tab
+   (target=_blank) is covered too. The allow is still that one loopback
+   origin; every other host stays blocked. Why here (P16f): John's
+   Riverside thread is shared seed data, and other suites (the P16a member crawler) send messages with
    synthetic PNG attachments into it. The API has no way to delete a sent
    message (messages are part of the record), so the crawler cannot clean
    them up, and the thread view then loads the image from the stand-in. Every

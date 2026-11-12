@@ -185,6 +185,10 @@ describe("CCM enroll new: roster, then CCM, with a partial retry", () => {
       await within(dialog).findByText("Patient added, CCM enrollment failed"),
     ).toBeInTheDocument();
     expect(onEnrolled).not.toHaveBeenCalled();
+    /* A 500 can pass: the retry is offered. */
+    expect(
+      within(dialog).getByText(/try the CCM step again/),
+    ).toBeInTheDocument();
 
     /* Name, MRN and date of birth went with the roster POST: locked. */
     for (const field of [
@@ -230,6 +234,28 @@ describe("CCM enroll new: roster, then CCM, with a partial retry", () => {
       providerName: "Dr. Synthetic",
       careManagerName: "Nurse Synthetic",
     });
+  }, 15_000);
+
+  it("a CCM step refused with a 403 offers no retry: the role cannot, so trying again cannot succeed", async () => {
+    api((c) => {
+      if (rosterPost(c))
+        return { status: 201, data: { patientId: NEW_ID, mrn: "700091" } };
+      if (ccmPost(c)) return apiError(403, null);
+      return undefined;
+    });
+    renderModal();
+    const dialog = await fillCcm();
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Enroll in CCM" }),
+    );
+    expect(
+      await within(dialog).findByText("Patient added, CCM enrollment failed"),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/You do not have access to do that/),
+    ).toBeInTheDocument();
+    expect(within(dialog).queryByText(/try the CCM step again/)).toBeNull();
+    expect(within(dialog).queryByText(/try/i)).toBeNull();
   }, 15_000);
 
   it("a refused roster POST (taken MRN) is not a partial: nothing is locked", async () => {

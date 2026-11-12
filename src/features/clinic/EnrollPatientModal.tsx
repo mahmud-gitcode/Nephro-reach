@@ -67,21 +67,30 @@ function notEnrolledText(failure: EnrollFailure | null, error: Error): string {
  * Whether the signed-in role can complete the enroll form: it puts
  * patients on the roster (patients edit) and has a program to choose —
  * programs edit (the server checks both before writing, spec 067), or CCM
- * at the nephrology office. Pages hide or disable "Enroll" without it.
+ * at the nephrology office with CCM edit (the CCM step is its own call,
+ * which needs ccm edit). Pages hide or disable "Enroll" without it.
  */
 export function useCanEnrollPatient(): boolean {
-  const offersCcm =
-    organizationFor(useOptionalAuth()?.user)?.portal === "nephrology";
+  const offersCcm = useOffersCcm();
   const roster = useCan("patients.enroll");
   const program = useCan("programs.enroll");
   return roster && (program || offersCcm);
 }
 
+/** CCM is a choice only at the nephrology office, and only for a role that
+ *  can write a CCM enrollment (ccm edit). Without it the CCM step after the
+ *  roster POST is refused, which would leave a roster patient not in CCM. */
+function useOffersCcm(): boolean {
+  const nephrology =
+    organizationFor(useOptionalAuth()?.user)?.portal === "nephrology";
+  const canCcm = useCan("ccm.log");
+  return nephrology && canCcm;
+}
+
 export function EnrollPatientModal(props: EnrollProps) {
   /* Only the nephrology office runs CCM, so only its form offers it — and
      only it loads the CCM record. */
-  const offersCcm =
-    organizationFor(useOptionalAuth()?.user)?.portal === "nephrology";
+  const offersCcm = useOffersCcm();
   return offersCcm ? <CcmEnrollForm {...props} /> : <EnrollForm {...props} />;
 }
 
@@ -105,7 +114,10 @@ function EnrollForm({
   /** The CCM record and condition library, for the nephrology office. */
   ccm?: { store: CcmActions; library: CcmCondition[] };
 }) {
-  const offersCcm = Boolean(ccm);
+  /* The CCM form is chosen with ccm edit; checked again here so a role
+     without it never gets a CCM step it cannot complete. */
+  const canCcm = useCan("ccm.log");
+  const offersCcm = Boolean(ccm) && canCcm;
   /* Programs edit as well as patients edit: the server refuses the whole
      enrollment without it (spec 067), so no program is offered then. */
   const canProgram = useCan("programs.enroll");
@@ -132,7 +144,7 @@ function EnrollForm({
         )
       : undefined;
   const canRoster = useCan("patients.enroll");
-  /* Nothing to choose: no programs edit and no CCM here. */
+  /* Nothing to choose: no programs edit and no CCM (with ccm edit) here. */
   const noProgram = !canProgram && !offersCcm;
   const canEnroll = canRoster && !noProgram;
   /* CCM "enroll new" is still two calls: (1) roster, (2) CCM enrolment. When (2)
@@ -298,7 +310,10 @@ function EnrollForm({
             }
           >
             {actionErrorText(ccmFailure)}
-            {ccmLocked ? " Press Enroll in CCM to try the CCM step again." : ""}
+            {/* A 403 is "your role can't": trying again cannot succeed. */}
+            {ccmLocked && !isApiError(ccmFailure, { status: 403 })
+              ? " Press Enroll in CCM to try the CCM step again."
+              : ""}
           </Alert>
         ) : null}
         {enroll.error &&
