@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from "react";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { useLanguageCode } from "@/context/LanguageContext";
 import { Input, type InputProps } from "./Input";
 
 /* ==========================================================================
@@ -29,10 +30,11 @@ export type SearchFieldProps = Omit<
 export function SearchField({
   label,
   shortcut = false,
-  placeholder = "Search…",
+  placeholder,
   className,
   ...rest
 }: SearchFieldProps) {
+  const isEs = useLanguageCode() === "ES";
   const ref = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -54,7 +56,7 @@ export function SearchField({
         type="search"
         inputSize="small"
         leadingIcon={<Search />}
-        placeholder={placeholder}
+        placeholder={placeholder ?? (isEs ? "Buscar…" : "Search…")}
         aria-label={label}
         aria-keyshortcuts={shortcut ? "Meta+K Control+K" : undefined}
         // Room for the key chip.

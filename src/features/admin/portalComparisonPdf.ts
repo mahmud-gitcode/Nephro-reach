@@ -9,6 +9,7 @@ import {
   CONTROL,
   PORTALS,
   SECTIONS,
+  localize,
   type Cell,
   type Limited,
 } from "./portalComparison.data";
@@ -97,31 +98,45 @@ const FEATURE_WIDTH = 220;
 const COL_WIDTH = (PAGE_WIDTH - MARGIN * 2 - FEATURE_WIDTH) / PORTALS.length;
 const colX = (i: number) => MARGIN + FEATURE_WIDTH + i * COL_WIDTH;
 
-function cellText(cell: Cell): string {
+function cellText(cell: Cell, isEs = false): string {
   if (typeof cell === "number") return String(cell);
-  if (cell === "yes") return "Yes";
+  if (cell === "yes") return isEs ? "Sí" : "Yes";
   if (cell === "no") return "-";
-  return "Limited*";
+  return isEs ? "Limitado*" : "Limited*";
 }
 
-/** The comparison as PDF file bytes. */
-export function comparisonPdf(today = new Date()): Uint8Array<ArrayBuffer> {
+/** The comparison as PDF file bytes (Spanish when `isEs`; WinAnsi carries
+ *  the accented letters). */
+export function comparisonPdf(
+  today = new Date(),
+  isEs = false,
+): Uint8Array<ArrayBuffer> {
   const l = new Layout();
   const line = BODY + 4;
+  const tr = (text: string) => localize(text, isEs);
+  const docTitle = isEs
+    ? "NephroReach - Comparación de portales"
+    : "NephroReach - Portal Comparison";
 
   /* Title */
-  l.text("NephroReach - Portal Comparison", MARGIN, 16, true);
+  l.text(docTitle, MARGIN, 16, true);
   l.y -= 18;
+  const generated = today.toLocaleDateString(isEs ? "es-US" : "en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
   l.text(
-    `What each organization's portal has. Generated ${today.toLocaleDateString(
-      "en-US",
-      { month: "long", day: "numeric", year: "numeric" },
-    )}.`,
+    isEs
+      ? `Lo que tiene el portal de cada organización. Generado el ${generated}.`
+      : `What each organization's portal has. Generated ${generated}.`,
     MARGIN,
   );
   l.y -= line;
   l.text(
-    "Yes = has it   - = does not have it   Limited* = partly; see the notes after the table",
+    isEs
+      ? "Sí = lo tiene   - = no lo tiene   Limitado* = en parte; vea las notas después de la tabla"
+      : "Yes = has it   - = does not have it   Limited* = partly; see the notes after the table",
     MARGIN,
   );
   l.y -= line + 6;
@@ -129,11 +144,11 @@ export function comparisonPdf(today = new Date()): Uint8Array<ArrayBuffer> {
   /* Table header, repeated on every page the table runs onto. */
   const header = () => {
     const nameLines = PORTALS.map((p) =>
-      wrap(p.name, charsFor(COL_WIDTH - 6, BODY)),
+      wrap(tr(p.name), charsFor(COL_WIDTH - 6, BODY)),
     );
     const rows = Math.max(...nameLines.map((n) => n.length));
     l.need(rows * line + 6);
-    l.text("Feature", MARGIN, BODY, true);
+    l.text(isEs ? "Función" : "Feature", MARGIN, BODY, true);
     nameLines.forEach((lines, i) =>
       lines.forEach((t, j) =>
         l.page.texts.push({
@@ -154,10 +169,10 @@ export function comparisonPdf(today = new Date()): Uint8Array<ArrayBuffer> {
   for (const section of SECTIONS) {
     l.need(line * 2);
     if (l.page.texts.length === 0) header();
-    l.text(section.title.toUpperCase(), MARGIN, BODY, true);
+    l.text(tr(section.title).toUpperCase(), MARGIN, BODY, true);
     l.y -= line;
     for (const row of section.rows) {
-      const lines = wrap(row.feature, charsFor(FEATURE_WIDTH - 8, BODY));
+      const lines = wrap(tr(row.feature), charsFor(FEATURE_WIDTH - 8, BODY));
       const before = l.pages.length;
       l.need(lines.length * line + 2);
       if (l.pages.length !== before) header();
@@ -169,7 +184,9 @@ export function comparisonPdf(today = new Date()): Uint8Array<ArrayBuffer> {
           size: BODY,
         }),
       );
-      PORTALS.forEach((p, i) => l.text(cellText(row.cells[p.id]), colX(i)));
+      PORTALS.forEach((p, i) =>
+        l.text(cellText(row.cells[p.id], isEs), colX(i)),
+      );
       l.y -= (lines.length - 1) * line + 4;
       l.rule(0.3);
       l.y -= line;
@@ -184,7 +201,11 @@ export function comparisonPdf(today = new Date()): Uint8Array<ArrayBuffer> {
       for (const p of PORTALS) {
         const cell = row.cells[p.id];
         if (typeof cell === "object") {
-          limited.push({ feature: row.feature, portal: p.name, detail: cell });
+          limited.push({
+            feature: tr(row.feature),
+            portal: tr(p.name),
+            detail: cell,
+          });
         }
       }
     }
@@ -193,7 +214,14 @@ export function comparisonPdf(today = new Date()): Uint8Array<ArrayBuffer> {
   const full = charsFor(PAGE_WIDTH - MARGIN * 2 - 12, BODY);
   l.y -= line;
   l.need(line * 3);
-  l.text("* Limited - what is and is not included", MARGIN, 12, true);
+  l.text(
+    isEs
+      ? "* Limitado - qué se incluye y qué no"
+      : "* Limited - what is and is not included",
+    MARGIN,
+    12,
+    true,
+  );
   l.y -= line + 6;
   for (const item of limited) {
     l.need(line * 4);
@@ -204,7 +232,7 @@ export function comparisonPdf(today = new Date()): Uint8Array<ArrayBuffer> {
       l.text(label, MARGIN + 6, BODY, true);
       l.y -= line;
       for (const entry of entries) {
-        const lines = wrap(entry, full - 4);
+        const lines = wrap(tr(entry), full - 4);
         l.need(lines.length * line);
         lines.forEach((t, j) => {
           l.text(j === 0 ? `${mark} ${t}` : `  ${t}`, MARGIN + 12);
@@ -212,25 +240,39 @@ export function comparisonPdf(today = new Date()): Uint8Array<ArrayBuffer> {
         });
       }
     };
-    list("Has:", "+", item.detail.included);
-    list("Does not have:", "x", item.detail.notIncluded);
+    list(isEs ? "Tiene:" : "Has:", "+", item.detail.included);
+    list(isEs ? "No tiene:" : "Does not have:", "x", item.detail.notIncluded);
     l.y -= 6;
   }
 
   /* Who controls staff and roles — kept together on one page. */
   l.y -= line;
   l.need(line * (4 + CONTROL.length * 2) + 30);
-  l.text("Who controls staff and roles", MARGIN, 12, true);
+  l.text(
+    isEs
+      ? "Quién controla el personal y los roles"
+      : "Who controls staff and roles",
+    MARGIN,
+    12,
+    true,
+  );
   l.y -= line + 6;
   const c1 = 150;
   const c2 = 180;
   const cols = [MARGIN, MARGIN + c1, MARGIN + c1 + c2];
   const widths = [c1, c2, PAGE_WIDTH - MARGIN - (MARGIN + c1 + c2)];
-  [
-    "Organization",
-    "Creates roles & turns features on/off",
-    "Adds staff & assigns roles",
-  ].forEach((h, i) => {
+  (isEs
+    ? [
+        "Organización",
+        "Crea roles y activa/desactiva funciones",
+        "Agrega personal y asigna roles",
+      ]
+    : [
+        "Organization",
+        "Creates roles & turns features on/off",
+        "Adds staff & assigns roles",
+      ]
+  ).forEach((h, i) => {
     wrap(h, charsFor(widths[i] - 8, BODY)).forEach((t, j) =>
       l.page.texts.push({
         text: t,
@@ -246,7 +288,7 @@ export function comparisonPdf(today = new Date()): Uint8Array<ArrayBuffer> {
   l.y -= line;
   for (const row of CONTROL) {
     const cells = [row.portal, row.roles, row.staff].map((t, i) =>
-      wrap(t, charsFor(widths[i] - 8, BODY)),
+      wrap(tr(t), charsFor(widths[i] - 8, BODY)),
     );
     const rows = Math.max(...cells.map((c) => c.length));
     l.need(rows * line + 4);
@@ -268,19 +310,23 @@ export function comparisonPdf(today = new Date()): Uint8Array<ArrayBuffer> {
   /* Page numbers, once the count is known. */
   l.pages.forEach((page, i) =>
     page.texts.push({
-      text: `NephroReach - Portal Comparison   Page ${i + 1} of ${l.pages.length}`,
+      text: isEs
+        ? `${docTitle}   Página ${i + 1} de ${l.pages.length}`
+        : `NephroReach - Portal Comparison   Page ${i + 1} of ${l.pages.length}`,
       x: MARGIN,
       y: MARGIN - 10,
       size: 7,
     }),
   );
 
-  return pdfBytes(buildPdfDocument(l.pages, "NephroReach - Portal Comparison"));
+  return pdfBytes(buildPdfDocument(l.pages, docTitle));
 }
 
 /** Builds the PDF and hands it to the browser to save. */
-export function downloadComparisonPdf(): void {
-  const blob = new Blob([comparisonPdf()], { type: "application/pdf" });
+export function downloadComparisonPdf(isEs = false): void {
+  const blob = new Blob([comparisonPdf(new Date(), isEs)], {
+    type: "application/pdf",
+  });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;

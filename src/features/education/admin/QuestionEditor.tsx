@@ -19,6 +19,7 @@ import {
   formatClockShort,
   isChoice,
   parseClock,
+  kindLabel,
   QUESTION_KINDS,
   questionProblem,
   withKind,
@@ -29,6 +30,7 @@ import type {
   VideoQuestion,
 } from "@/features/education/questions.types";
 import { Field, FIELD_CLASS } from "./ClassWizardSteps";
+import { useLanguage } from "@/context/LanguageContext";
 
 /* ==========================================================================
    Question builder
@@ -37,6 +39,20 @@ import { Field, FIELD_CLASS } from "./ClassWizardSteps";
    plain lists (lesson activities, module checks, the final exam) and timed
    lists (pop-ups during a video).
    ========================================================================== */
+
+/* questionProblem() returns English; the editor shows it in Spanish too. */
+const PROBLEM_ES: Record<string, string> = {
+  "Add the question text.": "Agregue el texto de la pregunta.",
+  "Describe the scenario.": "Describa el escenario.",
+  "Add at least two options.": "Agregue al menos dos opciones.",
+  "Every option needs text.": "Cada opción necesita texto.",
+  "Pick the correct answer.": "Elija la respuesta correcta.",
+  "Add at least two pairs.": "Agregue al menos dos pares.",
+  "Every pair needs both sides.": "Cada par necesita ambos lados.",
+  "Add at least one field.": "Agregue al menos un campo.",
+  "Every field needs a label.": "Cada campo necesita una etiqueta.",
+  "Enter the time as m:ss.": "Ingrese el tiempo como m:ss.",
+};
 
 const ICON_BUTTON =
   "flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-surface-sunken hover:text-fg-secondary disabled:cursor-not-allowed disabled:opacity-40";
@@ -58,10 +74,12 @@ function BilingualInput({
   multiline?: boolean;
   placeholder?: string;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const Control = multiline ? "textarea" : "input";
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <Field label={`${label} (English)`}>
+      <Field label={isEs ? `${label} (inglés)` : `${label} (English)`}>
         <Control
           className={`${FIELD_CLASS} ${multiline ? "resize-y" : ""}`}
           rows={multiline ? 3 : undefined}
@@ -70,7 +88,14 @@ function BilingualInput({
           onChange={(event) => onEn(event.target.value)}
         />
       </Field>
-      <Field label={`${label} (Spanish)`} hint="Falls back to English if empty">
+      <Field
+        label={isEs ? `${label} (español)` : `${label} (Spanish)`}
+        hint={
+          isEs
+            ? "Si está vacío, se usa el inglés"
+            : "Falls back to English if empty"
+        }
+      >
         <Control
           className={`${FIELD_CLASS} ${multiline ? "resize-y" : ""}`}
           rows={multiline ? 3 : undefined}
@@ -106,6 +131,8 @@ export function QuestionEditorModal({
     initialAt !== undefined ? formatClockShort(initialAt) : "0:30",
   );
 
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const set = (patch: Partial<Question>) =>
     setDraft((current) => ({ ...current, ...patch }));
 
@@ -121,27 +148,37 @@ export function QuestionEditorModal({
       open
       onClose={onClose}
       size="wide"
-      title={initial ? "Edit question" : "New question"}
+      title={
+        initial
+          ? isEs
+            ? "Editar pregunta"
+            : "Edit question"
+          : isEs
+            ? "Nueva pregunta"
+            : "New question"
+      }
       description={
         withTime
-          ? "The video pauses at this time and shows the question."
+          ? isEs
+            ? "El video se detiene en este momento y muestra la pregunta."
+            : "The video pauses at this time and shows the question."
           : undefined
       }
       footer={
         <>
           {problem ? (
             <span className="mr-auto text-body-sm text-fg-muted">
-              {problem}
+              {isEs ? (PROBLEM_ES[problem] ?? problem) : problem}
             </span>
           ) : null}
           <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
-            Cancel
+            {isEs ? "Cancelar" : "Cancel"}
           </Button>
           <Button
             onClick={() => onSave(draft, seconds ?? 0)}
             disabled={Boolean(problem)}
           >
-            Save question
+            {isEs ? "Guardar pregunta" : "Save question"}
           </Button>
         </>
       }
@@ -150,7 +187,7 @@ export function QuestionEditorModal({
         <div
           className={`grid grid-cols-1 gap-4 ${withTime ? "sm:grid-cols-[minmax(0,1fr)_160px]" : ""}`}
         >
-          <Field label="Question type">
+          <Field label={isEs ? "Tipo de pregunta" : "Question type"}>
             <select
               className={`${FIELD_CLASS} cursor-pointer`}
               value={draft.kind}
@@ -162,14 +199,18 @@ export function QuestionEditorModal({
             >
               {kinds.map((entry) => (
                 <option key={entry.kind} value={entry.kind}>
-                  {entry.labelEn}
-                  {entry.scored ? "" : " (not marked)"}
+                  {isEs ? entry.labelEs : entry.labelEn}
+                  {entry.scored
+                    ? ""
+                    : isEs
+                      ? " (sin calificar)"
+                      : " (not marked)"}
                 </option>
               ))}
             </select>
           </Field>
           {withTime ? (
-            <Field label="Show at (m:ss)">
+            <Field label={isEs ? "Mostrar en (m:ss)" : "Show at (m:ss)"}>
               <input
                 className={FIELD_CLASS}
                 value={time}
@@ -182,18 +223,22 @@ export function QuestionEditorModal({
 
         {draft.kind === "scenario" ? (
           <BilingualInput
-            label="Scenario"
+            label={isEs ? "Escenario" : "Scenario"}
             multiline
             en={draft.scenarioEn}
             es={draft.scenarioEs}
             onEn={(scenarioEn) => set({ scenarioEn })}
             onEs={(scenarioEs) => set({ scenarioEs })}
-            placeholder="Describe the situation the member reads first."
+            placeholder={
+              isEs
+                ? "Describa la situación que el miembro lee primero."
+                : "Describe the situation the member reads first."
+            }
           />
         ) : null}
 
         <BilingualInput
-          label="Question"
+          label={isEs ? "Pregunta" : "Question"}
           multiline
           en={draft.promptEn}
           es={draft.promptEs}
@@ -201,8 +246,12 @@ export function QuestionEditorModal({
           onEs={(promptEs) => set({ promptEs })}
           placeholder={
             draft.kind === "scenario"
-              ? "e.g. What would you do?"
-              : "e.g. What does dialysis do for your body?"
+              ? isEs
+                ? "p. ej., ¿Qué haría usted?"
+                : "e.g. What would you do?"
+              : isEs
+                ? "p. ej., ¿Qué hace la diálisis por su cuerpo?"
+                : "e.g. What does dialysis do for your body?"
           }
         />
 
@@ -217,7 +266,9 @@ export function QuestionEditorModal({
         ) : null}
         {draft.kind === "reflection" || draft.kind === "fill-in" ? (
           <BilingualInput
-            label="Hint in the empty box"
+            label={
+              isEs ? "Sugerencia en el cuadro vacío" : "Hint in the empty box"
+            }
             en={draft.placeholderEn}
             es={draft.placeholderEs}
             onEn={(placeholderEn) => set({ placeholderEn })}
@@ -236,6 +287,8 @@ function OptionsEditor({
   draft: Question;
   onChange: (patch: Partial<Question>) => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const fixed = draft.kind === "true-false";
   const update = (id: string, patch: Partial<Question["options"][number]>) =>
     onChange({
@@ -247,7 +300,9 @@ function OptionsEditor({
   return (
     <div className="space-y-4">
       <p className="text-caption font-bold text-fg-muted">
-        Answers — pick the correct one, and write feedback for each
+        {isEs
+          ? "Respuestas: elija la correcta y escriba comentarios para cada una"
+          : "Answers — pick the correct one, and write feedback for each"}
       </p>
       {draft.options.map((option, index) => {
         const correct = draft.correctOptionId === option.id;
@@ -269,7 +324,13 @@ function OptionsEditor({
                   onChange={() => onChange({ correctOptionId: option.id })}
                   className="h-4 w-4 accent-[var(--color-brand-600)]"
                 />
-                {correct ? "Correct answer" : `Answer ${index + 1}`}
+                {correct
+                  ? isEs
+                    ? "Respuesta correcta"
+                    : "Correct answer"
+                  : isEs
+                    ? `Respuesta ${index + 1}`
+                    : `Answer ${index + 1}`}
               </label>
               {!fixed ? (
                 <button
@@ -289,7 +350,11 @@ function OptionsEditor({
                           : draft.correctOptionId,
                     })
                   }
-                  aria-label={`Remove answer ${index + 1}`}
+                  aria-label={
+                    isEs
+                      ? `Quitar respuesta ${index + 1}`
+                      : `Remove answer ${index + 1}`
+                  }
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -297,22 +362,28 @@ function OptionsEditor({
             </div>
             {!fixed ? (
               <BilingualInput
-                label="Answer"
+                label={isEs ? "Respuesta" : "Answer"}
                 en={option.textEn}
                 es={option.textEs}
                 onEn={(textEn) => update(option.id, { textEn })}
                 onEs={(textEs) => update(option.id, { textEs })}
               />
             ) : (
-              <p className="text-body-sm font-bold text-fg">{option.textEn}</p>
+              <p className="text-body-sm font-bold text-fg">
+                {isEs ? option.textEs || option.textEn : option.textEn}
+              </p>
             )}
             <BilingualInput
-              label="Feedback"
+              label={isEs ? "Comentarios" : "Feedback"}
               en={option.feedbackEn ?? ""}
               es={option.feedbackEs ?? ""}
               onEn={(feedbackEn) => update(option.id, { feedbackEn })}
               onEs={(feedbackEs) => update(option.id, { feedbackEs })}
-              placeholder="Why this answer is, or is not, the best one."
+              placeholder={
+                isEs
+                  ? "Por qué esta respuesta es, o no es, la mejor."
+                  : "Why this answer is, or is not, the best one."
+              }
             />
           </div>
         );
@@ -327,7 +398,7 @@ function OptionsEditor({
           }
         >
           <Plus aria-hidden="true" />
-          Add answer
+          {isEs ? "Agregar respuesta" : "Add answer"}
         </Button>
       ) : null}
     </div>
@@ -341,6 +412,8 @@ function PairsEditor({
   draft: Question;
   onChange: (patch: Partial<Question>) => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const update = (id: string, patch: Partial<Question["pairs"][number]>) =>
     onChange({
       pairs: draft.pairs.map((pair) =>
@@ -351,7 +424,9 @@ function PairsEditor({
   return (
     <div className="space-y-4">
       <p className="text-caption font-bold text-fg-muted">
-        Pairs — the member matches each left item to its right item
+        {isEs
+          ? "Pares: el miembro relaciona cada elemento de la izquierda con su elemento de la derecha"
+          : "Pairs — the member matches each left item to its right item"}
       </p>
       {draft.pairs.map((pair, index) => (
         <div
@@ -360,7 +435,7 @@ function PairsEditor({
         >
           <div className="flex items-center justify-between">
             <span className="text-body-sm font-semibold text-fg">
-              Pair {index + 1}
+              {isEs ? `Par ${index + 1}` : `Pair ${index + 1}`}
             </span>
             <button
               type="button"
@@ -371,20 +446,22 @@ function PairsEditor({
                   pairs: draft.pairs.filter((entry) => entry.id !== pair.id),
                 })
               }
-              aria-label={`Remove pair ${index + 1}`}
+              aria-label={
+                isEs ? `Quitar par ${index + 1}` : `Remove pair ${index + 1}`
+              }
             >
               <Trash2 className="h-4 w-4" />
             </button>
           </div>
           <BilingualInput
-            label="Left"
+            label={isEs ? "Izquierda" : "Left"}
             en={pair.leftEn}
             es={pair.leftEs}
             onEn={(leftEn) => update(pair.id, { leftEn })}
             onEs={(leftEs) => update(pair.id, { leftEs })}
           />
           <BilingualInput
-            label="Right (its match)"
+            label={isEs ? "Derecha (su pareja)" : "Right (its match)"}
             en={pair.rightEn ?? ""}
             es={pair.rightEs ?? ""}
             onEn={(rightEn) => update(pair.id, { rightEn })}
@@ -399,7 +476,7 @@ function PairsEditor({
         onClick={() => onChange({ pairs: [...draft.pairs, emptyPair()] })}
       >
         <Plus aria-hidden="true" />
-        Add pair
+        {isEs ? "Agregar par" : "Add pair"}
       </Button>
     </div>
   );
@@ -412,6 +489,8 @@ function FieldsEditor({
   draft: Question;
   onChange: (patch: Partial<Question>) => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const update = (id: string, patch: Partial<Question["fields"][number]>) =>
     onChange({
       fields: draft.fields.map((field) =>
@@ -422,8 +501,12 @@ function FieldsEditor({
   return (
     <div className="space-y-4">
       <Field
-        label="Where the answer goes"
-        hint="Every answer is kept in the member's workbook."
+        label={isEs ? "Dónde se guarda la respuesta" : "Where the answer goes"}
+        hint={
+          isEs
+            ? "Cada respuesta se guarda en el cuaderno de trabajo del miembro."
+            : "Every answer is kept in the member's workbook."
+        }
       >
         <select
           className={`${FIELD_CLASS} cursor-pointer`}
@@ -434,12 +517,20 @@ function FieldsEditor({
             })
           }
         >
-          <option value="workbook">Workbook only</option>
-          <option value="care-team">Workbook and Care Team Questions</option>
+          <option value="workbook">
+            {isEs ? "Solo el cuaderno de trabajo" : "Workbook only"}
+          </option>
+          <option value="care-team">
+            {isEs
+              ? "Cuaderno de trabajo y Preguntas al Equipo"
+              : "Workbook and Care Team Questions"}
+          </option>
         </select>
       </Field>
 
-      <p className="text-caption font-bold text-fg-muted">Fields</p>
+      <p className="text-caption font-bold text-fg-muted">
+        {isEs ? "Campos" : "Fields"}
+      </p>
       {draft.fields.map((field, index) => (
         <div
           key={field.id}
@@ -447,7 +538,11 @@ function FieldsEditor({
         >
           <div className="min-w-0 flex-1">
             <BilingualInput
-              label={`Field ${index + 1} label`}
+              label={
+                isEs
+                  ? `Etiqueta del campo ${index + 1}`
+                  : `Field ${index + 1} label`
+              }
               en={field.labelEn}
               es={field.labelEs}
               onEn={(labelEn) => update(field.id, { labelEn })}
@@ -463,7 +558,9 @@ function FieldsEditor({
                 fields: draft.fields.filter((entry) => entry.id !== field.id),
               })
             }
-            aria-label={`Remove field ${index + 1}`}
+            aria-label={
+              isEs ? `Quitar campo ${index + 1}` : `Remove field ${index + 1}`
+            }
           >
             <Trash2 className="h-4 w-4" />
           </button>
@@ -476,7 +573,7 @@ function FieldsEditor({
         onClick={() => onChange({ fields: [...draft.fields, emptyField()] })}
       >
         <Plus aria-hidden="true" />
-        Add field
+        {isEs ? "Agregar campo" : "Add field"}
       </Button>
     </div>
   );
@@ -484,8 +581,8 @@ function FieldsEditor({
 
 /* ---- lists ----------------------------------------------------------- */
 
-function kindText(kind: QuestionKind) {
-  return QUESTION_KINDS.find((entry) => entry.kind === kind)?.labelEn ?? kind;
+function kindText(kind: QuestionKind, isEs: boolean) {
+  return kindLabel(kind, isEs);
 }
 
 function move<T>(items: T[], index: number, delta: number): T[] {
@@ -517,6 +614,8 @@ function QuestionRow({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   return (
     <li className="flex items-center gap-3 rounded-card border border-line bg-surface p-3">
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-primary-soft text-label-sm text-fg-brand">
@@ -524,11 +623,18 @@ function QuestionRow({
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-body-sm font-semibold text-fg">
-          {question.promptEn || "Untitled question"}
+          {question.promptEn ||
+            (isEs ? "Pregunta sin título" : "Untitled question")}
         </p>
         <p className="mt-0.5 flex flex-wrap items-center gap-2 text-caption text-fg-muted">
-          <Badge tone="neutral">{kindText(question.kind)}</Badge>
-          {time !== undefined ? <span>at {formatClockShort(time)}</span> : null}
+          <Badge tone="neutral">{kindText(question.kind, isEs)}</Badge>
+          {time !== undefined ? (
+            <span>
+              {isEs
+                ? `en ${formatClockShort(time)}`
+                : `at ${formatClockShort(time)}`}
+            </span>
+          ) : null}
         </p>
       </div>
       {time === undefined ? (
@@ -538,7 +644,7 @@ function QuestionRow({
             className={ICON_BUTTON}
             onClick={onUp}
             disabled={!canUp}
-            aria-label="Move up"
+            aria-label={isEs ? "Mover hacia arriba" : "Move up"}
           >
             <ArrowUp className="h-4 w-4" />
           </button>
@@ -547,7 +653,7 @@ function QuestionRow({
             className={ICON_BUTTON}
             onClick={onDown}
             disabled={!canDown}
-            aria-label="Move down"
+            aria-label={isEs ? "Mover hacia abajo" : "Move down"}
           >
             <ArrowDown className="h-4 w-4" />
           </button>
@@ -557,7 +663,7 @@ function QuestionRow({
         type="button"
         className={ICON_BUTTON}
         onClick={onEdit}
-        aria-label="Edit question"
+        aria-label={isEs ? "Editar pregunta" : "Edit question"}
       >
         <Edit3 className="h-4 w-4" />
       </button>
@@ -565,7 +671,7 @@ function QuestionRow({
         type="button"
         className={`${ICON_BUTTON} hover:bg-danger-surface hover:text-danger`}
         onClick={onDelete}
-        aria-label="Delete question"
+        aria-label={isEs ? "Eliminar pregunta" : "Delete question"}
       >
         <Trash2 className="h-4 w-4" />
       </button>
@@ -585,6 +691,8 @@ export function QuestionListEditor({
   emptyText: string;
   scoredOnly?: boolean;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const [editing, setEditing] = useState<{ question?: Question } | null>(null);
 
   return (
@@ -616,7 +724,7 @@ export function QuestionListEditor({
 
       <Button size="small" onClick={() => setEditing({})}>
         <Plus aria-hidden="true" />
-        Add question
+        {isEs ? "Agregar pregunta" : "Add question"}
       </Button>
 
       {editing ? (
@@ -648,6 +756,8 @@ export function VideoQuestionListEditor({
   items: VideoQuestion[];
   onChange: (next: VideoQuestion[]) => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const [editing, setEditing] = useState<{ item?: VideoQuestion } | null>(null);
   const sorted = [...items].sort((a, b) => a.at - b.at);
 
@@ -656,7 +766,9 @@ export function VideoQuestionListEditor({
       {sorted.length === 0 ? (
         <p className="flex flex-col items-center gap-2 rounded-control border border-dashed border-line p-6 text-center text-body-sm text-fg-muted">
           <Clock3 className="h-6 w-6 text-fg-subtle" />
-          No pop-up questions yet. Add one to pause the video at a set time.
+          {isEs
+            ? "Todavía no hay preguntas emergentes. Agregue una para pausar el video en un momento determinado."
+            : "No pop-up questions yet. Add one to pause the video at a set time."}
         </p>
       ) : (
         <ol className="space-y-2">
@@ -681,7 +793,7 @@ export function VideoQuestionListEditor({
 
       <Button size="small" onClick={() => setEditing({})}>
         <Plus aria-hidden="true" />
-        Add pop-up question
+        {isEs ? "Agregar pregunta emergente" : "Add pop-up question"}
       </Button>
 
       {editing ? (

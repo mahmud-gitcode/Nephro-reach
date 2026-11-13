@@ -71,6 +71,33 @@ export const ALL_SOURCES = "All Sources";
 
 export const programOptions = [ALL_PROGRAMS, JOURNEY, CRASH];
 
+/* Spanish labels for the enrollment statuses, referral sources and filter
+   choices. The English values stay the identities (filters, URL params,
+   CSV); only what is drawn is translated. Program names are product names
+   and are not translated. */
+const ENROLLMENT_LABELS_ES: Record<string, string> = {
+  Enrolled: "Inscrito",
+  "Pending Start": "Inicio pendiente",
+  "Not Started": "Sin comenzar",
+  Withdrawn: "Retirado",
+  Completed: "Completado",
+  Admitted: "Hospitalizado",
+  Discharged: "Dado de alta",
+  "No Program": "Sin programa",
+  "Office Referral": "Derivación del consultorio",
+  "Provider Referral": "Derivación del proveedor",
+  "Hospital Discharge": "Alta hospitalaria",
+  "Self-Pay": "Pago por cuenta propia",
+  [ALL_PROGRAMS]: "Todos los programas",
+  [ALL_STATUSES]: "Todos los estados",
+  [ALL_SOURCES]: "Todas las fuentes",
+};
+
+/** The label to draw for an enrollment status, source or filter choice. */
+export function enrollmentLabel(value: string, isEs = false): string {
+  return isEs ? (ENROLLMENT_LABELS_ES[value] ?? value) : value;
+}
+
 export const statusOptions: string[] = [
   ALL_STATUSES,
   "Enrolled",

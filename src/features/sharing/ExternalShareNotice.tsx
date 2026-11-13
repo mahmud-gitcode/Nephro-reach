@@ -41,7 +41,7 @@ const COPY: Record<"en" | "es", AckCopy> = {
     },
   },
   es: {
-    title: "Aviso de Compartir Fuera de NephroReach",
+    title: "Aviso de compartir fuera de NephroReach",
     body: [
       "Está a punto de enviar información a una persona u organización fuera de la red de NephroReach.",
       "Una vez que la información se exporta o se envía fuera de NephroReach, NephroReach no puede controlar cómo el destinatario accede, guarda, usa, reenvía, descarga o vuelve a compartir esa información. Es posible que el destinatario no esté sujeto a los requisitos de privacidad, seguridad o confidencialidad de NephroReach.",
@@ -51,10 +51,10 @@ const COPY: Record<"en" | "es", AckCopy> = {
     check:
       "Entiendo que estoy enviando información fuera de NephroReach y he confirmado el destinatario y la información que se comparte.",
     cancel: "Cancelar",
-    confirm: "Confirmar y Enviar",
+    confirm: "Confirmar y enviar",
     confirmFor: {
-      download: "Confirmar y Descargar",
-      print: "Confirmar e Imprimir",
+      download: "Confirmar y descargar",
+      print: "Confirmar e imprimir",
     },
   },
 };
@@ -210,7 +210,7 @@ const SHARE_OUTSIDE_COPY: Record<"en" | "es", AckCopy> = {
     confirm: "Confirm & Share",
   },
   es: {
-    title: "Compartir Fuera de NephroReach",
+    title: "Compartir fuera de NephroReach",
     body: [
       "Está a punto de compartir información con una persona u organización fuera de la plataforma NephroReach.",
       "Al continuar, usted reconoce que:",
@@ -227,7 +227,7 @@ const SHARE_OUTSIDE_COPY: Record<"en" | "es", AckCopy> = {
     check:
       "Entiendo que el destinatario puede o no abrir o responder a la información, y autorizo a NephroReach a enviar la información que seleccioné al destinatario que designé.",
     cancel: "Cancelar",
-    confirm: "Confirmar y Compartir",
+    confirm: "Confirmar y compartir",
   },
 };
 

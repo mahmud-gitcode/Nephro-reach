@@ -307,7 +307,15 @@ export function Modal({
           <button
             type="button"
             data-sheet-handle
-            aria-label={full ? "Collapse panel" : "Expand panel"}
+            aria-label={
+              full
+                ? isEs
+                  ? "Contraer panel"
+                  : "Collapse panel"
+                : isEs
+                  ? "Expandir panel"
+                  : "Expand panel"
+            }
             aria-expanded={full}
             onPointerDown={onHandleDown}
             onPointerMove={onHandleMove}

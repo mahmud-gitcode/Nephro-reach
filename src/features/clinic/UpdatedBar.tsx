@@ -5,6 +5,7 @@ import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui";
 import { cn } from "@/lib/utils/cn";
 import { useIsMounted } from "@/lib/utils/useIsMounted";
+import { useLanguageCode } from "@/context/LanguageContext";
 
 /**
  * "Last updated 12:43 PM" and a Refresh button, for a clinic page that reads
@@ -22,9 +23,10 @@ export function UpdatedBar({
   refetch: () => void;
 }) {
   const mounted = useIsMounted();
+  const isEs = useLanguageCode() === "ES";
   const time =
     mounted && updatedAt > 0
-      ? new Date(updatedAt).toLocaleTimeString("en-US", {
+      ? new Date(updatedAt).toLocaleTimeString(isEs ? "es-US" : "en-US", {
           hour: "numeric",
           minute: "2-digit",
         })
@@ -34,9 +36,13 @@ export function UpdatedBar({
     <div className="flex items-center justify-end gap-inline-md">
       <p role="status" className="text-caption text-fg-muted">
         {isFetching && time
-          ? "Refreshing…"
+          ? isEs
+            ? "Actualizando…"
+            : "Refreshing…"
           : time
-            ? `Last updated ${time}`
+            ? isEs
+              ? `Última actualización: ${time}`
+              : `Last updated ${time}`
             : ""}
       </p>
       <Button
@@ -50,7 +56,7 @@ export function UpdatedBar({
           aria-hidden="true"
           className={cn("h-4 w-4", isFetching && "animate-spin")}
         />
-        Refresh
+        {isEs ? "Actualizar" : "Refresh"}
       </Button>
     </div>
   );

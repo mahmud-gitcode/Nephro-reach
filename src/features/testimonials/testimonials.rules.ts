@@ -57,11 +57,19 @@ export function toDurationSeconds(
  * member's only recording because the browser could not measure it would be
  * worse than letting the admin see it and decide.
  */
-export function videoLengthError(seconds: number | null): string | null {
+export function videoLengthError(
+  seconds: number | null,
+  isEs = false,
+): string | null {
   if (seconds === null || !Number.isFinite(seconds) || seconds <= 0) {
     return null;
   }
   if (seconds > MAX_TESTIMONIAL_SECONDS) {
+    if (isEs) {
+      return `Ese video dura ${formatClock(seconds)}. Los testimonios pueden durar hasta ${formatClock(
+        MAX_TESTIMONIAL_SECONDS,
+      )}; intente recortarlo antes de subirlo.`;
+    }
     return `That video is ${formatClock(seconds)}. Testimonials can be up to ${formatClock(
       MAX_TESTIMONIAL_SECONDS,
     )} — try trimming it before you upload.`;
@@ -93,4 +101,19 @@ export function videoFileError(
     });
   }
   return null;
+}
+
+/** The four fixed member roles (stories and reviews) in Spanish. A typed
+ *  "Other" role is the member's own words and shows as written. */
+const MEMBER_ROLE_ES: Record<string, string> = {
+  "Dialysis Member": "Miembro en Diálisis",
+  "Family Caregiver": "Cuidador Familiar",
+  "CKD Learner": "Estudiante de ERC",
+  "Transplant Warrior": "Guerrero del Trasplante",
+  Other: "Otro",
+};
+
+/** A member role for display; English is returned unchanged. */
+export function memberRoleLabel(role: string, isEs: boolean): string {
+  return isEs ? (MEMBER_ROLE_ES[role] ?? role) : role;
 }

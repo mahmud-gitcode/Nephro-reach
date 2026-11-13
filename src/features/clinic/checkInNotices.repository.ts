@@ -33,9 +33,23 @@ export const NOTICE_REASON_LABEL: Record<NoticeReason, string> = {
   "member-requested": "Member asked for a call",
 };
 
+const NOTICE_REASON_LABEL_ES: Record<NoticeReason, string> = {
+  "missed-treatment": "Tratamiento omitido",
+  "severe-symptoms": "Síntomas graves",
+  "rough-day": "Día difícil",
+  "member-requested": "El miembro pidió una llamada",
+};
+
 /** A reason the server sent; an unknown one is shown as sent. */
 export function noticeReasonLabel(reason: string): string {
   return NOTICE_REASON_LABEL[reason as NoticeReason] ?? reason;
+}
+
+/** noticeReasonLabel in the page's language (Spanish when `isEs`). */
+export function noticeReasonText(reason: string, isEs: boolean): string {
+  return isEs
+    ? (NOTICE_REASON_LABEL_ES[reason as NoticeReason] ?? reason)
+    : noticeReasonLabel(reason);
 }
 
 /** CheckInNoticeResponseDto. */

@@ -46,6 +46,7 @@ import {
   type SeriesTone,
 } from "@/components/ui";
 import { cn } from "@/lib/utils/cn";
+import { useLanguage } from "@/context/LanguageContext";
 import { tableIconButton } from "./tableButton";
 import { shortProgram } from "./clinicIcons";
 import { memberLink, messageLink } from "./clinicDashboard.data";
@@ -54,6 +55,7 @@ import {
   ALL_SOURCES,
   ALL_STATUSES,
   countBy,
+  enrollmentLabel,
   filterPatients,
   paginate,
   PROGRAM_ORDER,
@@ -150,6 +152,7 @@ function PanelHeading({
 /** Why "Enroll New Patient" is off for a role the server would refuse
  *  (no programs edit, P16F-1): the same words as the form's own notice. */
 const NO_ENROLL = "Your role cannot enroll patients in a program.";
+const NO_ENROLL_ES = "Su rol no puede inscribir pacientes en un programa.";
 
 function SummaryCards({
   total,
@@ -174,6 +177,9 @@ function SummaryCards({
     slots === null ? null : Math.max(0, seats?.available ?? slots - used);
   const goalPct = slots ? Math.round((used / slots) * 100) : null;
   const full = remaining === 0;
+  const { language } = useLanguage();
+  const isEs = language === "ES";
+  const noEnroll = isEs ? NO_ENROLL_ES : NO_ENROLL;
 
   return (
     <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2">
@@ -188,18 +194,24 @@ function SummaryCards({
             ) : null}
           </>
         }
-        label="Patients Enrolled"
-        note={remaining === null ? undefined : `${remaining} slots remaining`}
+        label={isEs ? "Pacientes inscritos" : "Patients Enrolled"}
+        note={
+          remaining === null
+            ? undefined
+            : isEs
+              ? `${remaining} cupos disponibles`
+              : `${remaining} slots remaining`
+        }
       />
 
       <KeyCard
         tone="neutral"
         icon={<FileTextSolid />}
         value={slots ?? "—"}
-        label="Total Contract Slots"
+        label={isEs ? "Cupos totales del contrato" : "Total Contract Slots"}
       >
         <Link href={BILLING} className={cn(outlineLink, "w-full")}>
-          View Contract
+          {isEs ? "Ver contrato" : "View Contract"}
         </Link>
       </KeyCard>
 
@@ -207,20 +219,32 @@ function SummaryCards({
         tone="success"
         icon={<TargetSolid />}
         value={goalPct === null ? "—" : `${goalPct}%`}
-        label="Enrollment Goal"
-        note={slots === null ? undefined : `${used} of ${slots} enrolled`}
+        label={isEs ? "Meta de inscripción" : "Enrollment Goal"}
+        note={
+          slots === null
+            ? undefined
+            : isEs
+              ? `${used} de ${slots} inscritos`
+              : `${used} of ${slots} enrolled`
+        }
       />
 
       {/* Not a figure, so not a KeyCard: this one is the action, and the
           only card on the row with something to press. */}
       <Card as="article" padding="small" className="flex flex-col">
-        <p className="text-heading-5 text-fg-secondary">Enroll New Patient</p>
+        <p className="text-heading-5 text-fg-secondary">
+          {isEs ? "Inscribir nuevo paciente" : "Enroll New Patient"}
+        </p>
         <p className="mt-stack-xs text-body-sm text-fg-muted">
           {!canEnroll
-            ? NO_ENROLL
+            ? noEnroll
             : full
-              ? "Every contract seat is filled."
-              : "Add a new patient to your program."}
+              ? isEs
+                ? "Todos los cupos del contrato están ocupados."
+                : "Every contract seat is filled."
+              : isEs
+                ? "Agregue un nuevo paciente a su programa."
+                : "Add a new patient to your program."}
         </p>
         {/* The spacing goes on a wrapper, not on the button. `pt-stack-md`
             was on the Button itself, which added padding INSIDE a control
@@ -235,14 +259,16 @@ function SummaryCards({
             disabled={full || !canEnroll}
             title={
               !canEnroll
-                ? NO_ENROLL
+                ? noEnroll
                 : full
-                  ? "All contract seats are filled"
+                  ? isEs
+                    ? "Todos los cupos del contrato están ocupados"
+                    : "All contract seats are filled"
                   : undefined
             }
           >
             <Plus />
-            Enroll New Patient
+            {isEs ? "Inscribir nuevo paciente" : "Enroll New Patient"}
           </Button>
         </div>
       </Card>
@@ -303,6 +329,9 @@ function PatientTable({
 }) {
   /* Leaves NephroReach: ask first (client, 2026-10-07). */
   const share = useExternalShare();
+  const { language } = useLanguage();
+  const isEs = language === "ES";
+  const lang = isEs ? "es" : "en";
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const rows = view.rows ?? [];
 
@@ -342,7 +371,7 @@ function PatientTable({
   return (
     <Card as="section" padding="small" aria-labelledby="enrolled-heading">
       <h2 id="enrolled-heading" className="mb-stack-lg text-heading-4 text-fg">
-        Enrolled Patients
+        {isEs ? "Pacientes inscritos" : "Enrolled Patients"}
       </h2>
 
       <div className="mb-stack-lg flex flex-col gap-inline-md lg:flex-row lg:flex-wrap lg:items-center">
@@ -351,39 +380,49 @@ function PatientTable({
           inputSize="small"
           value={filters.query}
           onChange={(event) => onFilters({ query: event.target.value })}
-          placeholder="Search by name, MRN, or status..."
-          aria-label="Search patients"
+          placeholder={
+            isEs
+              ? "Buscar por nombre, MRN o estado..."
+              : "Search by name, MRN, or status..."
+          }
+          aria-label={isEs ? "Buscar pacientes" : "Search patients"}
           leadingIcon={<Search aria-hidden="true" />}
           className="lg:w-64"
         />
         <Select
           selectSize="small"
-          aria-label="Program"
+          aria-label={isEs ? "Programa" : "Program"}
           value={filters.program}
           onChange={(event) => onFilters({ program: event.target.value })}
         >
           {programOptions.map((option) => (
-            <option key={option}>{option}</option>
+            <option key={option} value={option}>
+              {enrollmentLabel(option, isEs)}
+            </option>
           ))}
         </Select>
         <Select
           selectSize="small"
-          aria-label="Status"
+          aria-label={isEs ? "Estado" : "Status"}
           value={filters.status}
           onChange={(event) => onFilters({ status: event.target.value })}
         >
           {statusOptions.map((option) => (
-            <option key={option}>{option}</option>
+            <option key={option} value={option}>
+              {enrollmentLabel(option, isEs)}
+            </option>
           ))}
         </Select>
         <Select
           selectSize="small"
-          aria-label="Referral source"
+          aria-label={isEs ? "Fuente de derivación" : "Referral source"}
           value={filters.source}
           onChange={(event) => onFilters({ source: event.target.value })}
         >
           {sourceOptions.map((option) => (
-            <option key={option}>{option}</option>
+            <option key={option} value={option}>
+              {enrollmentLabel(option, isEs)}
+            </option>
           ))}
         </Select>
         {/* No Enroll button here: the summary card directly above this
@@ -427,7 +466,7 @@ function PatientTable({
             }
           >
             <Download className="h-4 w-4" />
-            Export
+            {isEs ? "Exportar" : "Export"}
           </Button>
           {share.notice}
         </div>
@@ -436,13 +475,17 @@ function PatientTable({
       {selected.size > 0 ? (
         <div
           role="region"
-          aria-label="Selected patients"
+          aria-label={isEs ? "Pacientes seleccionados" : "Selected patients"}
           className="mb-stack-md flex flex-wrap items-center gap-inline-md rounded-control border border-line bg-surface-sunken px-inset-sm py-inset-xs"
         >
-          <p className="text-label-md text-fg">{selected.size} selected</p>
+          <p className="text-label-md text-fg">
+            {isEs
+              ? `${selected.size} seleccionados`
+              : `${selected.size} selected`}
+          </p>
           <Link href={MESSAGES} className={outlineLink}>
             <MessageSquareText className="h-4 w-4" />
-            Message selected
+            {isEs ? "Enviar mensaje a los seleccionados" : "Message selected"}
           </Link>
           <Button
             variant="neutral"
@@ -450,7 +493,7 @@ function PatientTable({
             size="small"
             onClick={() => setSelected(new Set())}
           >
-            Clear
+            {isEs ? "Borrar" : "Clear"}
           </Button>
         </div>
       ) : null}
@@ -459,8 +502,14 @@ function PatientTable({
 
       {view.error ? (
         <ErrorState
-          title={errorTitleFor(view.error, "Enrollments could not be loaded")}
-          message={errorMessageFor(view.error, undefined)}
+          title={errorTitleFor(
+            view.error,
+            isEs
+              ? "No se pudieron cargar las inscripciones"
+              : "Enrollments could not be loaded",
+            lang,
+          )}
+          message={errorMessageFor(view.error, undefined, lang)}
           error={view.error}
           onRetry={canRetry(view.error) ? view.refetch : undefined}
         />
@@ -480,19 +529,31 @@ function PatientTable({
                     checked={allOnPageSelected}
                     disabled={pageMrns.length === 0}
                     onChange={toggleAllOnPage}
-                    aria-label="Select all patients on this page"
+                    aria-label={
+                      isEs
+                        ? "Seleccionar todos los pacientes de esta página"
+                        : "Select all patients on this page"
+                    }
                     className="h-4 w-4 cursor-pointer accent-brand-600"
                   />
                 </TableHeaderCell>
-                <TableHeaderCell>Name</TableHeaderCell>
-                <TableHeaderCell>Program Assigned</TableHeaderCell>
-                <TableHeaderCell>Enrollment Date</TableHeaderCell>
-                <TableHeaderCell>Status</TableHeaderCell>
-                <TableHeaderCell>Start Date</TableHeaderCell>
-                <TableHeaderCell>Progress</TableHeaderCell>
-                <TableHeaderCell>Source</TableHeaderCell>
+                <TableHeaderCell>{isEs ? "Nombre" : "Name"}</TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Programa asignado" : "Program Assigned"}
+                </TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Fecha de inscripción" : "Enrollment Date"}
+                </TableHeaderCell>
+                <TableHeaderCell>{isEs ? "Estado" : "Status"}</TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Fecha de inicio" : "Start Date"}
+                </TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Progreso" : "Progress"}
+                </TableHeaderCell>
+                <TableHeaderCell>{isEs ? "Fuente" : "Source"}</TableHeaderCell>
                 <TableHeaderCell className="text-right">
-                  Actions
+                  {isEs ? "Acciones" : "Actions"}
                 </TableHeaderCell>
               </TableRow>
             </TableHead>
@@ -500,7 +561,9 @@ function PatientTable({
               {rows.length === 0 ? (
                 <TableEmptyRow colSpan={9}>
                   <span className="flex flex-wrap items-center gap-inline-md text-body-sm text-fg-secondary">
-                    No patients match these filters.
+                    {isEs
+                      ? "Ningún paciente coincide con estos filtros."
+                      : "No patients match these filters."}
                     {filtersOn ? (
                       <Button
                         variant="neutral"
@@ -508,7 +571,7 @@ function PatientTable({
                         size="small"
                         onClick={() => onFilters({ query: "", ...NO_FILTERS })}
                       >
-                        Clear filters
+                        {isEs ? "Borrar filtros" : "Clear filters"}
                       </Button>
                     ) : null}
                   </span>
@@ -528,7 +591,11 @@ function PatientTable({
                         type="checkbox"
                         checked={selected.has(patient.id)}
                         onChange={() => toggleOne(patient.id)}
-                        aria-label={`Select ${patient.name}`}
+                        aria-label={
+                          isEs
+                            ? `Seleccionar a ${patient.name}`
+                            : `Select ${patient.name}`
+                        }
                         className="h-4 w-4 cursor-pointer accent-brand-600"
                       />
                     </TableCell>
@@ -544,7 +611,7 @@ function PatientTable({
                     </TableCell>
                     <TableCell>
                       <Badge tone={statusTone[patient.status]}>
-                        {patient.status}
+                        {enrollmentLabel(patient.status, isEs)}
                       </Badge>
                     </TableCell>
                     <TableCell className="whitespace-nowrap tabular-nums">
@@ -554,7 +621,11 @@ function PatientTable({
                       <span className="flex items-center gap-inline-md">
                         <Progress
                           value={patient.progress}
-                          label={`${patient.name} program progress`}
+                          label={
+                            isEs
+                              ? `Progreso de ${patient.name} en el programa`
+                              : `${patient.name} program progress`
+                          }
                           size="small"
                           className="w-14"
                         />
@@ -564,23 +635,31 @@ function PatientTable({
                       </span>
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
-                      {patient.source}
+                      {enrollmentLabel(patient.source, isEs)}
                     </TableCell>
                     <TableCell>
                       <span className="flex justify-end gap-inline-xs">
                         <Link
                           href={memberLink({ patientId: patient.id })}
                           className={iconControl}
-                          aria-label={`View ${patient.name} on the Member page`}
-                          title="View member"
+                          aria-label={
+                            isEs
+                              ? `Ver a ${patient.name} en la página de Miembros`
+                              : `View ${patient.name} on the Member page`
+                          }
+                          title={isEs ? "Ver miembro" : "View member"}
                         >
                           <Eye aria-hidden="true" />
                         </Link>
                         <Link
                           href={messageLink(patient.id)}
                           className={iconControl}
-                          aria-label={`Message ${patient.name}`}
-                          title="Send message"
+                          aria-label={
+                            isEs
+                              ? `Enviar mensaje a ${patient.name}`
+                              : `Message ${patient.name}`
+                          }
+                          title={isEs ? "Enviar mensaje" : "Send message"}
                         >
                           <MessageSquareText aria-hidden="true" />
                         </Link>
@@ -596,7 +675,7 @@ function PatientTable({
 
       <div className="mt-stack-md flex flex-col gap-inline-md sm:flex-row sm:items-center sm:justify-between">
         <label className="flex items-center gap-inline-md text-body-sm text-fg-secondary">
-          Rows per page
+          {isEs ? "Filas por página" : "Rows per page"}
           <Select
             selectSize="small"
             value={String(perPage)}
@@ -612,7 +691,11 @@ function PatientTable({
           page={view.page}
           pageCount={view.pageCount}
           onPageChange={onPage}
-          summary={`Showing ${view.firstShown}–${view.lastShown} of ${view.total} patients`}
+          summary={
+            isEs
+              ? `Mostrando ${view.firstShown}–${view.lastShown} de ${view.total} pacientes`
+              : `Showing ${view.firstShown}–${view.lastShown} of ${view.total} patients`
+          }
         />
       </div>
     </Card>
@@ -635,34 +718,39 @@ function EnrollmentSources({
   onSource: (source: string) => void;
 }) {
   const counts = countBy(list, (p) => p.source, SOURCE_ORDER);
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const segments = counts.map((entry, index) => ({
-    label: entry.label,
+    key: entry.label,
+    label: enrollmentLabel(entry.label, isEs),
     value: entry.value,
     tone: SOURCE_TONES[index],
   }));
 
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading title="Enrollment Sources" />
+      <PanelHeading
+        title={isEs ? "Fuentes de inscripción" : "Enrollment Sources"}
+      />
       <div className="grid items-center gap-inset-md sm:grid-cols-[150px_minmax(0,1fr)]">
         <DonutChart
           segments={segments.filter((segment) => segment.value > 0)}
-          label="Enrollment sources"
+          label={isEs ? "Fuentes de inscripción" : "Enrollment sources"}
           size={150}
           thickness={28}
           centerValue={list.length}
-          centerLabel="Enrolled"
+          centerLabel={isEs ? "Inscritos" : "Enrolled"}
           className="mx-auto"
         />
         <ul className="space-y-stack-xs">
           {segments.map((segment) => {
-            const on = source === segment.label;
+            const on = source === segment.key;
             return (
-              <li key={segment.label}>
+              <li key={segment.key}>
                 <button
                   type="button"
                   aria-pressed={on}
-                  onClick={() => onSource(on ? ALL_SOURCES : segment.label)}
+                  onClick={() => onSource(on ? ALL_SOURCES : segment.key)}
                   className={cn(
                     filterRow(on),
                     "flex items-center gap-inline-md",
@@ -700,10 +788,14 @@ function ProgramEnrollment({
 }) {
   const counts = countBy(list, (p) => p.program, PROGRAM_ORDER);
   const max = Math.max(...counts.map((row) => row.value), 1);
+  const { language } = useLanguage();
+  const isEs = language === "ES";
 
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading title="Program Enrollment" />
+      <PanelHeading
+        title={isEs ? "Inscripción por programa" : "Program Enrollment"}
+      />
       {/* One measure — headcount — across programs, so one hue. The row
           label carries identity; colour would only repeat it. */}
       <ul className="space-y-stack-sm">
@@ -728,7 +820,11 @@ function ProgramEnrollment({
                 <Progress
                   value={row.value}
                   max={max}
-                  label={`${row.label} enrollment`}
+                  label={
+                    isEs
+                      ? `Inscripción en ${row.label}`
+                      : `${row.label} enrollment`
+                  }
                   size="small"
                   className="mt-stack-xs"
                 />
@@ -751,10 +847,14 @@ function EnrollmentStatusPanel({
   onStatus: (status: string) => void;
 }) {
   const counts = countBy(list, (p) => p.status, STATUS_ORDER);
+  const { language } = useLanguage();
+  const isEs = language === "ES";
 
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading title="Enrollment Status" />
+      <PanelHeading
+        title={isEs ? "Estado de inscripción" : "Enrollment Status"}
+      />
       {/* States, not series, so they wear the reserved status tones — and
           the badge carries the word, never colour alone. */}
       <ul className="space-y-stack-xs">
@@ -775,7 +875,7 @@ function EnrollmentStatusPanel({
                 )}
               >
                 <Badge tone={statusTone[row.label as EnrollmentStatus]}>
-                  {row.label}
+                  {enrollmentLabel(row.label, isEs)}
                 </Badge>
                 <span className="text-body-sm text-fg-secondary tabular-nums">
                   {row.value}
@@ -815,6 +915,8 @@ function EnrollmentView() {
   const router = useRouter();
   const pathname = usePathname();
   const clinic = useClinicData();
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const list = useMemo(() => clinic.data?.patients ?? [], [clinic.data]);
 
   const [filters, setFilters] = useState<Filters>(() => {
@@ -906,8 +1008,14 @@ function EnrollmentView() {
   if (clinic.error) {
     return (
       <ErrorState
-        title={errorTitleFor(clinic.error, "Enrollments could not be loaded")}
-        message={errorMessageFor(clinic.error, undefined)}
+        title={errorTitleFor(
+          clinic.error,
+          isEs
+            ? "No se pudieron cargar las inscripciones"
+            : "Enrollments could not be loaded",
+          isEs ? "es" : "en",
+        )}
+        message={errorMessageFor(clinic.error, undefined, isEs ? "es" : "en")}
         error={clinic.error}
         onRetry={canRetry(clinic.error) ? clinic.refetch : undefined}
       />
@@ -924,8 +1032,12 @@ function EnrollmentView() {
           icon={<CheckCircle2 />}
           title={
             justEnrolled.ccm
-              ? `${justEnrolled.name} is enrolled in CCM.`
-              : `${justEnrolled.name} is enrolled.`
+              ? isEs
+                ? `${justEnrolled.name} quedó inscrito en CCM.`
+                : `${justEnrolled.name} is enrolled in CCM.`
+              : isEs
+                ? `${justEnrolled.name} quedó inscrito.`
+                : `${justEnrolled.name} is enrolled.`
           }
           onDismiss={() => setJustEnrolled(null)}
           action={
@@ -938,14 +1050,22 @@ function EnrollmentView() {
               className={outlineLink}
             >
               {justEnrolled.ccm
-                ? "View on the CCM dashboard"
-                : "View on the Member page"}
+                ? isEs
+                  ? "Ver en el panel de CCM"
+                  : "View on the CCM dashboard"
+                : isEs
+                  ? "Ver en la página de Miembros"
+                  : "View on the Member page"}
             </Link>
           }
         >
           {justEnrolled.ccm
-            ? "They are on your CCM dashboard now."
-            : "They are highlighted in the list below and count toward your contract seats."}
+            ? isEs
+              ? "Ya aparece en su panel de CCM."
+              : "They are on your CCM dashboard now."
+            : isEs
+              ? "Aparece resaltado en la lista de abajo y ocupa uno de los cupos de su contrato."
+              : "They are highlighted in the list below and count toward your contract seats."}
         </Alert>
       ) : null}
 
@@ -959,17 +1079,23 @@ function EnrollmentView() {
       {list.length === 0 ? (
         <EmptyState
           icon={<Users />}
-          title="No patients enrolled yet"
-          description="Enroll your first patient to start their program."
+          title={
+            isEs ? "Aún no hay pacientes inscritos" : "No patients enrolled yet"
+          }
+          description={
+            isEs
+              ? "Inscriba a su primer paciente para que comience su programa."
+              : "Enroll your first patient to start their program."
+          }
           action={
             <Button
               size="small"
               onClick={() => setEnrolling(true)}
               disabled={!canEnroll}
-              title={canEnroll ? undefined : NO_ENROLL}
+              title={canEnroll ? undefined : isEs ? NO_ENROLL_ES : NO_ENROLL}
             >
               <Plus className="h-4 w-4" />
-              Enroll New Patient
+              {isEs ? "Inscribir nuevo paciente" : "Enroll New Patient"}
             </Button>
           }
         />
@@ -985,8 +1111,8 @@ function EnrollmentView() {
               serverMode ? null : (
                 <WindowNote
                   window={clinic.data?.window}
-                  what="These filters cover"
-                  noun="patients"
+                  what={isEs ? "Estos filtros incluyen" : "These filters cover"}
+                  noun={isEs ? "pacientes" : "patients"}
                   className="mb-stack-md"
                 />
               )
@@ -998,8 +1124,12 @@ function EnrollmentView() {
 
           <WindowNote
             window={clinic.data?.window}
-            what="Export and the breakdowns cover"
-            noun="patients"
+            what={
+              isEs
+                ? "La exportación y los desgloses incluyen"
+                : "Export and the breakdowns cover"
+            }
+            noun={isEs ? "pacientes" : "patients"}
           />
           <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
             <EnrollmentSources

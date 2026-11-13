@@ -152,7 +152,7 @@ export function ExtraTreatmentModal({
                 : "Session Number (Auto-Assigned)"}
             </label>
             <p className="text-heading-4 font-extrabold tracking-tight text-accent-900 sm:text-heading-3">
-              Treatment {session.sessionNumber}
+              {isEs ? "Tratamiento" : "Treatment"} {session.sessionNumber}
             </p>
             <p className="text-caption font-medium text-accent-fg">
               {isEs
@@ -162,7 +162,8 @@ export function ExtraTreatmentModal({
           </div>
 
           <span className="self-start rounded-card-nested border border-accent-300 bg-accent-200/80 px-3 py-1.5 text-caption font-bold text-accent-900 sm:self-center">
-            Extra #{session.extraIndex}
+            {isEs ? "Extra n.º " : "Extra #"}
+            {session.extraIndex}
           </span>
         </div>
 
@@ -177,16 +178,24 @@ export function ExtraTreatmentModal({
             className="w-full rounded-card border border-line bg-surface px-4 py-3 text-body-sm font-medium text-fg-secondary shadow-control outline-none focus:border-primary-edge focus:ring-1 focus:ring-ring sm:text-body-md"
           >
             <option value="Fluid Overload">
-              Fluid Overload (Extra Ultrafiltration needed)
+              {isEs
+                ? "Sobrecarga de líquido (se necesita ultrafiltración extra)"
+                : "Fluid Overload (Extra Ultrafiltration needed)"}
             </option>
             <option value="High Potassium">
-              High Potassium Alert / Lab Result
+              {isEs
+                ? "Alerta de potasio alto / resultado de laboratorio"
+                : "High Potassium Alert / Lab Result"}
             </option>
             <option value="Doctor Order">
-              Nephrologist / Doctor Direct Prescription
+              {isEs
+                ? "Indicación directa del nefrólogo / médico"
+                : "Nephrologist / Doctor Direct Prescription"}
             </option>
             <option value="Missed Session">
-              Make-up for a Missed Regular Session
+              {isEs
+                ? "Reposición de una sesión regular perdida"
+                : "Make-up for a Missed Regular Session"}
             </option>
           </select>
         </div>

@@ -21,6 +21,7 @@ import {
   Skeleton,
   Textarea,
 } from "@/components/ui";
+import { useLanguageCode } from "@/context/LanguageContext";
 import { isApiError } from "@/lib/api/client";
 import {
   MAX_RECIPIENT_REPLIES,
@@ -71,8 +72,8 @@ const TEASER_KEY = ["shared-link", "current"] as const;
 const CONTENT_KEY = ["shared-link", "current", "content"] as const;
 const ATTACHMENT_KEY = ["shared-link", "current", "attachment"] as const;
 
-function when(iso: string) {
-  return new Date(iso).toLocaleString("en-US", {
+function when(iso: string, isEs = false) {
+  return new Date(iso).toLocaleString(isEs ? "es-US" : "en-US", {
     month: "long",
     day: "numeric",
     year: "numeric",
@@ -102,15 +103,26 @@ function serverText(error: unknown, fallback: string): string {
 }
 
 function NotValid({ expired }: { expired?: boolean }) {
+  const isEs = useLanguageCode() === "ES";
   return (
     <Card padding="small">
       <h2 className="text-heading-4 text-fg">
-        {expired ? "This link has expired" : "This link is not valid"}
+        {expired
+          ? isEs
+            ? "Este enlace venció"
+            : "This link has expired"
+          : isEs
+            ? "Este enlace no es válido"
+            : "This link is not valid"}
       </h2>
       <p className="mt-stack-xs text-body-sm text-fg-secondary">
         {expired
-          ? "Links stop working after a while to protect the information. Ask the person who shared it to send it again."
-          : "The link may be mistyped or no longer available. Ask the person who shared it to send it again."}
+          ? isEs
+            ? "Los enlaces dejan de funcionar después de un tiempo para proteger la información. Pida a la persona que lo compartió que lo envíe de nuevo."
+            : "Links stop working after a while to protect the information. Ask the person who shared it to send it again."
+          : isEs
+            ? "Es posible que el enlace esté mal escrito o que ya no esté disponible. Pida a la persona que lo compartió que lo envíe de nuevo."
+            : "The link may be mistyped or no longer available. Ask the person who shared it to send it again."}
       </p>
     </Card>
   );
@@ -128,6 +140,7 @@ function VerifyForm({
   notice?: string;
   onVerified: (session: string) => void;
 }) {
+  const isEs = useLanguageCode() === "ES";
   const [name, setName] = useState("");
   const [organization, setOrganization] = useState("");
   const [code, setCode] = useState("");
@@ -143,10 +156,16 @@ function VerifyForm({
     onSuccess: (answer) => onVerified(answer.sessionToken),
   });
   const errors = {
-    name: name.trim() ? undefined : "Enter your full name.",
+    name: name.trim()
+      ? undefined
+      : isEs
+        ? "Ingrese su nombre completo."
+        : "Enter your full name.",
     code: /^\d{6}$/.test(code.trim())
       ? undefined
-      : "Enter the 6-digit code from the email.",
+      : isEs
+        ? "Ingrese el código de 6 dígitos del correo electrónico."
+        : "Enter the 6-digit code from the email.",
   };
   const locked = codeOf(verify.error) === "verification_locked";
 
@@ -154,23 +173,48 @@ function VerifyForm({
     <Card as="section" padding="small" className="space-y-stack-md">
       <div className="flex items-center gap-inline-sm">
         <ShieldCheck aria-hidden="true" className="size-5 text-fg-brand" />
-        <h2 className="text-heading-4 text-fg">Verify to view</h2>
+        <h2 className="text-heading-4 text-fg">
+          {isEs ? "Verifíquese para ver" : "Verify to view"}
+        </h2>
       </div>
-      <p className="text-body-sm text-fg-secondary">
-        {teaser.sharedByName} shared {kindLabel(teaser.kind).toLowerCase()} with
-        you on {when(teaser.sharedAt)}. To protect their privacy, we email a
-        code to the address this link was sent to.
-      </p>
+      {isEs ? (
+        <p className="text-body-sm text-fg-secondary">
+          {teaser.sharedByName} compartió con usted:{" "}
+          {kindLabel(teaser.kind, true).toLowerCase()}, el{" "}
+          {when(teaser.sharedAt, true)}. Para proteger su privacidad, enviamos
+          un código a la dirección a la que se envió este enlace.
+        </p>
+      ) : (
+        <p className="text-body-sm text-fg-secondary">
+          {teaser.sharedByName} shared {kindLabel(teaser.kind).toLowerCase()}{" "}
+          with you on {when(teaser.sharedAt)}. To protect their privacy, we
+          email a code to the address this link was sent to.
+        </p>
+      )}
       {notice ? <Alert tone="warning">{notice}</Alert> : null}
       {send.data ? (
         <Alert tone="success" icon={<MailCheck aria-hidden="true" />}>
-          We sent a code to {send.data.sentTo}. It works for{" "}
-          {Math.max(1, Math.round(send.data.expiresIn / 60))} minutes.
+          {isEs ? (
+            <>
+              Enviamos un código a {send.data.sentTo}. Funciona durante{" "}
+              {Math.max(1, Math.round(send.data.expiresIn / 60))} minutos.
+            </>
+          ) : (
+            <>
+              We sent a code to {send.data.sentTo}. It works for{" "}
+              {Math.max(1, Math.round(send.data.expiresIn / 60))} minutes.
+            </>
+          )}
         </Alert>
       ) : null}
       {send.error ? (
         <Alert tone="danger">
-          {serverText(send.error, "The code could not be sent. Try again.")}
+          {serverText(
+            send.error,
+            isEs
+              ? "No se pudo enviar el código. Intente de nuevo."
+              : "The code could not be sent. Try again.",
+          )}
         </Alert>
       ) : null}
       <div>
@@ -180,7 +224,13 @@ function VerifyForm({
           loading={send.isPending}
           onClick={() => send.mutate()}
         >
-          {send.data ? "Send a new code" : "Email me a code"}
+          {send.data
+            ? isEs
+              ? "Enviar un código nuevo"
+              : "Send a new code"
+            : isEs
+              ? "Enviarme un código por correo electrónico"
+              : "Email me a code"}
         </Button>
       </div>
       <form
@@ -193,7 +243,7 @@ function VerifyForm({
         }}
       >
         <FormField
-          label="Your full name"
+          label={isEs ? "Su nombre completo" : "Your full name"}
           required
           error={tried ? errors.name : undefined}
         >
@@ -207,7 +257,7 @@ function VerifyForm({
             />
           )}
         </FormField>
-        <FormField label="Organization">
+        <FormField label={isEs ? "Organización" : "Organization"}>
           {(field) => (
             <Input
               {...field}
@@ -219,7 +269,7 @@ function VerifyForm({
           )}
         </FormField>
         <FormField
-          label="Code from the email"
+          label={isEs ? "Código del correo electrónico" : "Code from the email"}
           required
           error={tried ? errors.code : undefined}
         >
@@ -238,13 +288,15 @@ function VerifyForm({
           <Alert tone="danger">
             {serverText(
               verify.error,
-              "That code did not work. Check it, or send a new one.",
+              isEs
+                ? "Ese código no funcionó. Revíselo o envíe uno nuevo."
+                : "That code did not work. Check it, or send a new one.",
             )}
           </Alert>
         ) : null}
         <div className="flex justify-end">
           <Button type="submit" loading={verify.isPending} disabled={locked}>
-            Verify and view
+            {isEs ? "Verificar y ver" : "Verify and view"}
           </Button>
         </div>
       </form>
@@ -261,8 +313,10 @@ function SharedAttachment({
   session: string;
   content: ApiSharedContent;
 }) {
+  const isEs = useLanguageCode() === "ES";
   const attachment = content.attachment!;
-  const name = attachment.originalName ?? "Attachment";
+  const name =
+    attachment.originalName ?? (isEs ? "Archivo adjunto" : "Attachment");
   const isImage = attachment.contentType.startsWith("image/");
   const [failed, setFailed] = useState(false);
   /* A picture shows as itself: its short-lived link is asked for while it
@@ -304,7 +358,11 @@ function SharedAttachment({
         // eslint-disable-next-line @next/next/no-img-element -- a short-lived presigned link
         <img
           src={previewUrl}
-          alt={`Photo shared by ${content.sharedByName}`}
+          alt={
+            isEs
+              ? `Foto compartida por ${content.sharedByName}`
+              : `Photo shared by ${content.sharedByName}`
+          }
           referrerPolicy="no-referrer"
           className="max-h-96 w-full rounded-control object-contain"
         />
@@ -318,12 +376,14 @@ function SharedAttachment({
           leadingIcon={<Download aria-hidden="true" />}
           onClick={download}
         >
-          Download
+          {isEs ? "Descargar" : "Download"}
         </Button>
       </div>
       {failed ? (
         <p role="alert" className="text-caption text-danger">
-          The file could not be opened. Try again.
+          {isEs
+            ? "No se pudo abrir el archivo. Intente de nuevo."
+            : "The file could not be opened. Try again."}
         </p>
       ) : null}
     </div>
@@ -339,12 +399,22 @@ function SharedItem({
   session: string;
   content: ApiSharedContent;
 }) {
+  const isEs = useLanguageCode() === "ES";
   return (
     <Card as="article" padding="small" className="space-y-stack-md">
       <div>
         <p className="text-caption text-fg-muted">
-          {kindLabel(content.kind)} · from {content.sharedByName} ·{" "}
-          {when(content.sharedAt)}
+          {isEs ? (
+            <>
+              {kindLabel(content.kind, true)} · de {content.sharedByName} ·{" "}
+              {when(content.sharedAt, true)}
+            </>
+          ) : (
+            <>
+              {kindLabel(content.kind)} · from {content.sharedByName} ·{" "}
+              {when(content.sharedAt)}
+            </>
+          )}
         </p>
         <h2 className="mt-stack-xs text-heading-3 text-fg">
           {content.subject}
@@ -359,9 +429,13 @@ function SharedItem({
         <SharedAttachment token={token} session={session} content={content} />
       ) : null}
       <Alert tone="info" live={false}>
-        {content.fromOrganization
-          ? `You are seeing only what ${content.sharedByName} chose to share with you. This page does not give access to NephroReach.`
-          : `You are seeing only what ${content.sharedByName} chose to share with you. This page does not give access to their NephroReach account.`}
+        {isEs
+          ? content.fromOrganization
+            ? `Solo ve lo que ${content.sharedByName} eligió compartir con usted. Esta página no da acceso a NephroReach.`
+            : `Solo ve lo que ${content.sharedByName} eligió compartir con usted. Esta página no da acceso a su cuenta de NephroReach.`
+          : content.fromOrganization
+            ? `You are seeing only what ${content.sharedByName} chose to share with you. This page does not give access to NephroReach.`
+            : `You are seeing only what ${content.sharedByName} chose to share with you. This page does not give access to their NephroReach account.`}
       </Alert>
     </Card>
   );
@@ -376,6 +450,7 @@ function Replies({
   session: string;
   content: ApiSharedContent;
 }) {
+  const isEs = useLanguageCode() === "ES";
   const queryClient = useQueryClient();
   const [body, setBody] = useState("");
   const [tried, setTried] = useState(false);
@@ -390,16 +465,28 @@ function Replies({
   });
   const max = content.maxReplies ?? MAX_RECIPIENT_REPLIES;
   const left = content.repliesLeft;
-  const error = body.trim() ? undefined : "Write a reply.";
+  const error = body.trim()
+    ? undefined
+    : isEs
+      ? "Escriba una respuesta."
+      : "Write a reply.";
 
   return (
     <Card as="section" padding="small" className="space-y-stack-md">
       <div>
         <h2 className="text-heading-4 text-fg">
-          Reply to {content.sharedByName}
+          {isEs ? (
+            <>Responder a {content.sharedByName}</>
+          ) : (
+            <>Reply to {content.sharedByName}</>
+          )}
         </h2>
         <p className="mt-stack-xs text-body-sm text-fg-secondary">
-          You can reply {max} times from this page.
+          {isEs ? (
+            <>Puede responder {max} veces desde esta página.</>
+          ) : (
+            <>You can reply {max} times from this page.</>
+          )}
         </p>
       </div>
       {content.replies.length > 0 ? (
@@ -410,7 +497,7 @@ function Replies({
               className="rounded-card-nested bg-surface-sunken p-inset-sm"
             >
               <p className="text-caption text-fg-muted">
-                {item.authorName} · {when(item.at)}
+                {item.authorName} · {when(item.at, isEs)}
               </p>
               <p className="mt-stack-xs text-body-sm whitespace-pre-line text-fg">
                 {item.body}
@@ -421,7 +508,12 @@ function Replies({
       ) : null}
       {reply.error ? (
         <Alert tone="danger">
-          {serverText(reply.error, "Your reply was not sent. Try again.")}
+          {serverText(
+            reply.error,
+            isEs
+              ? "Su respuesta no se envió. Intente de nuevo."
+              : "Your reply was not sent. Try again.",
+          )}
         </Alert>
       ) : null}
       {left > 0 ? (
@@ -435,10 +527,14 @@ function Replies({
           }}
         >
           <FormField
-            label="Your reply"
+            label={isEs ? "Su respuesta" : "Your reply"}
             required
             error={tried ? error : undefined}
-            hint={`${left} of ${max} replies left`}
+            hint={
+              isEs
+                ? `Le quedan ${left} de ${max} respuestas`
+                : `${left} of ${max} replies left`
+            }
           >
             {(field) => (
               <Textarea
@@ -456,14 +552,18 @@ function Replies({
               loading={reply.isPending}
               leadingIcon={<Send aria-hidden="true" />}
             >
-              Send reply
+              {isEs ? "Enviar respuesta" : "Send reply"}
             </Button>
           </div>
         </form>
       ) : (
-        <Alert tone="warning" title="You have used your replies">
-          To keep the conversation going, visit nephroreach.com and request an
-          account for your organization below.
+        <Alert
+          tone="warning"
+          title={isEs ? "Ya usó sus respuestas" : "You have used your replies"}
+        >
+          {isEs
+            ? "Para continuar la conversación, visite nephroreach.com y solicite una cuenta para su organización a continuación."
+            : "To keep the conversation going, visit nephroreach.com and request an account for your organization below."}
         </Alert>
       )}
     </Card>
@@ -479,6 +579,7 @@ function LearnMore({
   session: string;
   content: ApiSharedContent;
 }) {
+  const isEs = useLanguageCode() === "ES";
   const [open, setOpen] = useState(false);
   const [tried, setTried] = useState(false);
   const [form, setForm] = useState({
@@ -501,18 +602,29 @@ function LearnMore({
   const set = (change: Partial<typeof form>) =>
     setForm((current) => ({ ...current, ...change }));
   const errors = {
-    name: form.name.trim() ? undefined : "Enter your name.",
-    email: isEmail(form.email) ? undefined : "Enter a valid email address.",
+    name: form.name.trim()
+      ? undefined
+      : isEs
+        ? "Ingrese su nombre."
+        : "Enter your name.",
+    email: isEmail(form.email)
+      ? undefined
+      : isEs
+        ? "Ingrese un correo electrónico válido."
+        : "Enter a valid email address.",
   };
 
   return (
     <Card as="section" padding="small" className="space-y-stack-md">
       <h2 className="text-heading-4 text-fg">
-        Bring your renal communication into one workspace
+        {isEs
+          ? "Reúna su comunicación renal en un solo espacio de trabajo"
+          : "Bring your renal communication into one workspace"}
       </h2>
       <p className="text-body-sm text-fg-secondary">
-        NephroReach gives organizations secure patient communication, referrals,
-        care coordination, education enrollment, reporting and more.
+        {isEs
+          ? "NephroReach ofrece a las organizaciones comunicación segura con pacientes, referencias, coordinación de la atención, inscripción en educación, informes y más."
+          : "NephroReach gives organizations secure patient communication, referrals, care coordination, education enrollment, reporting and more."}
       </p>
       <div className="flex flex-wrap gap-inline-sm">
         <a
@@ -524,19 +636,24 @@ function LearnMore({
             appearance: "fill-stroke",
           })}
         >
-          Learn more about NephroReach
+          {isEs
+            ? "Más información sobre NephroReach"
+            : "Learn more about NephroReach"}
           <ExternalLink aria-hidden="true" />
         </a>
         {!request.isSuccess ? (
           <Button onClick={() => setOpen(true)} disabled={open}>
-            Request information for your organization
+            {isEs
+              ? "Solicitar información para su organización"
+              : "Request information for your organization"}
           </Button>
         ) : null}
       </div>
       {request.isSuccess ? (
         <Alert tone="success">
-          Thank you. The NephroReach team will contact you about an
-          organizational account.
+          {isEs
+            ? "Gracias. El equipo de NephroReach se comunicará con usted sobre una cuenta para su organización."
+            : "Thank you. The NephroReach team will contact you about an organizational account."}
         </Alert>
       ) : open ? (
         <form
@@ -552,12 +669,14 @@ function LearnMore({
             <Alert tone="danger" className="sm:col-span-2">
               {serverText(
                 request.error,
-                "The request was not sent. Try again.",
+                isEs
+                  ? "La solicitud no se envió. Intente de nuevo."
+                  : "The request was not sent. Try again.",
               )}
             </Alert>
           ) : null}
           <FormField
-            label="Name"
+            label={isEs ? "Nombre" : "Name"}
             required
             error={tried ? errors.name : undefined}
           >
@@ -570,7 +689,7 @@ function LearnMore({
               />
             )}
           </FormField>
-          <FormField label="Organization">
+          <FormField label={isEs ? "Organización" : "Organization"}>
             {(field) => (
               <Input
                 {...field}
@@ -581,7 +700,7 @@ function LearnMore({
             )}
           </FormField>
           <FormField
-            label="Email"
+            label={isEs ? "Correo electrónico" : "Email"}
             required
             error={tried ? errors.email : undefined}
           >
@@ -594,7 +713,7 @@ function LearnMore({
               />
             )}
           </FormField>
-          <FormField label="Phone">
+          <FormField label={isEs ? "Teléfono" : "Phone"}>
             {(field) => (
               <Input
                 {...field}
@@ -611,10 +730,10 @@ function LearnMore({
               appearance="fill-stroke"
               onClick={() => setOpen(false)}
             >
-              Cancel
+              {isEs ? "Cancelar" : "Cancel"}
             </Button>
             <Button type="submit" loading={request.isPending}>
-              Send request
+              {isEs ? "Enviar solicitud" : "Send request"}
             </Button>
           </div>
         </form>
@@ -632,6 +751,7 @@ function Verified({
   session: string;
   onSessionEnded: () => void;
 }) {
+  const isEs = useLanguageCode() === "ES";
   const content = useQuery({
     queryKey: CONTENT_KEY,
     queryFn: () => getSharedContent(token, session),
@@ -651,12 +771,16 @@ function Verified({
   if (error || !content.data)
     return (
       <Card padding="small" className="space-y-stack-sm">
-        <h2 className="text-heading-4 text-fg">This page did not load</h2>
+        <h2 className="text-heading-4 text-fg">
+          {isEs ? "Esta página no se cargó" : "This page did not load"}
+        </h2>
         <p className="text-body-sm text-fg-secondary">
-          Something went wrong on our side. Try again in a moment.
+          {isEs
+            ? "Algo salió mal de nuestro lado. Intente de nuevo en un momento."
+            : "Something went wrong on our side. Try again in a moment."}
         </p>
         <Button size="small" onClick={() => void content.refetch()}>
-          Try again
+          {isEs ? "Intentar de nuevo" : "Try again"}
         </Button>
       </Card>
     );
@@ -670,6 +794,7 @@ function Verified({
 }
 
 function SecureShare({ token }: { token: string }) {
+  const isEs = useLanguageCode() === "ES";
   const queryClient = useQueryClient();
   /* The share session: in this component's memory only. */
   const [session, setSession] = useState<string | null>(null);
@@ -684,8 +809,12 @@ function SecureShare({ token }: { token: string }) {
   const endSession = React.useCallback(() => {
     setSession(null);
     queryClient.removeQueries({ queryKey: CONTENT_KEY });
-    setNotice("Your session ended. Ask for a new code to keep reading.");
-  }, [queryClient]);
+    setNotice(
+      isEs
+        ? "Su sesión terminó. Pida un código nuevo para seguir leyendo."
+        : "Your session ended. Ask for a new code to keep reading.",
+    );
+  }, [queryClient, isEs]);
 
   if (teaser.isPending) return <Skeleton height={320} />;
   if (isGone(teaser.error))
@@ -693,15 +822,19 @@ function SecureShare({ token }: { token: string }) {
   if (teaser.error || !teaser.data)
     return (
       <Card padding="small" className="space-y-stack-sm">
-        <h2 className="text-heading-4 text-fg">This page did not load</h2>
+        <h2 className="text-heading-4 text-fg">
+          {isEs ? "Esta página no se cargó" : "This page did not load"}
+        </h2>
         <p className="text-body-sm text-fg-secondary">
           {serverText(
             teaser.error,
-            "Something went wrong on our side. Try again in a moment.",
+            isEs
+              ? "Algo salió mal de nuestro lado. Intente de nuevo en un momento."
+              : "Something went wrong on our side. Try again in a moment.",
           )}
         </p>
         <Button size="small" onClick={() => void teaser.refetch()}>
-          Try again
+          {isEs ? "Intentar de nuevo" : "Try again"}
         </Button>
       </Card>
     );
@@ -723,6 +856,7 @@ function SecureShare({ token }: { token: string }) {
 }
 
 export default function SecureSharePage({ token }: { token: string }) {
+  const isEs = useLanguageCode() === "ES";
   return (
     <main className="mx-auto w-full max-w-2xl space-y-4 px-4 py-10">
       <header className="flex items-center gap-inline-md">
@@ -732,7 +866,9 @@ export default function SecureSharePage({ token }: { token: string }) {
           width={140}
           height={40}
         />
-        <span className="text-label-md text-fg-muted">Secure Share</span>
+        <span className="text-label-md text-fg-muted">
+          {isEs ? "Compartir seguro" : "Secure Share"}
+        </span>
       </header>
       {/* A link that cannot be one is refused without asking the server. */}
       {isShareToken(token) ? <SecureShare token={token} /> : <NotValid />}

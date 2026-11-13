@@ -35,6 +35,7 @@ import * as messaging from "@/features/messaging/messaging.rules";
 import type { AccessTarget } from "./access.repository";
 import { useAccessImageUrl } from "./useAccess";
 import {
+  appointmentTitleLabel,
   dayParts,
   formatDay,
   formatTime,
@@ -169,7 +170,7 @@ export function AppointmentRow({
   isEs?: boolean;
   action?: React.ReactNode;
 }) {
-  const parts = dayParts(appointment.date);
+  const parts = dayParts(appointment.date, isEs);
   return (
     <div className="flex items-center gap-inline-lg">
       <span className="flex w-14 shrink-0 flex-col items-center rounded-control border border-line bg-surface-sunken py-1.5 text-center">
@@ -184,7 +185,9 @@ export function AppointmentRow({
         </span>
       </span>
       <div className="min-w-0 flex-1 space-y-0.5">
-        <p className="text-label-lg text-fg">{appointment.title}</p>
+        <p className="text-label-lg text-fg">
+          {appointmentTitleLabel(appointment.title, isEs)}
+        </p>
         <p className="flex items-center gap-inline-xs text-body-sm text-fg-secondary">
           <Clock3 aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
           {formatTime(appointment.time)}
@@ -218,9 +221,11 @@ const updateDot: Record<UpdateKind, string> = {
 export function UpdatesTimeline({
   updates,
   emptyLabel,
+  isEs = false,
 }: {
   updates: AccessUpdate[];
   emptyLabel: string;
+  isEs?: boolean;
 }) {
   if (updates.length === 0) {
     return <p className="text-body-sm text-fg-muted">{emptyLabel}</p>;
@@ -246,7 +251,7 @@ export function UpdatesTimeline({
               <p className="text-body-sm text-fg-secondary">{update.detail}</p>
             </div>
             <span className="shrink-0 text-body-sm text-fg-muted tabular-nums">
-              {formatDay(update.date)}
+              {formatDay(update.date, isEs)}
             </span>
           </li>
         );
@@ -288,7 +293,7 @@ export function HistoryTable({
             history.map((entry) => (
               <TableRow key={entry.id}>
                 <TableCell className="whitespace-nowrap tabular-nums">
-                  {formatDay(entry.date)}
+                  {formatDay(entry.date, isEs)}
                 </TableCell>
                 <TableCell>{entry.type}</TableCell>
                 <TableCell emphasis>{entry.procedure}</TableCell>

@@ -15,10 +15,12 @@ import {
   TableRow,
 } from "@/components/ui";
 import { PageTitle } from "@/components/layout/PageTitle";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   CONTROL,
   PORTALS,
   SECTIONS,
+  localize,
   type Cell,
   type Limited,
 } from "./portalComparison.data";
@@ -44,13 +46,15 @@ function CellMark({
   onLimited: () => void;
   label: string;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   if (typeof cell === "number") {
     return <span className="text-label-lg text-fg tabular-nums">{cell}</span>;
   }
   if (cell === "yes") {
     return (
       <span className="inline-flex size-7 items-center justify-center rounded-pill bg-success-surface text-success">
-        <Check aria-label="Yes" className="size-4" />
+        <Check aria-label={isEs ? "Sí" : "Yes"} className="size-4" />
       </span>
     );
   }
@@ -68,14 +72,21 @@ function CellMark({
       appearance="fill-stroke"
       leadingIcon={<Info aria-hidden="true" />}
       onClick={onLimited}
-      aria-label={`Limited — what is included for ${label}`}
+      aria-label={
+        isEs
+          ? `Limitado: qué incluye para ${label}`
+          : `Limited — what is included for ${label}`
+      }
     >
-      Limited
+      {isEs ? "Limitado" : "Limited"}
     </Button>
   );
 }
 
 export default function PortalComparison() {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
+  const tr = (text: string) => localize(text, isEs);
   const [open, setOpen] = useState<{
     feature: string;
     portal: string;
@@ -89,24 +100,32 @@ export default function PortalComparison() {
         action={
           <Button
             leadingIcon={<Download aria-hidden="true" />}
-            onClick={downloadComparisonPdf}
+            onClick={() => downloadComparisonPdf(isEs)}
           >
-            Download PDF
+            {isEs ? "Descargar PDF" : "Download PDF"}
           </Button>
         }
       />
-      <p className="measure text-body-md text-fg-muted">
-        What each organization&rsquo;s portal has, side by side. Click{" "}
-        <span className="text-label-md text-fg">Limited</span> to see what is
-        included and what is not.
-      </p>
+      {isEs ? (
+        <p className="measure text-body-md text-fg-muted">
+          Lo que tiene el portal de cada organización, lado a lado. Haga clic en{" "}
+          <span className="text-label-md text-fg">Limitado</span> para ver qué
+          se incluye y qué no.
+        </p>
+      ) : (
+        <p className="measure text-body-md text-fg-muted">
+          What each organization&rsquo;s portal has, side by side. Click{" "}
+          <span className="text-label-md text-fg">Limited</span> to see what is
+          included and what is not.
+        </p>
+      )}
 
       <div className="flex flex-wrap items-center gap-inline-lg text-body-sm text-fg-secondary">
         <span className="inline-flex items-center gap-inline-xs">
           <span className="inline-flex size-6 items-center justify-center rounded-pill bg-success-surface text-success">
             <Check aria-hidden="true" className="size-3.5" />
           </span>
-          Yes
+          {isEs ? "Sí" : "Yes"}
         </span>
         <span className="inline-flex items-center gap-inline-xs">
           <span className="inline-flex size-6 items-center justify-center rounded-pill bg-surface-sunken text-fg-subtle">
@@ -115,7 +134,8 @@ export default function PortalComparison() {
           No
         </span>
         <span className="inline-flex items-center gap-inline-xs">
-          <Badge tone="neutral">Limited</Badge> Click for details
+          <Badge tone="neutral">{isEs ? "Limitado" : "Limited"}</Badge>{" "}
+          {isEs ? "Haga clic para ver detalles" : "Click for details"}
         </span>
       </div>
 
@@ -123,10 +143,10 @@ export default function PortalComparison() {
         <Table minWidth={860}>
           <TableHead>
             <TableRow>
-              <TableHeaderCell>Feature</TableHeaderCell>
+              <TableHeaderCell>{isEs ? "Función" : "Feature"}</TableHeaderCell>
               {PORTALS.map((p) => (
                 <TableHeaderCell key={p.id} className="text-center">
-                  {p.name}
+                  {tr(p.name)}
                 </TableHeaderCell>
               ))}
             </TableRow>
@@ -140,24 +160,24 @@ export default function PortalComparison() {
                     colSpan={PORTALS.length + 1}
                     className="bg-surface-sunken text-overline text-fg-brand"
                   >
-                    {section.title}
+                    {tr(section.title)}
                   </TableCell>
                 </TableRow>
                 {section.rows.map((row) => (
                   <TableRow key={row.feature}>
-                    <TableCell emphasis>{row.feature}</TableCell>
+                    <TableCell emphasis>{tr(row.feature)}</TableCell>
                     {PORTALS.map((p) => {
                       const cell = row.cells[p.id];
                       return (
                         <TableCell key={p.id} className="text-center">
                           <CellMark
                             cell={cell}
-                            label={`${row.feature} — ${p.name}`}
+                            label={`${tr(row.feature)} — ${tr(p.name)}`}
                             onLimited={() =>
                               typeof cell === "object"
                                 ? setOpen({
-                                    feature: row.feature,
-                                    portal: p.name,
+                                    feature: tr(row.feature),
+                                    portal: tr(p.name),
                                     detail: cell,
                                   })
                                 : undefined
@@ -177,29 +197,40 @@ export default function PortalComparison() {
       <Card padding="none" className="overflow-hidden">
         <div className="p-card">
           <h2 className="text-heading-4 text-fg">
-            Who controls staff and roles
+            {isEs
+              ? "Quién controla el personal y los roles"
+              : "Who controls staff and roles"}
           </h2>
           <p className="mt-stack-xs text-body-sm text-fg-muted">
-            Built-in roles are only the starting point: each organization can
-            create its own roles and change what any role can do.
+            {isEs
+              ? "Los roles predefinidos son solo el punto de partida: cada organización puede crear sus propios roles y cambiar lo que puede hacer cualquier rol."
+              : "Built-in roles are only the starting point: each organization can create its own roles and change what any role can do."}
           </p>
         </div>
         <Table minWidth={720}>
           <TableHead>
             <TableRow>
-              <TableHeaderCell>Organization</TableHeaderCell>
               <TableHeaderCell>
-                Creates roles &amp; turns features on/off
+                {isEs ? "Organización" : "Organization"}
               </TableHeaderCell>
-              <TableHeaderCell>Adds staff &amp; assigns roles</TableHeaderCell>
+              <TableHeaderCell>
+                {isEs
+                  ? "Crea roles y activa/desactiva funciones"
+                  : "Creates roles & turns features on/off"}
+              </TableHeaderCell>
+              <TableHeaderCell>
+                {isEs
+                  ? "Agrega personal y asigna roles"
+                  : "Adds staff & assigns roles"}
+              </TableHeaderCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {CONTROL.map((row) => (
               <TableRow key={row.portal}>
-                <TableCell emphasis>{row.portal}</TableCell>
-                <TableCell>{row.roles}</TableCell>
-                <TableCell>{row.staff}</TableCell>
+                <TableCell emphasis>{tr(row.portal)}</TableCell>
+                <TableCell>{tr(row.roles)}</TableCell>
+                <TableCell>{tr(row.staff)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -212,11 +243,15 @@ export default function PortalComparison() {
           onClose={() => setOpen(null)}
           size="wide"
           title={open.feature}
-          description={`${open.portal} — limited`}
+          description={
+            isEs ? `${open.portal} — limitado` : `${open.portal} — limited`
+          }
         >
           <div className="grid grid-cols-1 gap-inset-md md:grid-cols-2">
             <section className="space-y-stack-sm rounded-card-nested border border-success-line bg-success-surface p-inset-sm">
-              <h3 className="text-label-lg text-fg">What it has</h3>
+              <h3 className="text-label-lg text-fg">
+                {isEs ? "Lo que tiene" : "What it has"}
+              </h3>
               <ul className="space-y-stack-xs">
                 {open.detail.included.map((item) => (
                   <li
@@ -227,13 +262,15 @@ export default function PortalComparison() {
                       aria-hidden="true"
                       className="mt-0.5 size-4 shrink-0 text-success"
                     />
-                    {item}
+                    {tr(item)}
                   </li>
                 ))}
               </ul>
             </section>
             <section className="space-y-stack-sm rounded-card-nested border border-line p-inset-sm">
-              <h3 className="text-label-lg text-fg">What it does not have</h3>
+              <h3 className="text-label-lg text-fg">
+                {isEs ? "Lo que no tiene" : "What it does not have"}
+              </h3>
               <ul className="space-y-stack-xs">
                 {open.detail.notIncluded.map((item) => (
                   <li
@@ -244,7 +281,7 @@ export default function PortalComparison() {
                       aria-hidden="true"
                       className="mt-0.5 size-4 shrink-0 text-danger"
                     />
-                    {item}
+                    {tr(item)}
                   </li>
                 ))}
               </ul>

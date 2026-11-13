@@ -103,13 +103,22 @@ export type UploadDraft = {
 };
 
 /** Why an upload cannot be sent, or null. The server checks again. */
-export function uploadDraftError(draft: UploadDraft): string | null {
-  if (!draft.fileName.trim()) return "Choose a CSV file.";
+export function uploadDraftError(
+  draft: UploadDraft,
+  isEs = false,
+): string | null {
+  if (!draft.fileName.trim())
+    return isEs ? "Elija un archivo CSV." : "Choose a CSV file.";
   if (draft.fileName.length > LAB_IMPORT_MAX_FILE_NAME)
-    return "The file name is too long. Rename the file and try again.";
-  if (!draft.csv.trim()) return "The file is empty.";
+    return isEs
+      ? "El nombre del archivo es demasiado largo. Cámbiele el nombre e inténtelo de nuevo."
+      : "The file name is too long. Rename the file and try again.";
+  if (!draft.csv.trim())
+    return isEs ? "El archivo está vacío." : "The file is empty.";
   if (draft.csv.length > LAB_IMPORT_MAX_CSV_CHARS)
-    return "The file is too large. Split it into smaller files of up to 1,000,000 characters.";
+    return isEs
+      ? "El archivo es demasiado grande. Divídalo en archivos más pequeños de hasta 1,000,000 caracteres."
+      : "The file is too large. Split it into smaller files of up to 1,000,000 characters.";
   return null;
 }
 

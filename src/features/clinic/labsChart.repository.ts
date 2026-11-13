@@ -148,3 +148,20 @@ export const SOURCE_LABEL: Record<LabSource, string> = {
   FACILITY_CSV_IMPORT: "CSV import",
   INTEGRATION: "Lab feed",
 };
+
+/** FLAG_LABEL in Spanish. */
+export const FLAG_LABEL_ES: Record<AbnormalFlag, string> = {
+  H: "Alto",
+  L: "Bajo",
+  HH: "Críticamente alto",
+  LL: "Críticamente bajo",
+  A: "Anormal",
+};
+
+/** SOURCE_LABEL in Spanish. */
+export const SOURCE_LABEL_ES: Record<LabSource, string> = {
+  PATIENT_ENTERED: "Ingresado por el paciente (sin verificar)",
+  PROVIDER_ENTERED: "Ingresado por el personal",
+  FACILITY_CSV_IMPORT: "Importación CSV",
+  INTEGRATION: "Conexión con el laboratorio",
+};

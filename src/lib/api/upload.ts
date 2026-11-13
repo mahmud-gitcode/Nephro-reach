@@ -114,6 +114,15 @@ const MESSAGES: Record<UploadErrorReason, string> = {
   storage_failed: "The upload did not finish. Please try again.",
 };
 
+const MESSAGES_ES: Record<UploadErrorReason, string> = {
+  type_not_allowed:
+    "No se puede subir este tipo de archivo. Use una foto, PDF, documento, video o audio.",
+  too_large: "Este archivo pesa más de 10 MB.",
+  empty: "Este archivo está vacío.",
+  bad_upload_url: "No se pudo iniciar la carga. Intente de nuevo.",
+  storage_failed: "La carga no terminó. Intente de nuevo.",
+};
+
 /* The storage host the CSP allows (NEXT_PUBLIC_STORAGE_ORIGIN). When it is
    set, a presigned URL for any other host is refused: the browser would
    block it anyway, and the file's bytes must not go anywhere else. */
@@ -206,12 +215,17 @@ export async function uploadFile(
   return id;
 }
 
-/** Member-readable text for an upload failure. */
-export function uploadErrorMessage(error: unknown): string {
-  if (error instanceof UploadError) return error.message;
+/** Member-readable text for an upload failure. `isEs` picks Spanish; a
+ *  validation message the server wrote itself is shown as sent. */
+export function uploadErrorMessage(error: unknown, isEs = false): string {
+  const text = isEs ? MESSAGES_ES : MESSAGES;
+  if (error instanceof UploadError)
+    return isEs ? (MESSAGES_ES[error.reason] ?? error.message) : error.message;
   if (error instanceof ApiError && error.status === 400)
-    return error.messages[0] ?? MESSAGES.storage_failed;
+    return error.messages[0] ?? text.storage_failed;
   if (error instanceof ApiError && error.status === 403)
-    return "You don't have permission to upload this file.";
-  return MESSAGES.storage_failed;
+    return isEs
+      ? "No tiene permiso para subir este archivo."
+      : "You don't have permission to upload this file.";
+  return text.storage_failed;
 }

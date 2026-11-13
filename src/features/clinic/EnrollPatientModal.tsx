@@ -33,6 +33,8 @@ import { isApiError } from "@/lib/api/client";
 import { ConditionSelect } from "./ConditionSelect";
 import { useConditionLibrary } from "./useConditionLibrary";
 import { chronicCount, type CcmCondition } from "./ccmConditions";
+import { useLanguage } from "@/context/LanguageContext";
+import { enrollmentLabel } from "./enrollment.data";
 
 /** The nephrology office's own program (client, 2026-10-09). Not an
  *  education program: the patient goes onto the roster (the server counts
@@ -54,13 +56,21 @@ type EnrollProps = {
 /** No program the role may enroll into, so the form cannot be completed. */
 const NO_PROGRAM_ACCESS =
   "Your role cannot enroll patients in a program. The office owner, or a role with programs edit, can.";
+const NO_PROGRAM_ACCESS_ES =
+  "Su rol no puede inscribir pacientes en un programa. Puede hacerlo el titular de la organización o un rol con permiso para editar programas.";
 
 /** A 403 is "your role can't", never "try again" (P16F-1). The server
  *  enrolls in one transaction, so a refusal saved nothing. */
-function notEnrolledText(failure: EnrollFailure | null, error: Error): string {
+function notEnrolledText(
+  failure: EnrollFailure | null,
+  error: Error,
+  isEs = false,
+): string {
   if (isApiError(failure?.error, { status: 403 }))
-    return "Your role cannot enroll patients in this program. Nothing was saved.";
-  return enrollErrorText(failure?.code ?? null, error.message);
+    return isEs
+      ? "Su rol no puede inscribir pacientes en este programa. No se guardó nada."
+      : "Your role cannot enroll patients in this program. Nothing was saved.";
+  return enrollErrorText(failure?.code ?? null, error.message, isEs);
 }
 
 /**
@@ -114,6 +124,8 @@ function EnrollForm({
   /** The CCM record and condition library, for the nephrology office. */
   ccm?: { store: CcmActions; library: CcmCondition[] };
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   /* The CCM form is chosen with ccm edit; checked again here so a role
      without it never gets a CCM step it cannot complete. */
   const canCcm = useCan("ccm.log");
@@ -141,6 +153,7 @@ function EnrollForm({
       ? enrollErrorText(
           failure.code,
           enroll.error instanceof Error ? enroll.error.message : "",
+          isEs,
         )
       : undefined;
   const canRoster = useCan("patients.enroll");
@@ -153,8 +166,9 @@ function EnrollForm({
   const [ccmPatientId, setCcmPatientId] = useState<string | null>(null);
   const ccmLocked = ccmPatientId !== null;
   const locked = ccmLocked;
-  const lockedHint =
-    "Already added to your roster. Only the CCM enrollment is tried again.";
+  const lockedHint = isEs
+    ? "Ya se agregó a su lista de pacientes. Solo se vuelve a intentar la inscripción en CCM."
+    : "Already added to your roster. Only the CCM enrollment is tried again.";
 
   const isCcm = offersCcm && (ccmLocked || draft.program === CCM_PROGRAM);
   const library = ccm?.library ?? [];
@@ -175,22 +189,35 @@ function EnrollForm({
       provider?: string;
       careManager?: string;
     } = {};
-    if (!draft.name.trim()) out.name = "Enter the patient's full name.";
+    if (!draft.name.trim())
+      out.name = isEs
+        ? "Ingrese el nombre completo del paciente."
+        : "Enter the patient's full name.";
     const mrn = draft.mrn.trim();
     /* A taken MRN or a patient already in CCM is refused by the server. */
-    if (!/^\d{6}$/.test(mrn)) out.mrn = "An MRN is 6 digits.";
-    if (!dob) out.dob = "Enter the date of birth.";
-    if (!provider.trim()) out.provider = "Enter the provider.";
-    if (!careManager.trim()) out.careManager = "Enter the care manager.";
+    if (!/^\d{6}$/.test(mrn))
+      out.mrn = isEs ? "El MRN tiene 6 dígitos." : "An MRN is 6 digits.";
+    if (!dob)
+      out.dob = isEs
+        ? "Ingrese la fecha de nacimiento."
+        : "Enter the date of birth.";
+    if (!provider.trim())
+      out.provider = isEs ? "Ingrese el proveedor." : "Enter the provider.";
+    if (!careManager.trim())
+      out.careManager = isEs
+        ? "Ingrese el gestor de atención."
+        : "Enter the care manager.";
     if (chronicCount(conditions, library) < 2)
-      out.conditions = "CCM needs two or more chronic conditions.";
+      out.conditions = isEs
+        ? "CCM requiere dos o más afecciones crónicas."
+        : "CCM needs two or more chronic conditions.";
     return out;
   }
 
   const hints: Record<string, string | undefined> = attempted
     ? isCcm
       ? ccmErrors()
-      : validateEnrollment(draft, programs)
+      : validateEnrollment(draft, programs, isEs)
     : {};
   /* The server's answer shows on its field (a taken MRN, a full contract). */
   const errors: Record<string, string | undefined> = {
@@ -255,12 +282,16 @@ function EnrollForm({
       open
       onClose={onClose}
       size="wide"
-      title="Enroll New Patient"
+      title={isEs ? "Inscribir nuevo paciente" : "Enroll New Patient"}
       description={
         isCcm
-          ? "Adds the patient to your roster and your CCM dashboard."
+          ? isEs
+            ? "Agrega al paciente a su lista de pacientes y a su panel de CCM."
+            : "Adds the patient to your roster and your CCM dashboard."
           : seats && seats.allowed !== null
-            ? `${Math.max(0, seats.available ?? seats.allowed - seats.used)} of ${seats.allowed} contract seats open.`
+            ? isEs
+              ? `${Math.max(0, seats.available ?? seats.allowed - seats.used)} de ${seats.allowed} cupos del contrato disponibles.`
+              : `${Math.max(0, seats.available ?? seats.allowed - seats.used)} of ${seats.allowed} contract seats open.`
             : undefined
       }
       footer={
@@ -271,7 +302,7 @@ function EnrollForm({
             size="small"
             onClick={onClose}
           >
-            Cancel
+            {isEs ? "Cancelar" : "Cancel"}
           </Button>
           <Button
             type="submit"
@@ -280,10 +311,16 @@ function EnrollForm({
             disabled={enroll.isPending || ccmSaving || !canEnroll}
           >
             {enroll.isPending || ccmSaving
-              ? "Enrolling…"
+              ? isEs
+                ? "Inscribiendo…"
+                : "Enrolling…"
               : isCcm
-                ? "Enroll in CCM"
-                : "Enroll Patient"}
+                ? isEs
+                  ? "Inscribir en CCM"
+                  : "Enroll in CCM"
+                : isEs
+                  ? "Inscribir paciente"
+                  : "Enroll Patient"}
           </Button>
         </>
       }
@@ -291,12 +328,13 @@ function EnrollForm({
       <form id="enroll-form" onSubmit={submit} noValidate>
         {!canRoster ? (
           <Alert tone="info" className="mb-stack-lg">
-            Your role cannot enroll patients. A care coordinator, the front desk
-            or an administrator can.
+            {isEs
+              ? "Su rol no puede inscribir pacientes. Puede hacerlo un coordinador de atención, la recepción o un administrador."
+              : "Your role cannot enroll patients. A care coordinator, the front desk or an administrator can."}
           </Alert>
         ) : noProgram ? (
           <Alert tone="info" className="mb-stack-lg">
-            {NO_PROGRAM_ACCESS}
+            {isEs ? NO_PROGRAM_ACCESS_ES : NO_PROGRAM_ACCESS}
           </Alert>
         ) : null}
         {ccmFailure ? (
@@ -305,14 +343,20 @@ function EnrollForm({
             className="mb-stack-lg"
             title={
               ccmLocked
-                ? "Patient added, CCM enrollment failed"
-                : "Not enrolled"
+                ? isEs
+                  ? "Paciente agregado, falló la inscripción en CCM"
+                  : "Patient added, CCM enrollment failed"
+                : isEs
+                  ? "No inscrito"
+                  : "Not enrolled"
             }
           >
-            {actionErrorText(ccmFailure)}
+            {actionErrorText(ccmFailure, isEs)}
             {/* A 403 is "your role can't": trying again cannot succeed. */}
             {ccmLocked && !isApiError(ccmFailure, { status: 403 })
-              ? " Press Enroll in CCM to try the CCM step again."
+              ? isEs
+                ? " Pulse Inscribir en CCM para volver a intentar el paso de CCM."
+                : " Press Enroll in CCM to try the CCM step again."
               : ""}
           </Alert>
         ) : null}
@@ -320,14 +364,18 @@ function EnrollForm({
         failure?.field !== "name" &&
         failure?.field !== "mrn" &&
         failure?.field !== "program" ? (
-          <Alert tone="danger" className="mb-stack-lg" title="Not enrolled">
-            {notEnrolledText(failure, enroll.error)}
+          <Alert
+            tone="danger"
+            className="mb-stack-lg"
+            title={isEs ? "No inscrito" : "Not enrolled"}
+          >
+            {notEnrolledText(failure, enroll.error, isEs)}
           </Alert>
         ) : null}
 
         <div className="grid gap-stack-md sm:grid-cols-2">
           <FormField
-            label="Full name"
+            label={isEs ? "Nombre completo" : "Full name"}
             required
             hint={locked ? lockedHint : undefined}
             error={errors.name}
@@ -340,7 +388,9 @@ function EnrollForm({
                 value={draft.name}
                 onChange={(event) => set("name", event.target.value)}
                 autoComplete="off"
-                placeholder="e.g. Maria L. Gomez"
+                placeholder={
+                  isEs ? "p. ej., Maria L. Gomez" : "e.g. Maria L. Gomez"
+                }
               />
             )}
           </FormField>
@@ -348,7 +398,13 @@ function EnrollForm({
           <FormField
             label="MRN"
             required
-            hint={locked ? lockedHint : "Six digits, from your EHR."}
+            hint={
+              locked
+                ? lockedHint
+                : isEs
+                  ? "Seis dígitos, de su historia clínica electrónica (EHR)."
+                  : "Six digits, from your EHR."
+            }
             error={errors.mrn}
           >
             {(props) => (
@@ -366,7 +422,7 @@ function EnrollForm({
 
           {isCcm ? (
             <FormField
-              label="Date of birth"
+              label={isEs ? "Fecha de nacimiento" : "Date of birth"}
               required
               hint={ccmLocked ? lockedHint : undefined}
               error={errors.dob}
@@ -383,9 +439,13 @@ function EnrollForm({
             </FormField>
           ) : (
             <FormField
-              label="Start date"
-              optionalLabel="optional"
-              hint="Leave empty if not scheduled yet."
+              label={isEs ? "Fecha de inicio" : "Start date"}
+              optionalLabel={isEs ? "opcional" : "optional"}
+              hint={
+                isEs
+                  ? "Déjela vacía si aún no está programada."
+                  : "Leave empty if not scheduled yet."
+              }
             >
               {(props) => (
                 <Input
@@ -398,7 +458,11 @@ function EnrollForm({
             </FormField>
           )}
 
-          <FormField label="Program" required error={errors.program}>
+          <FormField
+            label={isEs ? "Programa" : "Program"}
+            required
+            error={errors.program}
+          >
             {(props) => (
               <Select
                 {...props}
@@ -421,9 +485,13 @@ function EnrollForm({
           {isCcm ? (
             <>
               <FormField
-                label="Chronic conditions"
+                label={isEs ? "Afecciones crónicas" : "Chronic conditions"}
                 required
-                hint="Choose every condition that applies. Use Other for anything not listed."
+                hint={
+                  isEs
+                    ? "Elija todas las afecciones que correspondan. Use Otra para cualquiera que no esté en la lista."
+                    : "Choose every condition that applies. Use Other for anything not listed."
+                }
                 error={errors.conditions}
                 className="sm:col-span-2"
               >
@@ -437,7 +505,11 @@ function EnrollForm({
                   />
                 )}
               </FormField>
-              <FormField label="Provider" required error={errors.provider}>
+              <FormField
+                label={isEs ? "Proveedor" : "Provider"}
+                required
+                error={errors.provider}
+              >
                 {(props) => (
                   <Input
                     {...props}
@@ -448,7 +520,7 @@ function EnrollForm({
                 )}
               </FormField>
               <FormField
-                label="Care manager"
+                label={isEs ? "Gestor de atención" : "Care manager"}
                 required
                 error={errors.careManager}
               >
@@ -461,7 +533,10 @@ function EnrollForm({
                   />
                 )}
               </FormField>
-              <FormField label="Location" optionalLabel="optional">
+              <FormField
+                label={isEs ? "Ubicación" : "Location"}
+                optionalLabel={isEs ? "opcional" : "optional"}
+              >
                 {(props) => (
                   <Input
                     {...props}
@@ -473,7 +548,11 @@ function EnrollForm({
               </FormField>
             </>
           ) : (
-            <FormField label="Referral source" required error={errors.source}>
+            <FormField
+              label={isEs ? "Fuente de derivación" : "Referral source"}
+              required
+              error={errors.source}
+            >
               {(props) => (
                 <Select
                   {...props}
@@ -481,7 +560,9 @@ function EnrollForm({
                   onChange={(event) => set("source", event.target.value)}
                 >
                   {ENROLL_SOURCES.map((option) => (
-                    <option key={option}>{option}</option>
+                    <option key={option} value={option}>
+                      {enrollmentLabel(option, isEs)}
+                    </option>
                   ))}
                 </Select>
               )}

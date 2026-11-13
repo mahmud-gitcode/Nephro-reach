@@ -37,12 +37,14 @@ import {
   errorTitleFor,
 } from "@/lib/data/asyncState";
 import { useNow } from "@/lib/utils/useNow";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   axisMax,
   byMonth,
   EXPORTS,
   monthLabel,
   PER_MEMBER_REPORTS,
+  PER_MEMBER_REPORTS_ES,
   programStatusLabel,
   shares,
   type CcmReport,
@@ -75,8 +77,16 @@ import { useOptionalAuth } from "@/features/auth/AuthContext";
    report window in months.
    ========================================================================== */
 
-const NOT_AVAILABLE = "Not available yet";
+const notAvailable = (isEs: boolean) =>
+  isEs ? "Aún no disponible" : "Not available yet";
 const PERIODS = [3, 6, 12, 24] as const;
+
+function useIsEs() {
+  return useLanguage().language === "ES";
+}
+
+/** The error copy language for asyncState's helpers. */
+const lang = (isEs: boolean) => (isEs ? "es" : "en");
 
 const KPI_ICONS: Record<string, { icon: React.ReactNode; tone: KeyCardTone }> =
   {
@@ -118,12 +128,17 @@ function ReportSection<T>({
   height?: number;
   children: (data: T) => React.ReactNode;
 }) {
+  const isEs = useIsEs();
   return (
     <AsyncSection
       pending={read.isPending}
       error={read.error}
-      errorTitle={errorTitleFor(read.error, `${title} did not load`)}
-      errorMessage={errorMessageFor(read.error, undefined)}
+      errorTitle={errorTitleFor(
+        read.error,
+        isEs ? `${title}: no se cargó` : `${title} did not load`,
+        lang(isEs),
+      )}
+      errorMessage={errorMessageFor(read.error, undefined, lang(isEs))}
       onRetry={canRetry(read.error) ? read.refetch : undefined}
       skeleton={<Skeleton height={height} />}
     >
@@ -133,13 +148,18 @@ function ReportSection<T>({
 }
 
 function NoDataYet({ title }: { title: string }) {
+  const isEs = useIsEs();
   return (
     <Card as="section" padding="small" className="h-full">
       <PanelHeading title={title} />
       <EmptyState
         variant="bare"
-        title="No data yet"
-        description="NephroReach does not report this yet."
+        title={isEs ? "Aún no hay datos" : "No data yet"}
+        description={
+          isEs
+            ? "NephroReach aún no informa esto."
+            : "NephroReach does not report this yet."
+        }
       />
     </Card>
   );
@@ -155,13 +175,19 @@ function FilterBar({
   /* The view is one office, so the organization is a label, not a choice:
      an office must never be able to pick another. */
   const officeName = useOptionalAuth()?.user?.org ?? "—";
+  const isEs = useIsEs();
+  const NOT_AVAILABLE = notAvailable(isEs);
   return (
-    <Card as="section" padding="small" aria-label="Report filters">
+    <Card
+      as="section"
+      padding="small"
+      aria-label={isEs ? "Filtros del informe" : "Report filters"}
+    >
       <div className="grid gap-inline-lg sm:grid-cols-2 xl:grid-cols-4">
         <label className="block">
           <span className="flex items-center gap-inline-xs text-label-md text-fg-secondary">
             <CalendarDays aria-hidden="true" className="h-4 w-4" />
-            Period
+            {isEs ? "Período" : "Period"}
           </span>
           <Select
             selectSize="small"
@@ -171,13 +197,15 @@ function FilterBar({
           >
             {PERIODS.map((n) => (
               <option key={n} value={n}>
-                Last {n} months
+                {isEs ? `Últimos ${n} meses` : `Last ${n} months`}
               </option>
             ))}
           </Select>
         </label>
         <div>
-          <p className="text-label-md text-fg-secondary">Organization</p>
+          <p className="text-label-md text-fg-secondary">
+            {isEs ? "Organización" : "Organization"}
+          </p>
           <p className="mt-stack-xs flex h-control-small items-center gap-inline-md rounded-control-small border border-line bg-surface-sunken px-control-x-small text-body-sm text-fg">
             <Building2
               aria-hidden="true"
@@ -191,7 +219,7 @@ function FilterBar({
             id="report-filter-program"
             className="text-label-md text-fg-secondary"
           >
-            Program
+            {isEs ? "Programa" : "Program"}
           </p>
           <Select
             selectSize="small"
@@ -203,7 +231,9 @@ function FilterBar({
             value="All Programs"
             onChange={() => undefined}
           >
-            <option>All Programs</option>
+            <option value="All Programs">
+              {isEs ? "Todos los programas" : "All Programs"}
+            </option>
           </Select>
         </div>
         <div>
@@ -211,7 +241,7 @@ function FilterBar({
             id="report-filter-type"
             className="text-label-md text-fg-secondary"
           >
-            Member Type
+            {isEs ? "Tipo de miembro" : "Member Type"}
           </p>
           <Select
             selectSize="small"
@@ -223,7 +253,9 @@ function FilterBar({
             value="All Members"
             onChange={() => undefined}
           >
-            <option>All Members</option>
+            <option value="All Members">
+              {isEs ? "Todos los miembros" : "All Members"}
+            </option>
           </Select>
         </div>
       </div>
@@ -231,7 +263,9 @@ function FilterBar({
         id="report-filters-na"
         className="mt-stack-sm text-caption text-fg-muted"
       >
-        Program and member-type filters: {NOT_AVAILABLE.toLowerCase()}.
+        {isEs
+          ? `Filtros de programa y tipo de miembro: ${NOT_AVAILABLE.toLowerCase()}.`
+          : `Program and member-type filters: ${NOT_AVAILABLE.toLowerCase()}.`}
       </p>
     </Card>
   );
@@ -252,51 +286,65 @@ function KpiCards({
   questionsError: unknown;
   onOpenQuestions: () => void;
 }) {
+  const isEs = useIsEs();
+  const didNotLoad = isEs ? "No se cargó" : "Did not load";
   const value = (read: Read<unknown>, text: () => string) =>
     read.isPending ? "…" : read.error ? "—" : text();
   const kpis = [
     {
       id: "members",
-      label: "Total Members",
+      label: isEs ? "Total de miembros" : "Total Members",
       value: value(roster, () => String(roster.data!.activePatients)),
       note: roster.error
-        ? errorTitleFor(roster.error, "Did not load")
+        ? errorTitleFor(roster.error, didNotLoad, lang(isEs))
         : roster.data
-          ? `${roster.data.endedRelationships} ended`
+          ? isEs
+            ? `${roster.data.endedRelationships} finalizados`
+            : `${roster.data.endedRelationships} ended`
           : undefined,
     },
     {
       id: "completion",
-      label: "Program Completion Rate",
+      label: isEs
+        ? "Tasa de finalización de programas"
+        : "Program Completion Rate",
       value: value(
         programs,
         () => `${programs.data!.courseCompletionPercent}%`,
       ),
       note: programs.error
-        ? errorTitleFor(programs.error, "Did not load")
+        ? errorTitleFor(programs.error, didNotLoad, lang(isEs))
         : programs.data
-          ? `${programs.data.courseCompleted} of ${programs.data.withCourse} with a course`
+          ? isEs
+            ? `${programs.data.courseCompleted} de ${programs.data.withCourse} con un curso`
+            : `${programs.data.courseCompleted} of ${programs.data.withCourse} with a course`
           : undefined,
     },
     {
       id: "attendees",
-      label: "Live Class Attendances",
+      label: isEs ? "Asistencias a clases en vivo" : "Live Class Attendances",
       value: "—",
-      note: "No data yet",
+      note: isEs ? "Aún no hay datos" : "No data yet",
     },
     {
       id: "active",
-      label: "Patients Writing In",
+      label: isEs ? "Pacientes que escriben" : "Patients Writing In",
       value: value(messages, () => String(messages.data!.fromMembers)),
       note: messages.error
-        ? errorTitleFor(messages.error, "Did not load")
-        : "Messages from members in the period",
+        ? errorTitleFor(messages.error, didNotLoad, lang(isEs))
+        : isEs
+          ? "Mensajes de miembros en el período"
+          : "Messages from members in the period",
     },
     {
       id: "questions",
-      label: "Open Questions",
+      label: isEs ? "Preguntas abiertas" : "Open Questions",
       value: questionsError ? "—" : String(questions.length),
-      note: questionsError ? "Did not load" : "Shown in your inbox",
+      note: questionsError
+        ? didNotLoad
+        : isEs
+          ? "Se muestran en su bandeja de entrada"
+          : "Shown in your inbox",
     },
   ];
   return (
@@ -318,7 +366,7 @@ function KpiCards({
               appearance="ghost"
               onClick={onOpenQuestions}
             >
-              See who
+              {isEs ? "Ver quiénes" : "See who"}
             </Button>
           ) : undefined}
         </KeyCard>
@@ -328,10 +376,17 @@ function KpiCards({
 }
 
 function NewPatientsTrend({ roster }: { roster: Read<RosterReport> }) {
+  const isEs = useIsEs();
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading title="New Patients per Month" />
-      <ReportSection read={roster} title="New patients" height={260}>
+      <PanelHeading
+        title={isEs ? "Pacientes nuevos por mes" : "New Patients per Month"}
+      />
+      <ReportSection
+        read={roster}
+        title={isEs ? "Pacientes nuevos" : "New patients"}
+        height={260}
+      >
         {(data) => {
           const rows = byMonth(data.newLinksPerMonth);
           return (
@@ -339,16 +394,20 @@ function NewPatientsTrend({ roster }: { roster: Read<RosterReport> }) {
               series={[
                 {
                   id: "new-links",
-                  label: "New patients",
+                  label: isEs ? "Pacientes nuevos" : "New patients",
                   tone: "cat-1",
                   points: rows.map((r) => r.count),
                 },
               ]}
-              xLabels={rows.map((r) => monthLabel(r.month))}
+              xLabels={rows.map((r) => monthLabel(r.month, isEs))}
               yMin={0}
               yMax={axisMax(rows.map((r) => r.count))}
               yTicks={6}
-              label="New patients linked to this office by month"
+              label={
+                isEs
+                  ? "Pacientes nuevos vinculados a este consultorio por mes"
+                  : "New patients linked to this office by month"
+              }
               height={260}
             />
           );
@@ -371,9 +430,14 @@ function ShareDonut({
   total: number;
   centerLabel: string;
 }) {
+  const isEs = useIsEs();
   if (total === 0)
     return (
-      <EmptyState variant="bare" title="Nothing to show" description={title} />
+      <EmptyState
+        variant="bare"
+        title={isEs ? "Nada que mostrar" : "Nothing to show"}
+        description={title}
+      />
     );
   return (
     <>
@@ -403,22 +467,36 @@ function ShareDonut({
 }
 
 function EnrollmentsByStatus({ programs }: { programs: Read<ProgramsReport> }) {
+  const isEs = useIsEs();
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading title="Enrollments by Status" />
-      <ReportSection read={programs} title="Enrollments">
+      <PanelHeading
+        title={isEs ? "Inscripciones por estado" : "Enrollments by Status"}
+      />
+      <ReportSection
+        read={programs}
+        title={isEs ? "Inscripciones" : "Enrollments"}
+      >
         {(data) => (
           <ShareDonut
-            title="No enrollments in programs yet."
-            label="Program enrollments by status"
+            title={
+              isEs
+                ? "Aún no hay inscripciones en programas."
+                : "No enrollments in programs yet."
+            }
+            label={
+              isEs
+                ? "Inscripciones en programas por estado"
+                : "Program enrollments by status"
+            }
             rows={shares(
               data.byStatus.map((row) => ({
-                label: programStatusLabel(row.key),
+                label: programStatusLabel(row.key, isEs),
                 count: row.count,
               })),
             )}
             total={data.totalEnrollments}
-            centerLabel="Enrollments"
+            centerLabel={isEs ? "Inscripciones" : "Enrollments"}
           />
         )}
       </ReportSection>
@@ -427,20 +505,30 @@ function EnrollmentsByStatus({ programs }: { programs: Read<ProgramsReport> }) {
 }
 
 function MemberStatus({ roster }: { roster: Read<RosterReport> }) {
+  const isEs = useIsEs();
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading title="Member Status" />
-      <ReportSection read={roster} title="Member status">
+      <PanelHeading title={isEs ? "Estado de los miembros" : "Member Status"} />
+      <ReportSection
+        read={roster}
+        title={isEs ? "Estado de los miembros" : "Member status"}
+      >
         {(data) => (
           <ShareDonut
-            title="No members yet."
-            label="Members by status"
+            title={isEs ? "Aún no hay miembros." : "No members yet."}
+            label={isEs ? "Miembros por estado" : "Members by status"}
             rows={shares([
-              { label: "Active", count: data.activePatients },
-              { label: "Ended", count: data.endedRelationships },
+              {
+                label: isEs ? "Activos" : "Active",
+                count: data.activePatients,
+              },
+              {
+                label: isEs ? "Finalizados" : "Ended",
+                count: data.endedRelationships,
+              },
             ])}
             total={data.activePatients + data.endedRelationships}
-            centerLabel="Members"
+            centerLabel={isEs ? "Miembros" : "Members"}
           />
         )}
       </ReportSection>
@@ -449,15 +537,25 @@ function MemberStatus({ roster }: { roster: Read<RosterReport> }) {
 }
 
 function ProgramCompletion({ programs }: { programs: Read<ProgramsReport> }) {
+  const isEs = useIsEs();
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading title="Module Completion Rate" />
-      <ReportSection read={programs} title="Completion">
+      <PanelHeading
+        title={
+          isEs ? "Tasa de finalización de módulos" : "Module Completion Rate"
+        }
+      />
+      <ReportSection
+        read={programs}
+        title={isEs ? "Finalización" : "Completion"}
+      >
         {(data) => (
           <div className="space-y-stack-md">
             <div className="flex items-baseline justify-between gap-inline-md">
               <span className="text-body-sm text-fg-secondary">
-                All programs with a course
+                {isEs
+                  ? "Todos los programas con un curso"
+                  : "All programs with a course"}
               </span>
               <span className="text-label-md text-fg tabular-nums">
                 {data.courseCompletionPercent}%
@@ -465,12 +563,17 @@ function ProgramCompletion({ programs }: { programs: Read<ProgramsReport> }) {
             </div>
             <Progress
               value={data.courseCompletionPercent}
-              label="Course completion across programs"
+              label={
+                isEs
+                  ? "Finalización de cursos en todos los programas"
+                  : "Course completion across programs"
+              }
               size="medium"
             />
             <p className="text-caption text-fg-muted">
-              {data.courseCompleted} of {data.withCourse} enrollments with a
-              course have finished it. Per-program rates: no data yet.
+              {isEs
+                ? `${data.courseCompleted} de ${data.withCourse} inscripciones con un curso lo han terminado. Tasas por programa: aún no hay datos.`
+                : `${data.courseCompleted} of ${data.withCourse} enrollments with a course have finished it. Per-program rates: no data yet.`}
             </p>
           </div>
         )}
@@ -480,26 +583,42 @@ function ProgramCompletion({ programs }: { programs: Read<ProgramsReport> }) {
 }
 
 function CheckInRate({ notices }: { notices: Read<CheckInNoticesReport> }) {
+  const isEs = useIsEs();
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading title="Check-In Completion Rate" />
-      <ReportSection read={notices} title="Check-in notices" height={220}>
+      <PanelHeading
+        title={
+          isEs
+            ? "Tasa de finalización de registros"
+            : "Check-In Completion Rate"
+        }
+      />
+      <ReportSection
+        read={notices}
+        title={isEs ? "Avisos de registros" : "Check-in notices"}
+        height={220}
+      >
         {(data) => {
           const rows = byMonth(data.perMonth);
           return (
             <>
               <p className="mb-stack-sm text-caption text-fg-muted">
-                Check-in notices seen by your office, by month (
-                {data.seenRatePercent}% overall).
+                {isEs
+                  ? `Avisos de registros vistos por su consultorio, por mes (${data.seenRatePercent}% en total).`
+                  : `Check-in notices seen by your office, by month (${data.seenRatePercent}% overall).`}
               </p>
               <BarChart
                 bars={rows.map((r) => ({
-                  label: monthLabel(r.month),
+                  label: monthLabel(r.month, isEs),
                   value: r.delivered
                     ? Math.round((r.seen / r.delivered) * 100)
                     : 0,
                 }))}
-                label="Check-in notices seen by month"
+                label={
+                  isEs
+                    ? "Avisos de registros vistos por mes"
+                    : "Check-in notices seen by month"
+                }
                 unit="%"
                 yMax={100}
                 yTicks={6}
@@ -514,19 +633,29 @@ function CheckInRate({ notices }: { notices: Read<CheckInNoticesReport> }) {
 }
 
 function CcmCard({ ccm }: { ccm: Read<CcmReport> }) {
+  const isEs = useIsEs();
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading title="CCM This Month" />
+      <PanelHeading title={isEs ? "CCM este mes" : "CCM This Month"} />
       <ReportSection read={ccm} title="CCM">
         {(data) => (
           <dl className="divide-y divide-line-subtle">
             {(
               [
-                ["Patients", data.patients],
-                ["At the time threshold", data.patientsAtThreshold],
-                ["Minutes counted", data.countedMinutes],
-                ["Minutes pending", data.pendingMinutes],
-                ["Activities", data.activities],
+                [isEs ? "Pacientes" : "Patients", data.patients],
+                [
+                  isEs ? "En el umbral de tiempo" : "At the time threshold",
+                  data.patientsAtThreshold,
+                ],
+                [
+                  isEs ? "Minutos contabilizados" : "Minutes counted",
+                  data.countedMinutes,
+                ],
+                [
+                  isEs ? "Minutos pendientes" : "Minutes pending",
+                  data.pendingMinutes,
+                ],
+                [isEs ? "Actividades" : "Activities", data.activities],
               ] as const
             ).map(([term, value]) => (
               <div
@@ -555,19 +684,24 @@ function CustomReports({
   /* Leaves NephroReach: ask first (client, 2026-10-07). */
   const share = useExternalShare();
   const download = useReportExport();
+  const isEs = useIsEs();
+  const NOT_AVAILABLE = notAvailable(isEs);
   const tileClass =
     "flex w-full cursor-pointer items-center gap-inline-lg rounded-control border border-line-subtle bg-surface p-inset-sm text-left transition-colors duration-150 ease-standard hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-60";
 
   return (
     <Card as="section" padding="small">
-      <PanelHeading title="Custom Reports" />
+      <PanelHeading
+        title={isEs ? "Informes personalizados" : "Custom Reports"}
+      />
       <p className="-mt-stack-md mb-stack-md text-caption text-fg-muted">
-        Each file holds this office&rsquo;s counts for the period above (no
-        names or MRNs). NephroReach records every download.
+        {isEs
+          ? "Cada archivo contiene los recuentos de este consultorio para el período indicado arriba (sin nombres ni MRN). NephroReach registra cada descarga."
+          : "Each file holds this office’s counts for the period above (no names or MRNs). NephroReach records every download."}
       </p>
       {download.error ? (
         <Alert tone="danger" className="mb-stack-md">
-          {actionErrorText(download.error)}
+          {actionErrorText(download.error, isEs)}
         </Alert>
       ) : null}
       <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -591,7 +725,7 @@ function CustomReports({
                 <FileBarChart className="h-5 w-5" />
               </span>
               <span className="min-w-0 flex-1 text-label-lg text-fg">
-                {e.label}
+                {isEs ? e.labelEs : e.label}
               </span>
               <Download
                 aria-hidden="true"
@@ -602,7 +736,7 @@ function CustomReports({
         ))}
         {/* No audited per-member export exists (B14-4): shown, disabled,
             explained; nothing is built in the browser. */}
-        {PER_MEMBER_REPORTS.map((label) => (
+        {PER_MEMBER_REPORTS.map((label, i) => (
           <li key={label}>
             <button
               type="button"
@@ -618,15 +752,16 @@ function CustomReports({
                 <Download className="h-5 w-5" />
               </span>
               <span className="min-w-0 flex-1 text-label-lg text-fg">
-                {label}
+                {isEs ? PER_MEMBER_REPORTS_ES[i] : label}
               </span>
             </button>
           </li>
         ))}
       </ul>
       <p id="per-member-na" className="mt-stack-md text-caption text-fg-muted">
-        Per-member files: {NOT_AVAILABLE.toLowerCase()}. They need an audited
-        download from NephroReach.
+        {isEs
+          ? `Archivos por miembro: ${NOT_AVAILABLE.toLowerCase()}. Requieren una descarga auditada de NephroReach.`
+          : `Per-member files: ${NOT_AVAILABLE.toLowerCase()}. They need an audited download from NephroReach.`}
       </p>
       {share.notice}
     </Card>
@@ -643,10 +778,13 @@ function OpenQuestionsList({
   messagesHref: string;
 }) {
   const now = useNow();
+  const isEs = useIsEs();
   if (questions.length === 0) {
     return (
       <p className="text-body-sm text-fg-muted">
-        No unanswered patient messages. You are all caught up.
+        {isEs
+          ? "No hay mensajes de pacientes sin responder. Está al día."
+          : "No unanswered patient messages. You are all caught up."}
       </p>
     );
   }
@@ -664,7 +802,7 @@ function OpenQuestionsList({
                 .filter(Boolean)
                 .join(" · ")}
               {" · "}
-              {messagingRules.relativeLabel(q.sentAt, now)}
+              {messagingRules.relativeLabel(q.sentAt, now, isEs)}
             </p>
             <blockquote className="mt-stack-xs line-clamp-3 border-l-2 border-line pl-inset-xs text-body-sm text-fg-secondary">
               {q.body}
@@ -678,7 +816,7 @@ function OpenQuestionsList({
               appearance: "fill-stroke",
             })}
           >
-            Reply
+            {isEs ? "Responder" : "Reply"}
           </Link>
         </li>
       ))}
@@ -687,6 +825,7 @@ function OpenQuestionsList({
 }
 
 export default function ClinicReports() {
+  const isEs = useIsEs();
   const [months, setMonths] = useState<number>(REPORT_MONTHS.DEFAULT);
   const auth = useOptionalAuth();
   const nephrology =
@@ -733,14 +872,14 @@ export default function ClinicReports() {
             }
           >
             <Download className="h-4 w-4" />
-            Export Report
+            {isEs ? "Exportar informe" : "Export Report"}
           </Button>
         }
       />
 
       {exportShare.notice}
       {exportRoster.error ? (
-        <Alert tone="danger">{actionErrorText(exportRoster.error)}</Alert>
+        <Alert tone="danger">{actionErrorText(exportRoster.error, isEs)}</Alert>
       ) : null}
       <FilterBar months={months} onMonths={setMonths} />
 
@@ -755,8 +894,12 @@ export default function ClinicReports() {
       <Modal
         open={questionsOpen}
         onClose={() => setQuestionsOpen(false)}
-        title="Open Questions"
-        description="Patient messages to your office that are still waiting for a reply. Replying in Messages clears them."
+        title={isEs ? "Preguntas abiertas" : "Open Questions"}
+        description={
+          isEs
+            ? "Mensajes de pacientes a su consultorio que aún esperan respuesta. Al responder en Mensajes, se eliminan de esta lista."
+            : "Patient messages to your office that are still waiting for a reply. Replying in Messages clears them."
+        }
       >
         <OpenQuestionsList questions={questions} messagesHref={messagesHref} />
       </Modal>
@@ -778,10 +921,16 @@ export default function ClinicReports() {
         {nephrology ? (
           <CcmCard ccm={ccm} />
         ) : (
-          <NoDataYet title="Top Education Topics" />
+          <NoDataYet
+            title={
+              isEs ? "Temas educativos principales" : "Top Education Topics"
+            }
+          />
         )}
-        <NoDataYet title="Member Outcomes" />
-        <NoDataYet title="Recent Activity" />
+        <NoDataYet
+          title={isEs ? "Resultados de los miembros" : "Member Outcomes"}
+        />
+        <NoDataYet title={isEs ? "Actividad reciente" : "Recent Activity"} />
       </section>
 
       <CustomReports months={months} nephrology={nephrology} />

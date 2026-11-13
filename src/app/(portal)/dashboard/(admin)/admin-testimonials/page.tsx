@@ -35,6 +35,7 @@ import {
   X,
 } from "lucide-react";
 import { collabText } from "@/features/community/collabText";
+import { memberRoleLabel } from "@/features/testimonials/testimonials.rules";
 
 /* Phase 12: the queue is the server's (GET /platform/content/testimonials,
    platform content Manage). Approve and decline (with a reason the member
@@ -299,7 +300,7 @@ export default function AdminTestimonialsPage() {
                             {item.memberName}
                           </span>
                           <span>•</span>
-                          <span>{item.role}</span>
+                          <span>{memberRoleLabel(item.role, isEs)}</span>
                           <span>•</span>
                           <span>
                             {new Date(item.createdAt).toLocaleDateString()}
@@ -320,7 +321,11 @@ export default function AdminTestimonialsPage() {
 
                         {item.adminFeedback && isDeclined && (
                           <div className="rounded-control bg-danger-soft p-2 text-caption text-danger-fg">
-                            <strong>Admin Feedback:</strong>{" "}
+                            <strong>
+                              {isEs
+                                ? "Comentarios del administrador:"
+                                : "Admin Feedback:"}
+                            </strong>{" "}
                             {item.adminFeedback}
                           </div>
                         )}

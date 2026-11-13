@@ -295,7 +295,11 @@ export default function DialysisJournalPage() {
           {/* Standing Private Journal Notice per Jonlg09 Medical Safety Policy */}
           <aside
             role="note"
-            aria-label="Journal Privacy Notice"
+            aria-label={
+              language === "ES"
+                ? "Aviso de privacidad del diario"
+                : "Journal Privacy Notice"
+            }
             className="rounded-card border border-primary-soft-line bg-surface p-inset-md"
           >
             <div className="flex flex-col gap-inline-md">

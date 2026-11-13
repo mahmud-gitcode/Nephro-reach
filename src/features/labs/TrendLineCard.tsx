@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Card, LineChart, type SeriesTone } from "@/components/ui";
+import { useLanguageCode } from "@/context/LanguageContext";
 
 /* ==========================================================================
    TrendLineCard
@@ -62,6 +63,7 @@ export function TrendLineCard({
   refRangeLabel?: string;
   latestLabel?: string;
 }) {
+  const isEs = useLanguageCode() === "ES";
   const latest = data[data.length - 1];
   const top = axisTop(Math.max(...data));
   /* One label per reading, even if the dates run short. */
@@ -86,14 +88,16 @@ export function TrendLineCard({
             ) : null}
           </p>
           <p className="text-caption text-fg-muted">
-            {latestLabel || "Latest"}
+            {latestLabel || (isEs ? "Último" : "Latest")}
           </p>
         </div>
       </div>
 
       <LineChart
         className="mt-stack-lg"
-        label={`${testName} over time`}
+        label={
+          isEs ? `${testName} a lo largo del tiempo` : `${testName} over time`
+        }
         unit={unit}
         showLegend={false}
         height={110}

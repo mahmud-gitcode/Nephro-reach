@@ -73,6 +73,29 @@ export const PROGRAMS = [
   "All Programs",
 ] as const;
 
+/** A class status as shown on screen. The value itself stays English: it
+ *  is what the page stores and maps to the server's slug. */
+const CLASS_STATUS_ES: Record<ClassStatus, string> = {
+  Open: "Abierta",
+  "Not Yet Open": "Aún no abierta",
+  Cancelled: "Cancelada",
+};
+
+export function classStatusLabel(status: ClassStatus, isEs = false): string {
+  return isEs ? (CLASS_STATUS_ES[status] ?? status) : status;
+}
+
+/** A program as shown on screen. The named programs keep their names;
+ *  only the catch-all is translated. Course titles from the server are
+ *  data and pass through unchanged. */
+const PROGRAM_ES: Record<string, string> = {
+  "All Programs": "Todos los programas",
+};
+
+export function programLabel(program: string, isEs = false): string {
+  return isEs ? (PROGRAM_ES[program] ?? program) : program;
+}
+
 export function emptyClassDraft(date: string): ClassDraft {
   return {
     date,
@@ -109,15 +132,22 @@ export function classError(
   draft: ClassDraft,
   existing: ManagedClass[],
   editingId?: string,
+  isEs = false,
 ): string | null {
-  if (!draft.date) return "Pick a date.";
-  if (!draft.time) return "Pick a time.";
-  if (draft.topic.trim().length < 3) return "Give the class a topic.";
+  if (!draft.date) return isEs ? "Elija una fecha." : "Pick a date.";
+  if (!draft.time) return isEs ? "Elija una hora." : "Pick a time.";
+  if (draft.topic.trim().length < 3)
+    return isEs ? "Escriba un tema para la clase." : "Give the class a topic.";
   if (!Number.isFinite(draft.capacity) || draft.capacity < 1) {
-    return "Capacity must be at least 1.";
+    return isEs
+      ? "El cupo debe ser de al menos 1."
+      : "Capacity must be at least 1.";
   }
-  const linkError = recordingLinkError(draft.joinUrl ?? "");
-  if (linkError) return `Meeting link: ${linkError}`;
+  const linkError = recordingLinkError(draft.joinUrl ?? "", isEs);
+  if (linkError)
+    return isEs
+      ? `Enlace de la reunión: ${linkError}`
+      : `Meeting link: ${linkError}`;
 
   const clash = existing.some(
     (item) =>
@@ -126,7 +156,10 @@ export function classError(
       item.date === draft.date &&
       item.time === draft.time,
   );
-  if (clash) return "Another class is already booked for that day and time.";
+  if (clash)
+    return isEs
+      ? "Ya hay otra clase programada para ese día y esa hora."
+      : "Another class is already booked for that day and time.";
 
   return null;
 }
@@ -223,7 +256,7 @@ export type RecordingLinks = Record<string, string>;
  * http and https only. A `javascript:` URL in an href that the page later
  * opens is a script the clinic did not mean to run.
  */
-export function recordingLinkError(url: string): string | null {
+export function recordingLinkError(url: string, isEs = false): string | null {
   const trimmed = url.trim();
   if (!trimmed) return null;
 
@@ -231,11 +264,15 @@ export function recordingLinkError(url: string): string | null {
   try {
     parsed = new URL(trimmed);
   } catch {
-    return "Enter a full link, starting with https://";
+    return isEs
+      ? "Escriba el enlace completo, que empiece con https://"
+      : "Enter a full link, starting with https://";
   }
 
   if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-    return "Only https:// links can be saved.";
+    return isEs
+      ? "Solo se pueden guardar enlaces https://."
+      : "Only https:// links can be saved.";
   }
   return null;
 }
@@ -273,6 +310,8 @@ export type SettingFieldKind = "switch" | "text" | "number" | "select";
 export interface SettingField {
   key: string;
   label: string;
+  /** The label in Spanish (shown when the page is in Spanish). */
+  labelEs?: string;
   kind: SettingFieldKind;
   /** For `select`. */
   options?: string[];
@@ -281,6 +320,7 @@ export interface SettingField {
   min?: number;
   max?: number;
   note?: string;
+  noteEs?: string;
 }
 
 /**
@@ -295,18 +335,40 @@ export const SETTING_FIELDS: Record<SettingId, SettingField[]> = {
     {
       key: "link",
       label: "Default meeting link",
+      labelEs: "Enlace de reunión predeterminado",
       kind: "text",
       placeholder: "https://zoom.us/j/0000000000",
     },
-    { key: "autoCreate", label: "Create a meeting per class", kind: "switch" },
-    { key: "waitingRoom", label: "Use a waiting room", kind: "switch" },
+    {
+      key: "autoCreate",
+      label: "Create a meeting per class",
+      labelEs: "Crear una reunión por clase",
+      kind: "switch",
+    },
+    {
+      key: "waitingRoom",
+      label: "Use a waiting room",
+      labelEs: "Usar una sala de espera",
+      kind: "switch",
+    },
   ],
   reminders: [
-    { key: "email", label: "Email reminder", kind: "switch" },
-    { key: "sms", label: "SMS reminder", kind: "switch" },
+    {
+      key: "email",
+      label: "Email reminder",
+      labelEs: "Recordatorio por correo electrónico",
+      kind: "switch",
+    },
+    {
+      key: "sms",
+      label: "SMS reminder",
+      labelEs: "Recordatorio por SMS",
+      kind: "switch",
+    },
     {
       key: "lead",
       label: "Send",
+      labelEs: "Enviar",
       kind: "select",
       options: ["1 day before", "2 hours before", "1 hour before"],
     },
@@ -315,6 +377,7 @@ export const SETTING_FIELDS: Record<SettingId, SettingField[]> = {
     {
       key: "capacity",
       label: "Default capacity",
+      labelEs: "Cupo predeterminado",
       kind: "number",
       min: 1,
       max: 1000,
@@ -322,6 +385,7 @@ export const SETTING_FIELDS: Record<SettingId, SettingField[]> = {
     {
       key: "waitlist",
       label: "Take a waitlist when full",
+      labelEs: "Abrir una lista de espera cuando esté llena",
       kind: "switch",
     },
   ],
@@ -329,32 +393,74 @@ export const SETTING_FIELDS: Record<SettingId, SettingField[]> = {
     {
       key: "handouts",
       label: "Handout link",
+      labelEs: "Enlace de los materiales",
       kind: "text",
       placeholder: "https://…",
     },
-    { key: "sendAfter", label: "Send handouts after class", kind: "switch" },
+    {
+      key: "sendAfter",
+      label: "Send handouts after class",
+      labelEs: "Enviar materiales después de la clase",
+      kind: "switch",
+    },
   ],
   surveys: [
-    { key: "send", label: "Send a survey after class", kind: "switch" },
+    {
+      key: "send",
+      label: "Send a survey after class",
+      labelEs: "Enviar una encuesta después de la clase",
+      kind: "switch",
+    },
     {
       key: "surveyLink",
       label: "Survey link",
+      labelEs: "Enlace de la encuesta",
       kind: "text",
       placeholder: "https://…",
     },
   ],
   certificates: [
-    { key: "issue", label: "Issue certificates", kind: "switch" },
+    {
+      key: "issue",
+      label: "Issue certificates",
+      labelEs: "Emitir certificados",
+      kind: "switch",
+    },
     {
       key: "minAttendance",
       label: "Minimum attendance",
+      labelEs: "Asistencia mínima",
       kind: "number",
       min: 0,
       max: 100,
       note: "Percent of the class a member must attend.",
+      noteEs: "Porcentaje de la clase al que un miembro debe asistir.",
     },
   ],
 };
+
+/** A settings field's label in the page's language. */
+export function fieldLabel(field: SettingField, isEs = false): string {
+  return isEs && field.labelEs ? field.labelEs : field.label;
+}
+
+export function fieldNote(
+  field: SettingField,
+  isEs = false,
+): string | undefined {
+  return isEs && field.noteEs ? field.noteEs : field.note;
+}
+
+/** A select option as shown on screen; the stored value stays English. */
+const OPTION_ES: Record<string, string> = {
+  "1 day before": "1 día antes",
+  "2 hours before": "2 horas antes",
+  "1 hour before": "1 hora antes",
+};
+
+export function settingOptionLabel(option: string, isEs = false): string {
+  return isEs ? (OPTION_ES[option] ?? option) : option;
+}
 
 /**
  * A number setting outside its range (an emptied field reads as 0): the
@@ -363,15 +469,22 @@ export const SETTING_FIELDS: Record<SettingId, SettingField[]> = {
 export function settingNumberError(
   field: SettingField,
   value: unknown,
+  isEs = false,
 ): string | null {
   if (field.kind !== "number") return null;
   const n = typeof value === "number" ? value : Number(value);
-  if (!Number.isInteger(n)) return `${field.label} must be a whole number.`;
+  const label = fieldLabel(field, isEs);
+  if (!Number.isInteger(n))
+    return isEs
+      ? `${label} debe ser un número entero.`
+      : `${field.label} must be a whole number.`;
   if (
     (field.min !== undefined && n < field.min) ||
     (field.max !== undefined && n > field.max)
   )
-    return `${field.label} must be between ${field.min ?? 0} and ${field.max ?? n}.`;
+    return isEs
+      ? `${label} debe estar entre ${field.min ?? 0} y ${field.max ?? n}.`
+      : `${field.label} must be between ${field.min ?? 0} and ${field.max ?? n}.`;
   return null;
 }
 
@@ -407,10 +520,11 @@ export function defaultSettings(): Record<SettingId, SettingValues> {
 export function settingSummary(
   id: SettingId,
   values: SettingValues,
+  isEs = false,
 ): string | null {
   const on = SETTING_FIELDS[id]
     .filter((field) => field.kind === "switch" && values[field.key] === true)
-    .map((field) => field.label);
+    .map((field) => fieldLabel(field, isEs));
 
   if (on.length > 0) return on.join(", ");
   return null;

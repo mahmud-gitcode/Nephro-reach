@@ -404,13 +404,13 @@ export default function FluidTrackerPage() {
           fileName="weight-fluid-log"
           table={{
             header: [
-              "Date",
-              "Morning weight",
-              "Evening weight",
-              "Fluid intake",
-              "Fluid goal",
-              "Urine output",
-              "Notes",
+              language === "ES" ? "Fecha" : "Date",
+              language === "ES" ? "Peso de la mañana" : "Morning weight",
+              language === "ES" ? "Peso de la noche" : "Evening weight",
+              language === "ES" ? "Consumo de líquidos" : "Fluid intake",
+              language === "ES" ? "Meta de líquidos" : "Fluid goal",
+              language === "ES" ? "Producción de orina" : "Urine output",
+              language === "ES" ? "Notas" : "Notes",
             ],
             rows: entries.map((e) => [
               e.date ?? e.dateEn,

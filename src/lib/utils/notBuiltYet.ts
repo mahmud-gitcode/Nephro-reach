@@ -21,9 +21,11 @@
  * closer to the truth than a reachable one that lies. When the feature
  * lands, delete the call; nothing else about the button changes.
  */
-export function notBuiltYet(feature: string) {
+export function notBuiltYet(feature: string, isEs = false) {
   return {
     disabled: true,
-    title: `${feature} is not available yet`,
+    title: isEs
+      ? `${feature} aún no está disponible`
+      : `${feature} is not available yet`,
   } as const;
 }

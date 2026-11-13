@@ -345,7 +345,7 @@ export default function MedicationsGivenSection({
                   <div className="space-y-stack-sm text-center">
                     <p className="text-body-sm text-fg-muted">
                       {language === "ES"
-                        ? `No hay medicamentos registrados para el tratamiento del ${dayLabel}.`
+                        ? `No hay medicamentos registrados para el tratamiento del ${rowDate(treatmentDate, true)}.`
                         : `No medications recorded for the ${dayLabel} treatment.`}
                     </p>
                     {regular.length > 0 ? (
@@ -374,7 +374,9 @@ export default function MedicationsGivenSection({
                   return (
                     <TableRow key={item.id}>
                       <TableCell className="whitespace-nowrap">
-                        {item.date}
+                        {language === "ES"
+                          ? rowDate(item.givenOn, true)
+                          : item.date}
                       </TableCell>
                       <TableCell emphasis className="whitespace-nowrap">
                         {item.medication}
@@ -480,7 +482,7 @@ export default function MedicationsGivenSection({
               type="text"
               value={formDate}
               onChange={(e) => setFormDate(e.target.value)}
-              placeholder="May 31, 2024"
+              placeholder={language === "ES" ? "31 may 2024" : "May 31, 2024"}
             />
           </div>
 
@@ -575,7 +577,7 @@ export default function MedicationsGivenSection({
               type="text"
               value={formReason}
               onChange={(e) => setFormReason(e.target.value)}
-              placeholder="e.g. Anemia"
+              placeholder={language === "ES" ? "p. ej. Anemia" : "e.g. Anemia"}
             />
           </div>
         </form>

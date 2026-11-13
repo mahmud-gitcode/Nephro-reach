@@ -43,15 +43,19 @@ import {
   errorTitleFor,
 } from "@/lib/data/asyncState";
 import { useIsMounted } from "@/lib/utils/useIsMounted";
+import { useLanguage } from "@/context/LanguageContext";
 import { isStorageDownloadUrl } from "@/lib/utils/safeUrl";
 import { useOptionalAuth } from "@/features/auth/AuthContext";
 import { tableIconButton } from "./tableButton";
 import {
+  billingCycleText,
+  contractStatusText,
   contractTone,
   daysUntilEnd,
   formatCents,
   formatDate,
   formatDay,
+  invoiceStatusText,
   invoiceTone,
   outstanding,
   paidThisMonthPct,
@@ -75,6 +79,13 @@ import { ContractDocumentModal, RequestChangeModal } from "./BillingModals";
    choice, so those controls are hidden and the choice is shown read-only.
    An invoice PDF opens only when NephroReach issued one.
    ========================================================================== */
+
+function useIsEs() {
+  return useLanguage().language === "ES";
+}
+
+/** The error copy language for asyncState's helpers. */
+const lang = (isEs: boolean) => (isEs ? "es" : "en");
 
 function PanelHeading({
   title,
@@ -112,6 +123,7 @@ function SummaryCards({
   today: Date;
   seats: OfficeBilling["seats"];
 }) {
+  const isEs = useIsEs();
   const paidPct = paidThisMonthPct(invoices, today);
   const used = seats?.used ?? 0;
   const allowed = seats?.allowed ?? null;
@@ -122,18 +134,22 @@ function SummaryCards({
         icon={<ContractSolid />}
         value={
           <Badge tone={contractTone[contract.status]} className="text-label-lg">
-            {contract.status}
+            {contractStatusText(contract.status, isEs)}
           </Badge>
         }
-        label="Contract Status"
-        note={`${formatDay(contract.start)} – ${formatDay(contract.end)}`}
+        label={isEs ? "Estado del contrato" : "Contract Status"}
+        note={`${formatDay(contract.start, isEs)} – ${formatDay(contract.end, isEs)}`}
       />
       <KeyCard
         tone="success"
         icon={<MoneySolid />}
         value={formatCents(contract.monthlyFeeCents)}
-        label="Monthly Fee"
-        note={`Billed ${contract.billingCycle.toLowerCase()}`}
+        label={isEs ? "Tarifa mensual" : "Monthly Fee"}
+        note={
+          isEs
+            ? `Facturación: ${billingCycleText(contract.billingCycle, isEs).toLowerCase()}`
+            : `Billed ${contract.billingCycle.toLowerCase()}`
+        }
       />
       <KeyCard
         tone="brand"
@@ -143,23 +159,29 @@ function SummaryCards({
             {used}
             <span className="text-heading-4 text-fg-muted">
               {" "}
-              / {allowed ?? "no limit"}
+              / {allowed ?? (isEs ? "sin límite" : "no limit")}
             </span>
           </>
         }
-        label="Patients Covered"
+        label={isEs ? "Pacientes cubiertos" : "Patients Covered"}
         note={
           seats?.available !== null && seats?.available !== undefined
-            ? `${seats.available} slots remaining`
-            : "No seat limit"
+            ? isEs
+              ? `${seats.available} cupos disponibles`
+              : `${seats.available} slots remaining`
+            : isEs
+              ? "Sin límite de cupos"
+              : "No seat limit"
         }
       />
       <KeyCard
         tone="success"
         icon={<CheckCircleSolid />}
         value={paidPct === null ? "—" : `${paidPct}%`}
-        label="Invoices Paid"
-        note="This month (invoices shown)"
+        label={isEs ? "Facturas pagadas" : "Invoices Paid"}
+        note={
+          isEs ? "Este mes (facturas mostradas)" : "This month (invoices shown)"
+        }
       />
     </section>
   );
@@ -180,27 +202,45 @@ function ContractDetails({
   onViewContract: () => void;
   onRequestChange: () => void;
 }) {
+  const isEs = useIsEs();
   const signedInOffice = useOptionalAuth()?.user?.org ?? null;
   const profile = billing.profile;
   const lastRequest = billing.changeRequests[0];
-  const officeName = profile?.name ?? signedInOffice ?? "Your office";
+  const officeName =
+    profile?.name ??
+    signedInOffice ??
+    (isEs ? "Su consultorio" : "Your office");
 
   const rows: [string, React.ReactNode][] = [
-    ["Contract #", contract.number],
-    ["Start Date", formatDay(contract.start)],
-    ["End Date", formatDay(contract.end)],
-    ["Patients Allowed", contract.patientsAllowed],
-    ["Monthly Fee", formatCents(contract.monthlyFeeCents)],
-    ["Billing Cycle", contract.billingCycle],
-    ["Auto-Renew", contract.autoRenew ? "Yes" : "No"],
-    ["Primary Contact", contract.primaryContact],
-    ["Email", profile?.email ?? "—"],
-    ["Phone", profile?.phone ?? "—"],
+    [isEs ? "Contrato n.º" : "Contract #", contract.number],
+    [isEs ? "Fecha de inicio" : "Start Date", formatDay(contract.start, isEs)],
+    [isEs ? "Fecha de fin" : "End Date", formatDay(contract.end, isEs)],
+    [
+      isEs ? "Pacientes permitidos" : "Patients Allowed",
+      contract.patientsAllowed,
+    ],
+    [
+      isEs ? "Tarifa mensual" : "Monthly Fee",
+      formatCents(contract.monthlyFeeCents),
+    ],
+    [
+      isEs ? "Ciclo de facturación" : "Billing Cycle",
+      billingCycleText(contract.billingCycle, isEs),
+    ],
+    [
+      isEs ? "Renovación automática" : "Auto-Renew",
+      contract.autoRenew ? (isEs ? "Sí" : "Yes") : "No",
+    ],
+    [isEs ? "Contacto principal" : "Primary Contact", contract.primaryContact],
+    [isEs ? "Correo electrónico" : "Email", profile?.email ?? "—"],
+    [isEs ? "Teléfono" : "Phone", profile?.phone ?? "—"],
   ];
 
   return (
     <Card as="section" padding="small" className="flex h-full flex-col">
-      <PanelHeading title="Contract Details" />
+      <PanelHeading
+        title={isEs ? "Detalles del contrato" : "Contract Details"}
+      />
 
       <div className="flex items-start gap-inline-lg">
         <span
@@ -213,7 +253,7 @@ function ContractDetails({
           <p className="text-heading-5 text-fg">{officeName}</p>
           <p className="text-body-sm text-fg-muted">{contract.type}</p>
           <Badge tone={contractTone[contract.status]} className="mt-stack-xs">
-            {contract.status}
+            {contractStatusText(contract.status, isEs)}
           </Badge>
         </div>
       </div>
@@ -235,7 +275,7 @@ function ContractDetails({
       <div className="mt-auto grid gap-inline-md pt-inset-md sm:grid-cols-2">
         <Button size="small" className="sm:col-span-2" onClick={onViewContract}>
           <FileText className="h-4 w-4" />
-          View Contract Document
+          {isEs ? "Ver documento del contrato" : "View Contract Document"}
         </Button>
         {/* An office cannot rewrite its own contract, so the mockup's "Edit
             Contract" is a request to NephroReach (billing Edit). */}
@@ -247,11 +287,13 @@ function ContractDetails({
           title={
             canRequest
               ? undefined
-              : "Your role cannot send billing requests in this office."
+              : isEs
+                ? "Su rol no puede enviar solicitudes de facturación en este consultorio."
+                : "Your role cannot send billing requests in this office."
           }
           onClick={onRequestChange}
         >
-          Request a Change
+          {isEs ? "Solicitar un cambio" : "Request a Change"}
         </Button>
         <Link
           href={messagesHref}
@@ -262,20 +304,24 @@ function ContractDetails({
           })}
         >
           <MessageSquareText className="h-4 w-4" />
-          Send Message
+          {isEs ? "Enviar mensaje" : "Send Message"}
         </Link>
       </div>
 
       {/* The latest request stays on the card, so a sent one is visible. */}
       {lastRequest ? (
         <p className="mt-inset-md text-body-sm text-fg-muted">
-          Change requested by{" "}
+          {isEs ? "Cambio solicitado por" : "Change requested by"}{" "}
           {billing.requesterLabel(lastRequest.requestedById)}:{" "}
-          {changeTopicLabel(lastRequest.topic)} ·{" "}
-          {formatDate(new Date(lastRequest.requestedAt))}
+          {changeTopicLabel(lastRequest.topic, isEs)} ·{" "}
+          {formatDate(new Date(lastRequest.requestedAt), isEs)}
           {lastRequest.resolvedAt
-            ? ` · resolved ${formatDate(new Date(lastRequest.resolvedAt))}`
-            : " · open"}
+            ? isEs
+              ? ` · resuelto el ${formatDate(new Date(lastRequest.resolvedAt), isEs)}`
+              : ` · resolved ${formatDate(new Date(lastRequest.resolvedAt))}`
+            : isEs
+              ? " · abierto"
+              : " · open"}
         </p>
       ) : null}
     </Card>
@@ -283,6 +329,7 @@ function ContractDetails({
 }
 
 function InvoiceTable({ billing }: { billing: OfficeBilling }) {
+  const isEs = useIsEs();
   const [opening, setOpening] = React.useState<string | null>(null);
   const [linkError, setLinkError] = React.useState<unknown>(null);
 
@@ -297,7 +344,9 @@ function InvoiceTable({ billing }: { billing: OfficeBilling }) {
          data: or blob:), whatever the server returned. */
       if (!isStorageDownloadUrl(link.url))
         throw new RangeError(
-          "The invoice link was not valid. Nothing was opened.",
+          isEs
+            ? "El enlace de la factura no era válido. No se abrió nada."
+            : "The invoice link was not valid. Nothing was opened.",
         );
       window.open(link.url, "_blank", "noopener,noreferrer");
     } catch (error) {
@@ -309,10 +358,10 @@ function InvoiceTable({ billing }: { billing: OfficeBilling }) {
 
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading title="Invoices" />
+      <PanelHeading title={isEs ? "Facturas" : "Invoices"} />
       {linkError ? (
         <Alert tone="danger" className="mb-stack-md">
-          {actionErrorText(linkError)}
+          {actionErrorText(linkError, isEs)}
         </Alert>
       ) : null}
       <AsyncSection
@@ -320,9 +369,14 @@ function InvoiceTable({ billing }: { billing: OfficeBilling }) {
         error={billing.invoicesError}
         errorTitle={errorTitleFor(
           billing.invoicesError,
-          "Invoices did not load",
+          isEs ? "Las facturas no se cargaron" : "Invoices did not load",
+          lang(isEs),
         )}
-        errorMessage={errorMessageFor(billing.invoicesError, undefined)}
+        errorMessage={errorMessageFor(
+          billing.invoicesError,
+          undefined,
+          lang(isEs),
+        )}
         onRetry={
           canRetry(billing.invoicesError) ? billing.refetchInvoices : undefined
         }
@@ -331,8 +385,12 @@ function InvoiceTable({ billing }: { billing: OfficeBilling }) {
         empty={
           <EmptyState
             variant="bare"
-            title="No invoices yet"
-            description="Invoices appear here once NephroReach issues them."
+            title={isEs ? "Aún no hay facturas" : "No invoices yet"}
+            description={
+              isEs
+                ? "Las facturas aparecen aquí cuando NephroReach las emite."
+                : "Invoices appear here once NephroReach issues them."
+            }
           />
         }
       >
@@ -340,14 +398,20 @@ function InvoiceTable({ billing }: { billing: OfficeBilling }) {
           <Table minWidth={560}>
             <TableHead className="bg-surface-sunken">
               <TableRow>
-                <TableHeaderCell>Invoice #</TableHeaderCell>
-                <TableHeaderCell>Billing Period</TableHeaderCell>
-                <TableHeaderCell>Issued</TableHeaderCell>
-                <TableHeaderCell>Due</TableHeaderCell>
-                <TableHeaderCell numeric>Amount</TableHeaderCell>
-                <TableHeaderCell>Status</TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Factura n.º" : "Invoice #"}
+                </TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Período de facturación" : "Billing Period"}
+                </TableHeaderCell>
+                <TableHeaderCell>{isEs ? "Emitida" : "Issued"}</TableHeaderCell>
+                <TableHeaderCell>{isEs ? "Vence" : "Due"}</TableHeaderCell>
+                <TableHeaderCell numeric>
+                  {isEs ? "Monto" : "Amount"}
+                </TableHeaderCell>
+                <TableHeaderCell>{isEs ? "Estado" : "Status"}</TableHeaderCell>
                 <TableHeaderCell className="text-right">
-                  Actions
+                  {isEs ? "Acciones" : "Actions"}
                 </TableHeaderCell>
               </TableRow>
             </TableHead>
@@ -364,17 +428,17 @@ function InvoiceTable({ billing }: { billing: OfficeBilling }) {
                     {invoice.period}
                   </TableCell>
                   <TableCell className="whitespace-nowrap tabular-nums">
-                    {formatDate(invoice.issued)}
+                    {formatDate(invoice.issued, isEs)}
                   </TableCell>
                   <TableCell className="whitespace-nowrap tabular-nums">
-                    {formatDate(invoice.due)}
+                    {formatDate(invoice.due, isEs)}
                   </TableCell>
                   <TableCell numeric>
                     {formatCents(invoice.amountCents, invoice.currency)}
                   </TableCell>
                   <TableCell>
                     <Badge tone={invoiceTone[invoice.status]}>
-                      {invoice.status}
+                      {invoiceStatusText(invoice.status, isEs)}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
@@ -388,9 +452,15 @@ function InvoiceTable({ billing }: { billing: OfficeBilling }) {
                       title={
                         invoice.hasPdf
                           ? undefined
-                          : "No PDF has been issued for this invoice."
+                          : isEs
+                            ? "No se ha emitido un PDF para esta factura."
+                            : "No PDF has been issued for this invoice."
                       }
-                      aria-label={`Download ${invoice.number}`}
+                      aria-label={
+                        isEs
+                          ? `Descargar ${invoice.number}`
+                          : `Download ${invoice.number}`
+                      }
                       onClick={() => void open(invoice)}
                     >
                       <Download aria-hidden="true" />
@@ -409,7 +479,7 @@ function InvoiceTable({ billing }: { billing: OfficeBilling }) {
               appearance="fill-stroke"
               onClick={billing.loadMoreInvoices}
             >
-              Show older invoices
+              {isEs ? "Mostrar facturas anteriores" : "Show older invoices"}
             </Button>
           </div>
         ) : null}
@@ -425,32 +495,39 @@ function SeatUsage({
   seats: OfficeBilling["seats"];
   enrollHref: string;
 }) {
+  const isEs = useIsEs();
   const used = seats?.used ?? 0;
   const allowed = seats?.allowed ?? null;
   return (
     <Card as="section" padding="small" className="flex flex-col">
-      <PanelHeading title="Patient Seats" />
+      <PanelHeading title={isEs ? "Cupos de pacientes" : "Patient Seats"} />
       <div className="flex items-center gap-inset-sm">
         <ProgressRing
           value={allowed ? Math.min(100, (used / allowed) * 100) : 0}
-          label="Contract seats in use"
+          label={isEs ? "Cupos del contrato en uso" : "Contract seats in use"}
           size={96}
         />
         <dl className="space-y-stack-xs">
           <div className="flex gap-inline-md">
-            <dt className="text-body-sm text-fg-muted">Enrolled</dt>
+            <dt className="text-body-sm text-fg-muted">
+              {isEs ? "Inscritos" : "Enrolled"}
+            </dt>
             <dd className="text-label-lg text-fg tabular-nums">{used}</dd>
           </div>
           <div className="flex gap-inline-md">
-            <dt className="text-body-sm text-fg-muted">Remaining</dt>
+            <dt className="text-body-sm text-fg-muted">
+              {isEs ? "Disponibles" : "Remaining"}
+            </dt>
             <dd className="text-label-lg text-fg tabular-nums">
               {seats?.available ?? "—"}
             </dd>
           </div>
           <div className="flex gap-inline-md">
-            <dt className="text-body-sm text-fg-muted">Allowed</dt>
+            <dt className="text-body-sm text-fg-muted">
+              {isEs ? "Permitidos" : "Allowed"}
+            </dt>
             <dd className="text-label-lg text-fg tabular-nums">
-              {allowed ?? "No limit"}
+              {allowed ?? (isEs ? "Sin límite" : "No limit")}
             </dd>
           </div>
         </dl>
@@ -466,7 +543,7 @@ function SeatUsage({
           })}
         >
           <Users className="h-4 w-4" />
-          Manage Enrollment
+          {isEs ? "Administrar inscripciones" : "Manage Enrollment"}
         </Link>
       </div>
     </Card>
@@ -474,21 +551,26 @@ function SeatUsage({
 }
 
 function Renewal({ contract, today }: { contract: Contract; today: Date }) {
+  const isEs = useIsEs();
   const end = contract.end;
   const days = end ? daysUntilEnd(end, today) : null;
   const elapsed = end ? termElapsedPct(contract.start, end, today) : 0;
   return (
     <Card as="section" padding="small" className="flex flex-col">
-      <PanelHeading title="Renewal" />
+      <PanelHeading title={isEs ? "Renovación" : "Renewal"} />
       <div className="flex items-baseline justify-between gap-inline-md">
-        <span className="text-body-sm text-fg-secondary">Term elapsed</span>
+        <span className="text-body-sm text-fg-secondary">
+          {isEs ? "Plazo transcurrido" : "Term elapsed"}
+        </span>
         <span className="text-label-lg text-fg tabular-nums">
           {end ? `${elapsed}%` : "—"}
         </span>
       </div>
       <Progress
         value={elapsed}
-        label="Contract term elapsed"
+        label={
+          isEs ? "Plazo del contrato transcurrido" : "Contract term elapsed"
+        }
         size="medium"
         className="mt-stack-xs"
       />
@@ -499,8 +581,12 @@ function Renewal({ contract, today }: { contract: Contract; today: Date }) {
             className="h-4 w-4 shrink-0 text-fg-muted"
           />
           {end
-            ? `Ends ${formatDay(end)} · ${days} days left`
-            : "No end date set"}
+            ? isEs
+              ? `Termina el ${formatDay(end, isEs)} · quedan ${days} días`
+              : `Ends ${formatDay(end)} · ${days} days left`
+            : isEs
+              ? "Sin fecha de finalización"
+              : "No end date set"}
         </li>
         <li className="flex items-center gap-inline-md text-body-sm text-fg">
           <RefreshCw
@@ -508,14 +594,19 @@ function Renewal({ contract, today }: { contract: Contract; today: Date }) {
             className="h-4 w-4 shrink-0 text-fg-muted"
           />
           {contract.autoRenew
-            ? "Renews automatically"
-            : "Does not renew automatically"}
+            ? isEs
+              ? "Se renueva automáticamente"
+              : "Renews automatically"
+            : isEs
+              ? "No se renueva automáticamente"
+              : "Does not renew automatically"}
         </li>
       </ul>
       {/* NephroReach holds the renewal choice; an office reads it here and
           asks for a change with "Request a Change". */}
       <p className="mt-auto pt-inset-md text-body-sm text-fg-muted">
-        Renewal choice: {renewalLabel(contract.renewalChoice)}
+        {isEs ? "Opción de renovación" : "Renewal choice"}:{" "}
+        {renewalLabel(contract.renewalChoice, isEs)}
       </p>
     </Card>
   );
@@ -530,15 +621,24 @@ function BillingSummary({
   billing: OfficeBilling;
   today: Date;
 }) {
+  const isEs = useIsEs();
   const rows: [string, string][] = [
     [
-      `Paid in ${today.getFullYear()}`,
+      isEs
+        ? `Pagado en ${today.getFullYear()}`
+        : `Paid in ${today.getFullYear()}`,
       formatCents(totalPaidThisYear(billing.invoices, today)),
     ],
-    ["Outstanding", formatCents(outstanding(billing.invoices))],
-    ["Billing cycle", contract.billingCycle],
     [
-      "Invoices issued",
+      isEs ? "Saldo pendiente" : "Outstanding",
+      formatCents(outstanding(billing.invoices)),
+    ],
+    [
+      isEs ? "Ciclo de facturación" : "Billing cycle",
+      billingCycleText(contract.billingCycle, isEs),
+    ],
+    [
+      isEs ? "Facturas emitidas" : "Invoices issued",
       billing.invoicesTotal === null ? "—" : String(billing.invoicesTotal),
     ],
   ];
@@ -546,9 +646,13 @@ function BillingSummary({
   return (
     <Card as="section" padding="small">
       <PanelHeading
-        title="Billing Summary"
+        title={isEs ? "Resumen de facturación" : "Billing Summary"}
         description={
-          billing.hasMoreInvoices ? "From the invoices shown." : undefined
+          billing.hasMoreInvoices
+            ? isEs
+              ? "Según las facturas mostradas."
+              : "From the invoices shown."
+            : undefined
         }
       />
       <dl className="divide-y divide-line-subtle">
@@ -577,6 +681,7 @@ export default function ClinicBilling({
   /* "This month" and the renewal countdown hang off today's date. This page
      is prerendered at build time, so the clock is read once the page is in
      the browser. */
+  const isEs = useIsEs();
   const mounted = useIsMounted();
   const today = mounted ? new Date() : null;
   const billing = useOfficeBilling();
@@ -600,8 +705,12 @@ export default function ClinicBilling({
       <AsyncSection
         pending={billing.isPending || today === null}
         error={billing.error}
-        errorTitle={errorTitleFor(billing.error, "Billing did not load")}
-        errorMessage={errorMessageFor(billing.error, undefined)}
+        errorTitle={errorTitleFor(
+          billing.error,
+          isEs ? "La facturación no se cargó" : "Billing did not load",
+          lang(isEs),
+        )}
+        errorMessage={errorMessageFor(billing.error, undefined, lang(isEs))}
         onRetry={canRetry(billing.error) ? billing.refetch : undefined}
         isEmpty={contract === null}
         skeleton={
@@ -616,11 +725,15 @@ export default function ClinicBilling({
         }
         empty={
           <EmptyState
-            title="No contract"
+            title={isEs ? "Sin contrato" : "No contract"}
             description={
               billing.pendingContract
-                ? `A contract starts ${formatDay(billing.pendingContract.start)}.`
-                : "This office has no NephroReach contract yet."
+                ? isEs
+                  ? `Un contrato comienza el ${formatDay(billing.pendingContract.start, isEs)}.`
+                  : `A contract starts ${formatDay(billing.pendingContract.start)}.`
+                : isEs
+                  ? "Este consultorio aún no tiene un contrato con NephroReach."
+                  : "This office has no NephroReach contract yet."
             }
           />
         }
@@ -629,8 +742,9 @@ export default function ClinicBilling({
           <>
             {billing.pendingContract ? (
               <Alert tone="info">
-                A new contract ({billing.pendingContract.number}) starts{" "}
-                {formatDay(billing.pendingContract.start)}.
+                {isEs
+                  ? `Un nuevo contrato (${billing.pendingContract.number}) comienza el ${formatDay(billing.pendingContract.start, isEs)}.`
+                  : `A new contract (${billing.pendingContract.number}) starts ${formatDay(billing.pendingContract.start)}.`}
               </Alert>
             ) : null}
 

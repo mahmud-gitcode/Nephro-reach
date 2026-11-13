@@ -647,11 +647,18 @@ function DialysisManagementDashboard() {
   );
 }
 
+function LoadingFallback() {
+  const { language } = useLanguage();
+  return (
+    <div className="p-8 text-center text-fg-muted">
+      {language === "ES" ? "Cargando..." : "Loading..."}
+    </div>
+  );
+}
+
 export default function DialysisManagementPage() {
   return (
-    <Suspense
-      fallback={<div className="p-8 text-center text-fg-muted">Loading...</div>}
-    >
+    <Suspense fallback={<LoadingFallback />}>
       <DialysisManagementDashboard />
     </Suspense>
   );

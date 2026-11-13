@@ -40,6 +40,7 @@ import {
 import { QuestionListEditor } from "@/features/education/admin/QuestionEditor";
 import { usePlatformCourse } from "@/features/education/usePlatformCourses";
 import { errorTitleFor } from "@/lib/data/asyncState";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   Alert,
   Badge,
@@ -72,6 +73,26 @@ const KIND_LABEL: Record<CourseClassKind, string> = {
   reading: "Reading",
   exam: "Exam",
 };
+
+const KIND_LABEL_ES: Record<CourseClassKind, string> = {
+  video: "Video",
+  audio: "Audio",
+  reading: "Lectura",
+  exam: "Examen",
+};
+
+const STATUS_ES: Record<string, string> = {
+  published: "publicado",
+  draft: "borrador",
+  archived: "archivado",
+};
+
+/** Spanish plural of a course's own group or lesson word. */
+function pluralEs(word: string): string {
+  if (/ión$/i.test(word)) return word.replace(/ión$/i, "iones");
+  if (/[aeiouáéó]$/i.test(word)) return `${word}s`;
+  return `${word}es`;
+}
 
 /* Categorical, not good-or-bad: each kind keeps its own tag colour. */
 const KIND_TONE: Record<CourseClassKind, BadgeTone> = {
@@ -113,7 +134,15 @@ function ModuleSection({
   onEditModule: () => void;
   onDeleteModule: () => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const minutes = moduleMinutes(courseModule);
+  const groupLabel = isEs
+    ? course.groupLabelEs || course.groupLabelEn
+    : course.groupLabelEn;
+  const itemLabel = isEs
+    ? course.itemLabelEs || course.itemLabelEn
+    : course.itemLabelEn;
 
   const examCount = courseModule.classes.filter(
     (entry) => entry.kind === "exam",
@@ -126,7 +155,7 @@ function ModuleSection({
       <header className="flex flex-wrap items-center gap-inline-md border-b border-line p-card py-inset-md">
         <div className="min-w-0 flex-1">
           <p className="text-overline text-fg-brand">
-            {course.groupLabelEn} {index + 1}
+            {groupLabel} {index + 1}
           </p>
           <h2 className="truncate text-heading-4 text-fg">
             {courseModule.titleEn}
@@ -135,11 +164,21 @@ function ModuleSection({
 
         <span className="flex items-center gap-inline-md text-body-sm text-fg-muted">
           <span>
-            {lessonCount} {course.itemLabelEn.toLowerCase()}
-            {lessonCount === 1 ? "" : "s"}
-            {examCount > 0
-              ? ` · ${examCount} exam${examCount === 1 ? "" : "s"}`
-              : ""}
+            {isEs ? (
+              `${lessonCount} ${(lessonCount === 1 ? itemLabel : pluralEs(itemLabel)).toLowerCase()}${
+                examCount > 0
+                  ? ` · ${examCount} examen${examCount === 1 ? "" : "es"}`
+                  : ""
+              }`
+            ) : (
+              <>
+                {lessonCount} {course.itemLabelEn.toLowerCase()}
+                {lessonCount === 1 ? "" : "s"}
+                {examCount > 0
+                  ? ` · ${examCount} exam${examCount === 1 ? "" : "s"}`
+                  : ""}
+              </>
+            )}
           </span>
           <span aria-hidden="true">·</span>
           <span>{formatTotalDuration(minutes)}</span>
@@ -152,7 +191,11 @@ function ModuleSection({
             size="small"
             iconOnly
             onClick={onEditModule}
-            aria-label={`Rename ${courseModule.titleEn}`}
+            aria-label={
+              isEs
+                ? `Cambiar nombre de ${courseModule.titleEn}`
+                : `Rename ${courseModule.titleEn}`
+            }
           >
             <Edit3 />
           </Button>
@@ -162,7 +205,11 @@ function ModuleSection({
             size="small"
             iconOnly
             onClick={onDeleteModule}
-            aria-label={`Delete ${courseModule.titleEn}`}
+            aria-label={
+              isEs
+                ? `Eliminar ${courseModule.titleEn}`
+                : `Delete ${courseModule.titleEn}`
+            }
           >
             <Trash2 />
           </Button>
@@ -173,7 +220,7 @@ function ModuleSection({
             onClick={onAddExam}
           >
             <ClipboardCheck />
-            Add Exam
+            {isEs ? "Agregar examen" : "Add Exam"}
           </Button>
           <Button
             variant="neutral"
@@ -182,35 +229,39 @@ function ModuleSection({
             onClick={onAddClass}
           >
             <Plus />
-            Add {course.itemLabelEn}
+            {isEs ? `Agregar ${itemLabel}` : `Add ${course.itemLabelEn}`}
           </Button>
         </div>
       </header>
 
       {visibleClasses.length === 0 ? (
         <p className="m-card rounded-card-nested border border-dashed border-line p-inset-xl text-center text-body-sm text-fg-muted">
-          {courseModule.classes.length === 0
-            ? `No ${course.itemLabelEn.toLowerCase()}s in this ${course.groupLabelEn.toLowerCase()} yet.`
-            : `Nothing of that type in this ${course.groupLabelEn.toLowerCase()}.`}
+          {isEs
+            ? courseModule.classes.length === 0
+              ? `Todavía no hay ${pluralEs(itemLabel).toLowerCase()} en ${groupLabel} ${index + 1}.`
+              : `No hay nada de ese tipo en ${groupLabel} ${index + 1}.`
+            : courseModule.classes.length === 0
+              ? `No ${course.itemLabelEn.toLowerCase()}s in this ${course.groupLabelEn.toLowerCase()} yet.`
+              : `Nothing of that type in this ${course.groupLabelEn.toLowerCase()}.`}
         </p>
       ) : (
         <Table minWidth={860}>
           <TableHead>
             <TableRow>
               {[
-                course.itemLabelEn,
-                "Type",
-                "Duration",
-                "Transcript",
-                "Questions",
-                "Documents",
-                "Actions",
-              ].map((header) => (
+                [course.itemLabelEn, itemLabel],
+                ["Type", "Tipo"],
+                ["Duration", "Duración"],
+                ["Transcript", "Transcripción"],
+                ["Questions", "Preguntas"],
+                ["Documents", "Documentos"],
+                ["Actions", "Acciones"],
+              ].map(([header, headerEs]) => (
                 <TableHeaderCell
                   key={header}
                   className={header === "Actions" ? "text-right" : undefined}
                 >
-                  {header}
+                  {isEs ? headerEs : header}
                 </TableHeaderCell>
               ))}
             </TableRow>
@@ -231,8 +282,13 @@ function ModuleSection({
                         </span>
                         <span className="block truncate text-caption text-fg-muted">
                           {courseClass.kind === "exam"
-                            ? `${courseClass.activities.length} scored questions · ${course.passMark}% to pass`
-                            : courseClass.mediaSrc || "No media path set"}
+                            ? isEs
+                              ? `${courseClass.activities.length} preguntas calificadas · ${course.passMark}% para aprobar`
+                              : `${courseClass.activities.length} scored questions · ${course.passMark}% to pass`
+                            : courseClass.mediaSrc ||
+                              (isEs
+                                ? "No hay ruta multimedia"
+                                : "No media path set")}
                         </span>
                       </span>
                     </span>
@@ -243,7 +299,9 @@ function ModuleSection({
                       tone={KIND_TONE[courseClass.kind]}
                       icon={<KindIcon aria-hidden="true" />}
                     >
-                      {KIND_LABEL[courseClass.kind]}
+                      {isEs
+                        ? KIND_LABEL_ES[courseClass.kind]
+                        : KIND_LABEL[courseClass.kind]}
                     </Badge>
                   </TableCell>
 
@@ -263,7 +321,8 @@ function ModuleSection({
                         aria-hidden="true"
                         className="h-4 w-4 text-fg-muted"
                       />
-                      {courseClass.transcript.length} lines
+                      {courseClass.transcript.length}{" "}
+                      {isEs ? "líneas" : "lines"}
                     </span>
                   </TableCell>
 
@@ -297,7 +356,7 @@ function ModuleSection({
                         onClick={() => onEditClass(courseClass)}
                       >
                         <Edit3 />
-                        Edit
+                        {isEs ? "Editar" : "Edit"}
                       </Button>
                       <Button
                         variant="danger"
@@ -305,7 +364,11 @@ function ModuleSection({
                         size="small"
                         iconOnly
                         onClick={() => onDeleteClass(courseClass.id)}
-                        aria-label={`Delete ${courseClass.titleEn}`}
+                        aria-label={
+                          isEs
+                            ? `Eliminar ${courseClass.titleEn}`
+                            : `Delete ${courseClass.titleEn}`
+                        }
                       >
                         <Trash2 />
                       </Button>
@@ -342,6 +405,8 @@ export default function ManageCoursePage() {
     setStatus,
     isSaving,
   } = usePlatformCourse(courseId);
+  const { language } = useLanguage();
+  const isEs = language === "ES";
 
   const course = getCourse(courseId);
 
@@ -369,7 +434,11 @@ export default function ManageCoursePage() {
   if (error) {
     return (
       <ErrorState
-        title={errorTitleFor(error, "The course did not load")}
+        title={errorTitleFor(
+          error,
+          isEs ? "El curso no se cargó" : "The course did not load",
+          isEs ? "es" : "en",
+        )}
         error={error}
         onRetry={refetch}
       />
@@ -380,17 +449,19 @@ export default function ManageCoursePage() {
     return (
       <div className="rounded-card-nested border border-line bg-surface p-8 text-center shadow-card">
         <h1 className="text-heading-4 font-semibold text-fg">
-          Course not found
+          {isEs ? "Curso no encontrado" : "Course not found"}
         </h1>
         <p className="mt-2 text-body-sm text-fg-muted">
-          It may have been deleted.
+          {isEs
+            ? "Es posible que se haya eliminado."
+            : "It may have been deleted."}
         </p>
         <Link
           href="/dashboard/manage-curriculum"
           className="mt-5 inline-flex items-center gap-2 rounded-control bg-primary-solid px-4 py-2.5 text-body-sm font-bold text-primary-on-solid transition-colors hover:bg-primary-solid-hover"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to courses
+          {isEs ? "Volver a los cursos" : "Back to courses"}
         </Link>
       </div>
     );
@@ -399,14 +470,23 @@ export default function ManageCoursePage() {
   const saveFailure = saveError ? (
     <Alert
       tone="danger"
-      title="That change was not saved"
+      title={isEs ? "Ese cambio no se guardó" : "That change was not saved"}
       onDismiss={dismissSaveError}
     >
       {saveError instanceof Error
         ? saveError.message
-        : "Nothing was changed. Please try again."}
+        : isEs
+          ? "No se cambió nada. Inténtelo de nuevo."
+          : "Nothing was changed. Please try again."}
     </Alert>
   ) : null;
+
+  const groupLabel = isEs
+    ? course.groupLabelEs || course.groupLabelEn
+    : course.groupLabelEn;
+  const itemLabel = isEs
+    ? course.itemLabelEs || course.itemLabelEn
+    : course.itemLabelEn;
 
   const editingModule = course.modules.find(
     (entry) => entry.id === editingModuleId,
@@ -431,7 +511,7 @@ export default function ManageCoursePage() {
         className="inline-flex min-h-11 items-center gap-2 text-body-sm font-semibold text-fg-brand transition-colors hover:text-fg-brand"
       >
         <ArrowLeft className="h-4 w-4" />
-        All courses
+        {isEs ? "Todos los cursos" : "All courses"}
       </Link>
 
       {saveFailure ? <div className="mt-4">{saveFailure}</div> : null}
@@ -443,7 +523,8 @@ export default function ManageCoursePage() {
               {course.titleEn}
             </h1>
             <p className="mt-2 max-w-3xl text-body-sm leading-relaxed text-fg-muted">
-              {course.descriptionEn || "No description yet."}
+              {course.descriptionEn ||
+                (isEs ? "Todavía no hay descripción." : "No description yet.")}
             </p>
 
             <ul className="mt-4 flex flex-wrap items-center gap-3">
@@ -452,21 +533,25 @@ export default function ManageCoursePage() {
                 <span className="font-bold text-fg">
                   {course.modules.length}
                 </span>
-                {course.groupLabelEn.toLowerCase()}s
+                {isEs
+                  ? pluralEs(groupLabel).toLowerCase()
+                  : `${course.groupLabelEn.toLowerCase()}s`}
               </li>
               <li className="flex items-center gap-2 rounded-control border border-line bg-surface-sunken px-3.5 py-1.5 text-caption font-medium text-fg-muted">
                 <BookOpen className="h-4 w-4 text-fg-brand" />
                 <span className="font-bold text-fg">
                   {courseClassCount(course) - examTotal}
                 </span>
-                {course.itemLabelEn.toLowerCase()}s
+                {isEs
+                  ? pluralEs(itemLabel).toLowerCase()
+                  : `${course.itemLabelEn.toLowerCase()}s`}
               </li>
               <li className="flex items-center gap-2 rounded-control border border-line bg-surface-sunken px-3.5 py-1.5 text-caption font-medium text-fg-muted">
                 <Clock3 className="h-4 w-4 text-fg-brand" />
                 <span className="font-bold text-fg">
                   {formatTotalDuration(courseMinutes(course))}
                 </span>
-                total
+                {isEs ? "en total" : "total"}
               </li>
             </ul>
           </div>
@@ -474,7 +559,9 @@ export default function ManageCoursePage() {
           <div className="flex shrink-0 flex-wrap items-center gap-2.5">
             {/* Members see published courses only. */}
             <Badge tone={course.status === "published" ? "success" : "neutral"}>
-              {course.status}
+              {isEs
+                ? (STATUS_ES[course.status] ?? course.status)
+                : course.status}
             </Badge>
             {course.status === "published" ? (
               <Button
@@ -483,11 +570,11 @@ export default function ManageCoursePage() {
                 loading={isSaving}
                 onClick={() => setStatus("unpublish")}
               >
-                Unpublish
+                {isEs ? "Despublicar" : "Unpublish"}
               </Button>
             ) : (
               <Button loading={isSaving} onClick={() => setStatus("publish")}>
-                Publish
+                {isEs ? "Publicar" : "Publish"}
               </Button>
             )}
             {course.status !== "archived" ? (
@@ -497,7 +584,7 @@ export default function ManageCoursePage() {
                 loading={isSaving}
                 onClick={() => setStatus("archive")}
               >
-                Archive
+                {isEs ? "Archivar" : "Archive"}
               </Button>
             ) : null}
             <button
@@ -506,7 +593,7 @@ export default function ManageCoursePage() {
               className="flex cursor-pointer items-center gap-2 rounded-control border border-line bg-surface px-4 py-2.5 text-body-sm font-bold text-fg-secondary transition-colors hover:bg-surface-sunken"
             >
               <Edit3 className="h-4 w-4 text-fg-muted" />
-              Edit course
+              {isEs ? "Editar curso" : "Edit course"}
             </button>
             <button
               type="button"
@@ -514,7 +601,7 @@ export default function ManageCoursePage() {
               className="flex cursor-pointer items-center gap-2 rounded-control border border-line bg-surface px-4 py-2.5 text-body-sm font-bold text-fg-secondary transition-colors hover:bg-surface-sunken"
             >
               <Settings className="h-4 w-4 text-fg-muted" />
-              Settings
+              {isEs ? "Configuración" : "Settings"}
             </button>
             <button
               type="button"
@@ -522,7 +609,7 @@ export default function ManageCoursePage() {
               className="flex cursor-pointer items-center gap-2 rounded-control bg-primary-solid px-4 py-2.5 text-body-sm font-bold text-primary-on-solid shadow-card transition-colors hover:bg-primary-solid-hover"
             >
               <Plus className="h-4 w-4" />
-              Add {course.groupLabelEn}
+              {isEs ? `Agregar ${groupLabel}` : `Add ${course.groupLabelEn}`}
             </button>
           </div>
         </div>
@@ -532,7 +619,7 @@ export default function ManageCoursePage() {
         <div className="mt-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div
             role="tablist"
-            aria-label={`${course.groupLabelEn}s`}
+            aria-label={isEs ? pluralEs(groupLabel) : `${course.groupLabelEn}s`}
             className="flex gap-2.5 overflow-x-auto pb-1"
           >
             {course.modules.map((courseModule, index) => (
@@ -549,7 +636,7 @@ export default function ManageCoursePage() {
                 }`}
               >
                 <span>
-                  {course.groupLabelEn} {index + 1}
+                  {groupLabel} {index + 1}
                 </span>
                 <span
                   className={`rounded-pill px-1.5 py-0.5 text-caption font-bold ${
@@ -567,7 +654,7 @@ export default function ManageCoursePage() {
           <div className="flex shrink-0 items-center gap-2">
             <Filter className="h-4 w-4 shrink-0 text-fg-muted" />
             <label className="sr-only" htmlFor="class-type-filter">
-              Filter by class type
+              {isEs ? "Filtrar por tipo de clase" : "Filter by class type"}
             </label>
             <select
               id="class-type-filter"
@@ -577,11 +664,13 @@ export default function ManageCoursePage() {
               }
               className="h-[38px] cursor-pointer rounded-card-nested border border-line bg-surface px-3 text-body-sm font-medium text-fg-secondary transition-colors outline-none hover:bg-surface-sunken focus:border-primary-edge focus:ring-2 focus:ring-ring"
             >
-              <option value="all">All Types</option>
+              <option value="all">
+                {isEs ? "Todos los tipos" : "All Types"}
+              </option>
               <option value="video">Video</option>
               <option value="audio">Audio</option>
-              <option value="reading">Reading</option>
-              <option value="exam">Exam</option>
+              <option value="reading">{isEs ? "Lectura" : "Reading"}</option>
+              <option value="exam">{isEs ? "Examen" : "Exam"}</option>
             </select>
           </div>
         </div>
@@ -635,8 +724,14 @@ export default function ManageCoursePage() {
           />
         ) : (
           <p className="rounded-card-nested border border-dashed border-line-strong bg-surface p-10 text-center text-body-sm font-medium text-fg-muted">
-            This course has no {course.groupLabelEn.toLowerCase()}s yet. Add one
-            to start building {course.itemLabelEn.toLowerCase()}s.
+            {isEs ? (
+              `Este curso todavía no tiene ${pluralEs(groupLabel).toLowerCase()}. Agregue contenido para empezar a crear ${pluralEs(itemLabel).toLowerCase()}.`
+            ) : (
+              <>
+                This course has no {course.groupLabelEn.toLowerCase()}s yet. Add
+                one to start building {course.itemLabelEn.toLowerCase()}s.
+              </>
+            )}
           </p>
         )}
       </div>
@@ -644,17 +739,31 @@ export default function ManageCoursePage() {
       <Card as="section" aria-labelledby="final-exam" className="mt-6">
         <SectionTitle
           id="final-exam"
-          title="Final exam"
-          subtitle={`Scored · ${course.passMark}% to pass · ${
-            course.maxAttempts === 0 ? "unlimited" : course.maxAttempts
-          } attempts${
-            course.certificateEnabled && course.requireExamPass
-              ? " · needed for the certificate"
-              : ""
-          }`}
+          title={isEs ? "Examen final" : "Final exam"}
+          subtitle={
+            isEs
+              ? `Calificado · ${course.passMark}% para aprobar · ${
+                  course.maxAttempts === 0
+                    ? "intentos ilimitados"
+                    : `${course.maxAttempts} intentos`
+                }${
+                  course.certificateEnabled && course.requireExamPass
+                    ? " · necesario para el certificado"
+                    : ""
+                }`
+              : `Scored · ${course.passMark}% to pass · ${
+                  course.maxAttempts === 0 ? "unlimited" : course.maxAttempts
+                } attempts${
+                  course.certificateEnabled && course.requireExamPass
+                    ? " · needed for the certificate"
+                    : ""
+                }`
+          }
           action={
             <Badge tone={course.finalExam.length > 0 ? "info" : "neutral"}>
-              {course.finalExam.length} questions
+              {isEs
+                ? `${course.finalExam.length} preguntas`
+                : `${course.finalExam.length} questions`}
             </Badge>
           }
         />
@@ -662,7 +771,11 @@ export default function ManageCoursePage() {
           questions={course.finalExam}
           scoredOnly
           onChange={(finalExam) => updateCourse(course.id, { finalExam })}
-          emptyText="No final exam yet. Add questions to give members a scored exam."
+          emptyText={
+            isEs
+              ? "Todavía no hay examen final. Agregue preguntas para dar a los miembros un examen calificado."
+              : "No final exam yet. Add questions to give members a scored exam."
+          }
         />
       </Card>
 

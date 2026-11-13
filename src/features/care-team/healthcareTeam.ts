@@ -15,7 +15,7 @@
    ========================================================================== */
 
 export const TEAM_ROLES = [
-  { value: "nurse", en: "Dialysis nurse", es: "Enfermera de diálisis" },
+  { value: "nurse", en: "Dialysis nurse", es: "Enfermero/a de diálisis" },
   { value: "nephrologist", en: "Nephrologist", es: "Nefrólogo" },
   { value: "dietitian", en: "Dietitian", es: "Dietista" },
   { value: "social-worker", en: "Social worker", es: "Trabajador social" },

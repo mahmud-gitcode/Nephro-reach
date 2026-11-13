@@ -20,6 +20,7 @@ import {
   TableRow,
   Textarea,
 } from "@/components/ui";
+import { useLanguage } from "@/context/LanguageContext";
 import { canRetry } from "@/lib/data/asyncState";
 import { useCanLevel } from "@/features/staff/useStaffAccounts";
 import {
@@ -31,8 +32,8 @@ import {
 } from "./consoleUi";
 import { centsToInput, formatCents, parseDollars } from "./money";
 import {
-  AUDIENCE_LABEL,
   ORG_AUDIENCES,
+  audienceLabelFor,
   type OrgAudience,
 } from "./platformPlans.mappers";
 import { PlatformContracts } from "./PlatformContracts";
@@ -59,25 +60,42 @@ const OUTCOME_TEXT = {
   versioned:
     "Saved as a new version: offices already on this plan keep their terms; new contracts get the new one.",
 } as const;
+const OUTCOME_TEXT_ES: Record<keyof typeof OUTCOME_TEXT, string> = {
+  created:
+    "Se creó el plan de oficina. Publíquelo para ofrecerlo en los contratos.",
+  updated: "Se guardó el plan de oficina.",
+  versioned:
+    "Se guardó como una nueva versión: las oficinas que ya tienen este plan conservan sus condiciones; los nuevos contratos reciben la nueva.",
+};
 
 export function OrganizationSubscriptions() {
   const plans = useOrgPlans();
   const canWrite = useCanLevel("plans", 2);
   const canManage = useCanLevel("plans", 3);
   const [editing, setEditing] = useState<AdminOrgPlan | "new" | null>(null);
-  const copy = readErrorCopy(plans.error, "The office plans did not load");
+  const { language } = useLanguage();
+  const isEs = language === "ES";
+  const copy = readErrorCopy(
+    plans.error,
+    isEs
+      ? "Los planes de oficina no se cargaron"
+      : "The office plans did not load",
+    isEs,
+  );
 
   return (
     <section className="mt-stack-2xl space-y-stack-lg">
       <div className="flex flex-col gap-inline-lg sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-heading-4 text-fg">
-            Office &amp; Clinic Subscriptions
+            {isEs
+              ? "Suscripciones de oficinas y clínicas"
+              : "Office & Clinic Subscriptions"}
           </h2>
           <p className="mt-stack-xs measure text-caption text-fg-muted">
-            Plans for dialysis centers, vascular access centers, nephrology
-            offices and hospitals. Kept apart from the member plans, so they
-            never show on the public pricing page.
+            {isEs
+              ? "Planes para centros de diálisis, centros de acceso vascular, consultorios de nefrología y hospitales. Se mantienen separados de los planes para miembros, por lo que nunca aparecen en la página pública de precios."
+              : "Plans for dialysis centers, vascular access centers, nephrology offices and hospitals. Kept apart from the member plans, so they never show on the public pricing page."}
           </p>
         </div>
         {canWrite ? (
@@ -91,25 +109,31 @@ export function OrganizationSubscriptions() {
               setEditing("new");
             }}
           >
-            Add Office Plan
+            {isEs ? "Agregar plan de oficina" : "Add Office Plan"}
           </Button>
         ) : null}
       </div>
 
       {plans.outcome ? (
         <Alert tone="success" onDismiss={plans.dismissOutcome}>
-          {OUTCOME_TEXT[plans.outcome]}
+          {(isEs ? OUTCOME_TEXT_ES : OUTCOME_TEXT)[plans.outcome]}
         </Alert>
       ) : null}
       <ActionError
         error={plans.statusError}
-        title="The plan status did not change"
+        title={
+          isEs
+            ? "El estado del plan no cambió"
+            : "The plan status did not change"
+        }
         onDismiss={plans.dismissStatusError}
       />
 
       <Card padding="none">
         <div className="p-card">
-          <h3 className="text-heading-5 text-fg">Plans</h3>
+          <h3 className="text-heading-5 text-fg">
+            {isEs ? "Planes" : "Plans"}
+          </h3>
         </div>
         <AsyncSection
           pending={plans.isPending}
@@ -122,12 +146,16 @@ export function OrganizationSubscriptions() {
             <TableHead>
               <TableRow>
                 <TableHeaderCell>Plan</TableHeaderCell>
-                <TableHeaderCell>For</TableHeaderCell>
-                <TableHeaderCell>Monthly fee</TableHeaderCell>
-                <TableHeaderCell>Patients included</TableHeaderCell>
-                <TableHeaderCell>Status</TableHeaderCell>
+                <TableHeaderCell>{isEs ? "Para" : "For"}</TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Tarifa mensual" : "Monthly fee"}
+                </TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Pacientes incluidos" : "Patients included"}
+                </TableHeaderCell>
+                <TableHeaderCell>{isEs ? "Estado" : "Status"}</TableHeaderCell>
                 <TableHeaderCell className="text-right">
-                  Actions
+                  {isEs ? "Acciones" : "Actions"}
                 </TableHeaderCell>
               </TableRow>
             </TableHead>
@@ -135,7 +163,9 @@ export function OrganizationSubscriptions() {
               {plans.plans.length === 0 ? (
                 <TableEmptyRow colSpan={6}>
                   <p className="text-body-sm text-fg-muted">
-                    No office plans yet.
+                    {isEs
+                      ? "Aún no hay planes de oficina."
+                      : "No office plans yet."}
                   </p>
                 </TableEmptyRow>
               ) : null}
@@ -150,13 +180,18 @@ export function OrganizationSubscriptions() {
                     ) : null}
                     {plan.earlierVersions > 0 ? (
                       <span className="block text-caption text-fg-muted">
-                        Version {plan.earlierVersions + 1}
+                        {isEs ? "Versión" : "Version"}{" "}
+                        {plan.earlierVersions + 1}
                       </span>
                     ) : null}
                   </TableCell>
-                  <TableCell>{plan.audienceLabel}</TableCell>
+                  <TableCell>
+                    {isEs
+                      ? audienceLabelFor(plan.audience, true)
+                      : plan.audienceLabel}
+                  </TableCell>
                   <TableCell numeric>
-                    {formatCents(plan.monthlyFeeCents)}
+                    {formatCents(plan.monthlyFeeCents, "USD", isEs)}
                   </TableCell>
                   <TableCell numeric>{plan.patientsIncluded}</TableCell>
                   <TableCell>
@@ -176,9 +211,19 @@ export function OrganizationSubscriptions() {
                               plan.active ? "retire" : "publish",
                             )
                           }
-                          aria-label={`${plan.active ? "Retire" : "Publish"} ${plan.name}`}
+                          aria-label={
+                            isEs
+                              ? `${plan.active ? "Retirar" : "Publicar"} ${plan.name}`
+                              : `${plan.active ? "Retire" : "Publish"} ${plan.name}`
+                          }
                         >
-                          {plan.active ? "Retire" : "Publish"}
+                          {isEs
+                            ? plan.active
+                              ? "Retirar"
+                              : "Publicar"
+                            : plan.active
+                              ? "Retire"
+                              : "Publish"}
                         </Button>
                       ) : null}
                       {canWrite ? (
@@ -187,7 +232,9 @@ export function OrganizationSubscriptions() {
                           variant="neutral"
                           appearance="ghost"
                           iconOnly
-                          aria-label={`Edit ${plan.name}`}
+                          aria-label={
+                            isEs ? `Editar ${plan.name}` : `Edit ${plan.name}`
+                          }
                           onClick={() => {
                             plans.dismissSaveError();
                             setEditing(plan);
@@ -260,23 +307,41 @@ function OrgPlanModal({
   const [tried, setTried] = useState(false);
 
   const cents = parseDollars(fee);
-  const nameError = name.trim() ? undefined : "Give the plan a name.";
+  const { language } = useLanguage();
+  const isEs = language === "ES";
+  const nameError = name.trim()
+    ? undefined
+    : isEs
+      ? "Póngale un nombre al plan."
+      : "Give the plan a name.";
   const feeError =
     cents !== null && cents > 0
       ? undefined
-      : "Enter a monthly fee above zero, in dollars and cents (e.g. 1995.00).";
+      : isEs
+        ? "Ingrese una tarifa mensual mayor que cero, en dólares y centavos (p. ej., 1995.00)."
+        : "Enter a monthly fee above zero, in dollars and cents (e.g. 1995.00).";
   const patientsError =
     /^\d+$/.test(patients.trim()) &&
     Number(patients) >= 1 &&
     Number(patients) <= 100_000
       ? undefined
-      : "Enter a whole number of patients (1 to 100,000).";
+      : isEs
+        ? "Ingrese un número entero de pacientes (de 1 a 100,000)."
+        : "Enter a whole number of patients (1 to 100,000).";
 
   return (
     <Modal
       open
       onClose={onClose}
-      title={plan ? "Edit Office Plan" : "Add Office Plan"}
+      title={
+        plan
+          ? isEs
+            ? "Editar plan de oficina"
+            : "Edit Office Plan"
+          : isEs
+            ? "Agregar plan de oficina"
+            : "Add Office Plan"
+      }
       footer={
         <>
           <Button
@@ -285,7 +350,7 @@ function OrgPlanModal({
             onClick={onClose}
             disabled={saving}
           >
-            Cancel
+            {isEs ? "Cancelar" : "Cancel"}
           </Button>
           <Button
             loading={saving}
@@ -302,25 +367,29 @@ function OrgPlanModal({
               });
             }}
           >
-            Save Plan
+            {isEs ? "Guardar plan" : "Save Plan"}
           </Button>
         </>
       }
     >
       <div className="space-y-stack-md">
         {error ? (
-          <Alert tone="danger" title="The plan was not saved">
-            {actionErrorText(error)}
+          <Alert
+            tone="danger"
+            title={isEs ? "El plan no se guardó" : "The plan was not saved"}
+          >
+            {actionErrorText(error, isEs)}
           </Alert>
         ) : null}
         {plan && plan.active ? (
           <Alert tone="info" live={false}>
-            If an office is already on this plan, a new fee or patient limit is
-            saved as a new version; their contract keeps its terms.
+            {isEs
+              ? "Si una oficina ya tiene este plan, una nueva tarifa o un nuevo límite de pacientes se guarda como una nueva versión; su contrato conserva sus condiciones."
+              : "If an office is already on this plan, a new fee or patient limit is saved as a new version; their contract keeps its terms."}
           </Alert>
         ) : null}
         <FormField
-          label="Plan name"
+          label={isEs ? "Nombre del plan" : "Plan name"}
           required
           error={tried ? nameError : undefined}
         >
@@ -333,7 +402,7 @@ function OrgPlanModal({
             />
           )}
         </FormField>
-        <FormField label="For" required>
+        <FormField label={isEs ? "Para" : "For"} required>
           {(field) => (
             <Select
               {...field}
@@ -342,7 +411,7 @@ function OrgPlanModal({
             >
               {ORG_AUDIENCES.map((a) => (
                 <option key={a} value={a}>
-                  {AUDIENCE_LABEL[a]}
+                  {audienceLabelFor(a, isEs)}
                 </option>
               ))}
             </Select>
@@ -350,7 +419,7 @@ function OrgPlanModal({
         </FormField>
         <div className="grid grid-cols-1 gap-inline-lg sm:grid-cols-2">
           <FormField
-            label="Monthly fee (USD)"
+            label={isEs ? "Tarifa mensual (USD)" : "Monthly fee (USD)"}
             required
             error={tried ? feeError : undefined}
           >
@@ -365,7 +434,7 @@ function OrgPlanModal({
             )}
           </FormField>
           <FormField
-            label="Patients included"
+            label={isEs ? "Pacientes incluidos" : "Patients included"}
             required
             error={tried ? patientsError : undefined}
           >
@@ -380,7 +449,7 @@ function OrgPlanModal({
             )}
           </FormField>
         </div>
-        <FormField label="What's included">
+        <FormField label={isEs ? "Qué incluye" : "What's included"}>
           {(field) => (
             <Textarea
               {...field}

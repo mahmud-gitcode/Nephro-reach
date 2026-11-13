@@ -1,6 +1,7 @@
 "use client";
 
 import { useExternalShare } from "@/features/sharing/ExternalShareNotice";
+import { useLanguage } from "@/context/LanguageContext";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CalendarClock,
@@ -83,6 +84,7 @@ import {
   OUTCOMES,
   activityTypeFor,
   addDays,
+  ccmText,
   ageOn,
   dayKey,
   durationMinutes,
@@ -111,7 +113,7 @@ import {
 } from "./ccm.repository";
 import {
   nameOf as noticeName,
-  noticeReasonLabel,
+  noticeReasonText,
   type CheckInNotice,
 } from "./checkInNotices.repository";
 import { NoticeModal } from "./ClinicCheckIns";
@@ -136,6 +138,7 @@ import {
   CONDITION_GROUPS,
   chronicCount,
   conditionSummary,
+  conditionText,
   sortedConditions,
   type CcmCondition,
 } from "./ccmConditions";
@@ -165,6 +168,12 @@ const INBOX_PAGE = 25;
 /* An export reads the filtered worklist a bounded number of pages. */
 const EXPORT_MAX_PAGES = 20;
 
+/** Whether the reader chose Spanish. */
+function useIsEs() {
+  const { language } = useLanguage();
+  return language === "ES";
+}
+
 const statusTone: Record<CcmStatus, BadgeTone> = {
   "Action Needed": "danger",
   "Below Threshold": "warning",
@@ -190,13 +199,23 @@ const requirementLabel: Record<RequirementStatus, string> = {
   "not-applicable": "Not Applicable",
 };
 
+const requirementLabelEs: Record<RequirementStatus, string> = {
+  complete: "Completo",
+  "in-progress": "En curso",
+  missing: "Faltante",
+  "not-applicable": "No aplica",
+};
+
 const REQUIRED = CCM_REQUIREMENTS.length;
 
 function StatusBadge({ row }: { row: CcmEnrollment }) {
+  const isEs = useIsEs();
   const label =
     row.status === "Below Threshold"
-      ? `${row.remainingMinutes} min remaining`
-      : row.status;
+      ? isEs
+        ? `Faltan ${row.remainingMinutes} min`
+        : `${row.remainingMinutes} min remaining`
+      : ccmText(row.status, isEs);
   return <Badge tone={statusTone[row.status]}>{label}</Badge>;
 }
 
@@ -243,6 +262,7 @@ function Pager({
   pagination: { mode: string; totalPages?: number } | null | undefined;
   onPage: (next: number) => void;
 }) {
+  const isEs = useIsEs();
   const last =
     pagination && pagination.mode === "offset"
       ? (pagination.totalPages ?? 1)
@@ -257,10 +277,10 @@ function Pager({
         disabled={page <= 1}
         onClick={() => onPage(page - 1)}
       >
-        Previous
+        {isEs ? "Anterior" : "Previous"}
       </Button>
       <span className="text-caption text-fg-muted tabular-nums">
-        Page {page} of {last}
+        {isEs ? `Página ${page} de ${last}` : `Page ${page} of ${last}`}
       </span>
       <Button
         size="small"
@@ -269,7 +289,7 @@ function Pager({
         disabled={page >= last}
         onClick={() => onPage(page + 1)}
       >
-        Next
+        {isEs ? "Siguiente" : "Next"}
       </Button>
     </div>
   );
@@ -279,6 +299,7 @@ function readError(
   error: unknown,
   title: string,
   retry: () => void,
+  isEs = false,
 ): {
   error: unknown;
   errorTitle: React.ReactNode;
@@ -287,8 +308,8 @@ function readError(
 } {
   return {
     error,
-    errorTitle: errorTitleFor(error, title),
-    errorMessage: errorMessageFor(error, undefined),
+    errorTitle: errorTitleFor(error, title, isEs ? "es" : "en"),
+    errorMessage: errorMessageFor(error, undefined, isEs ? "es" : "en"),
     onRetry: canRetry(error) ? retry : undefined,
   };
 }
@@ -307,6 +328,7 @@ function StatusSplit({
     readyForReview: number;
   };
 }) {
+  const isEs = useIsEs();
   const value: Record<CcmStatus, number> = {
     "Ready for Review": summary.readyForReview,
     "Below Threshold": summary.belowThreshold,
@@ -320,16 +342,21 @@ function StatusSplit({
   return (
     <Card as="section" padding="small">
       <h2 className="mb-stack-lg text-heading-4 text-fg">
-        CCM Status
+        {isEs ? "Estado de CCM" : "CCM Status"}
         <span className="text-body-sm text-fg-muted">
           {" "}
-          · {summary.billingQueue} enrolled patients
+          · {summary.billingQueue}{" "}
+          {isEs ? "pacientes inscritos" : "enrolled patients"}
         </span>
       </h2>
       <Breakdown
-        label="Enrolled CCM patients by status"
+        label={
+          isEs
+            ? "Pacientes inscritos en CCM por estado"
+            : "Enrolled CCM patients by status"
+        }
         items={order.map((status) => ({
-          label: status,
+          label: ccmText(status, isEs),
           value: value[status],
           tone: statusChart[status],
         }))}
@@ -402,22 +429,27 @@ function WorklistFiltersBar({
   /** Absent unless the signed-in role manages the clinic's settings. */
   onManageLibrary?: () => void;
 }) {
+  const isEs = useIsEs();
   return (
     <div className="flex flex-col gap-inline-md px-card pb-stack-lg lg:flex-row lg:flex-wrap lg:items-center">
       <SearchField
-        label="Search patients"
-        placeholder="Search by name or MRN…"
+        label={isEs ? "Buscar pacientes" : "Search patients"}
+        placeholder={
+          isEs ? "Buscar por nombre o MRN…" : "Search by name or MRN…"
+        }
         value={filters.query}
         onChange={(e) => onChange({ query: e.target.value })}
         className="lg:w-64"
       />
       <Select
         selectSize="small"
-        aria-label="Provider"
+        aria-label={isEs ? "Proveedor" : "Provider"}
         value={filters.provider}
         onChange={(e) => onChange({ provider: e.target.value })}
       >
-        <option value={ALL}>All Providers</option>
+        <option value={ALL}>
+          {isEs ? "Todos los proveedores" : "All Providers"}
+        </option>
         {optionsOf(rows, (r) => r.providerName, filters.provider).map(
           (option) => (
             <option key={option}>{option}</option>
@@ -426,22 +458,26 @@ function WorklistFiltersBar({
       </Select>
       <Select
         selectSize="small"
-        aria-label="Location"
+        aria-label={isEs ? "Ubicación" : "Location"}
         value={filters.location}
         onChange={(e) => onChange({ location: e.target.value })}
       >
-        <option value={ALL}>All Locations</option>
+        <option value={ALL}>
+          {isEs ? "Todas las ubicaciones" : "All Locations"}
+        </option>
         {optionsOf(rows, (r) => r.location, filters.location).map((option) => (
           <option key={option}>{option}</option>
         ))}
       </Select>
       <Select
         selectSize="small"
-        aria-label="Care manager"
+        aria-label={isEs ? "Gestor de atención" : "Care manager"}
         value={filters.careManager}
         onChange={(e) => onChange({ careManager: e.target.value })}
       >
-        <option value={ALL}>All Care Managers</option>
+        <option value={ALL}>
+          {isEs ? "Todos los gestores de atención" : "All Care Managers"}
+        </option>
         {optionsOf(rows, (r) => r.careManagerName, filters.careManager).map(
           (option) => (
             <option key={option}>{option}</option>
@@ -450,29 +486,35 @@ function WorklistFiltersBar({
       </Select>
       <Select
         selectSize="small"
-        aria-label="CCM status"
+        aria-label={isEs ? "Estado de CCM" : "CCM status"}
         value={filters.status}
         onChange={(e) => onChange({ status: e.target.value })}
       >
-        <option value={ALL}>All Statuses</option>
+        <option value={ALL}>
+          {isEs ? "Todos los estados" : "All Statuses"}
+        </option>
         {CCM_STATUSES.map((option) => (
-          <option key={option}>{option}</option>
+          <option key={option} value={option}>
+            {ccmText(option, isEs)}
+          </option>
         ))}
       </Select>
       <Select
         selectSize="small"
-        aria-label="Condition"
+        aria-label={isEs ? "Afección" : "Condition"}
         value={filters.condition}
         onChange={(e) => onChange({ condition: e.target.value })}
       >
-        <option value={ALL}>All Conditions</option>
+        <option value={ALL}>
+          {isEs ? "Todas las afecciones" : "All Conditions"}
+        </option>
         {CONDITION_GROUPS.map((group) => (
-          <optgroup key={group} label={group}>
+          <optgroup key={group} label={conditionText(group, isEs)}>
             {library
               .filter((c) => c.group === group && c.active)
               .map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.label}
+                  {conditionText(c.label, isEs)}
                 </option>
               ))}
           </optgroup>
@@ -487,7 +529,7 @@ function WorklistFiltersBar({
             onClick={onManageLibrary}
             leadingIcon={<ListChecks aria-hidden="true" />}
           >
-            Condition Library
+            {isEs ? "Biblioteca de afecciones" : "Condition Library"}
           </Button>
         ) : null}
         <Button
@@ -498,7 +540,7 @@ function WorklistFiltersBar({
           onClick={onExport}
           leadingIcon={<Download aria-hidden="true" />}
         >
-          Export
+          {isEs ? "Exportar" : "Export"}
         </Button>
       </span>
     </div>
@@ -517,6 +559,7 @@ function ConditionsCell({
   library: CcmCondition[];
   patient: string;
 }) {
+  const isEs = useIsEs();
   const [at, setAt] = useState<{ top: number; left: number } | null>(null);
   const close = useCallback(() => setAt(null), []);
   const wrapRef = useDismiss<HTMLDivElement>(at !== null, close);
@@ -530,16 +573,20 @@ function ConditionsCell({
     };
   }, [at, close]);
 
-  const summary = conditionSummary(values, library);
+  const summary = conditionSummary(values, library, 2, isEs);
   if (!summary.text) return <span className="text-fg-muted">—</span>;
-  const all = sortedConditions(values, library);
+  const all = sortedConditions(values, library, isEs);
   return (
     <div ref={wrapRef} className="inline-block">
       <button
         type="button"
         aria-haspopup="true"
         aria-expanded={at !== null}
-        aria-label={`${patient}'s conditions: ${summary.full}`}
+        aria-label={
+          isEs
+            ? `Afecciones de ${patient}: ${summary.full}`
+            : `${patient}'s conditions: ${summary.full}`
+        }
         onClick={(e) => {
           if (at) return close();
           const box = e.currentTarget.getBoundingClientRect();
@@ -569,7 +616,7 @@ function ConditionsCell({
           style={{ top: at.top, left: at.left }}
         >
           <p className="px-3 pt-1 pb-2 text-label-sm text-fg-muted">
-            Chronic Conditions ({all.length})
+            {isEs ? "Afecciones crónicas" : "Chronic Conditions"} ({all.length})
           </p>
           <ul className="max-h-72 overflow-y-auto">
             {all.map((condition) => (
@@ -579,7 +626,7 @@ function ConditionsCell({
               >
                 <span>
                   {condition.label}
-                  {condition.other ? " (Other)" : ""}
+                  {condition.other ? (isEs ? " (Otra)" : " (Other)") : ""}
                 </span>
                 {condition.other ? null : (
                   <span className="shrink-0 text-caption text-fg-muted">
@@ -607,6 +654,7 @@ function Worklist({
   onOpen: (patientId: string) => void;
 }) {
   /* Leaves NephroReach: ask first (client, 2026-10-07). */
+  const isEs = useIsEs();
   const share = useExternalShare();
   const { orgId } = useOfficeOrg();
   const [filters, setFilters] = useState<Filters>({
@@ -694,7 +742,8 @@ function Worklist({
       {exportError ? (
         <div className="px-card pb-stack-md">
           <Alert tone="danger" onDismiss={() => setExportError(null)}>
-            The export did not finish. {actionErrorText(exportError)}
+            {isEs ? "La exportación no terminó." : "The export did not finish."}{" "}
+            {actionErrorText(exportError, isEs)}
           </Alert>
         </div>
       ) : null}
@@ -702,8 +751,11 @@ function Worklist({
         pending={worklist.isPending}
         {...readError(
           worklist.error,
-          "The worklist could not be loaded",
+          isEs
+            ? "No se pudo cargar la lista de trabajo"
+            : "The worklist could not be loaded",
           worklist.refetch,
+          isEs,
         )}
         skeleton={<Skeleton height={320} className="mx-card" />}
       >
@@ -711,26 +763,36 @@ function Worklist({
           <TableHead>
             <TableRow>
               <SortHeader column="name" sort={sort} onSort={onSort}>
-                Patient
+                {isEs ? "Paciente" : "Patient"}
               </SortHeader>
               <TableHeaderCell>MRN</TableHeaderCell>
-              <TableHeaderCell>Conditions</TableHeaderCell>
-              <TableHeaderCell>This Month&rsquo;s Minutes</TableHeaderCell>
-              <TableHeaderCell>Last Activity</TableHeaderCell>
-              <TableHeaderCell>CCM Checklist</TableHeaderCell>
-              <TableHeaderCell>Status</TableHeaderCell>
+              <TableHeaderCell>
+                {isEs ? "Afecciones" : "Conditions"}
+              </TableHeaderCell>
+              <TableHeaderCell>
+                {isEs ? "Minutos de este mes" : <>This Month&rsquo;s Minutes</>}
+              </TableHeaderCell>
+              <TableHeaderCell>
+                {isEs ? "Última actividad" : "Last Activity"}
+              </TableHeaderCell>
+              <TableHeaderCell>
+                {isEs ? "Lista de verificación de CCM" : "CCM Checklist"}
+              </TableHeaderCell>
+              <TableHeaderCell>{isEs ? "Estado" : "Status"}</TableHeaderCell>
               <SortHeader column="nextFollowUp" sort={sort} onSort={onSort}>
-                Next Follow-Up
+                {isEs ? "Próximo seguimiento" : "Next Follow-Up"}
               </SortHeader>
               <TableHeaderCell className="text-right">
-                <span className="sr-only">Actions</span>
+                <span className="sr-only">{isEs ? "Acciones" : "Actions"}</span>
               </TableHeaderCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {rows.length === 0 ? (
               <TableEmptyRow colSpan={9}>
-                No patients match these filters.
+                {isEs
+                  ? "Ningún paciente coincide con estos filtros."
+                  : "No patients match these filters."}
               </TableEmptyRow>
             ) : (
               rows.map((row) => {
@@ -768,7 +830,11 @@ function Worklist({
                           max={CCM_THRESHOLD_MINUTES}
                           tone={statusBar[row.status]}
                           size="small"
-                          label={`${name}: ${row.minutes} of ${CCM_THRESHOLD_MINUTES} minutes`}
+                          label={
+                            isEs
+                              ? `${name}: ${row.minutes} de ${CCM_THRESHOLD_MINUTES} minutos`
+                              : `${name}: ${row.minutes} of ${CCM_THRESHOLD_MINUTES} minutes`
+                          }
                           className="w-20"
                         />
                       </span>
@@ -827,6 +893,7 @@ function PatientCell({ mrn, name }: { mrn: string | null; name: string }) {
 }
 
 function OpenButton({ name, onOpen }: { name: string; onOpen: () => void }) {
+  const isEs = useIsEs();
   return (
     <span className="flex justify-end">
       <Button
@@ -834,9 +901,9 @@ function OpenButton({ name, onOpen }: { name: string; onOpen: () => void }) {
         variant="neutral"
         appearance="fill-stroke"
         onClick={onOpen}
-        aria-label={`Open ${name}`}
+        aria-label={isEs ? `Abrir ${name}` : `Open ${name}`}
       >
-        Open
+        {isEs ? "Abrir" : "Open"}
       </Button>
     </span>
   );
@@ -845,6 +912,7 @@ function OpenButton({ name, onOpen }: { name: string; onOpen: () => void }) {
 /** Check-in notices members sent this office (server rows). Opening one
  *  reads the check-in behind it and marks it seen. */
 function CheckInsTable({ onOpen }: { onOpen: (patientId: string) => void }) {
+  const isEs = useIsEs();
   const [page, setPage] = useState(1);
   const [open, setOpen] = useState<CheckInNotice | null>(null);
   const notices = useCheckInNotices({ page, limit: INBOX_PAGE });
@@ -854,26 +922,33 @@ function CheckInsTable({ onOpen }: { onOpen: (patientId: string) => void }) {
       pending={notices.isPending}
       {...readError(
         notices.error,
-        "Check-in notices could not be loaded",
+        isEs
+          ? "No se pudieron cargar los avisos de registro"
+          : "Check-in notices could not be loaded",
         notices.refetch,
+        isEs,
       )}
       skeleton={<Skeleton height={240} className="mx-card" />}
     >
       <Table minWidth={820}>
         <TableHead>
           <TableRow>
-            <TableHeaderCell>Patient</TableHeaderCell>
-            <TableHeaderCell>Date</TableHeaderCell>
-            <TableHeaderCell>Reasons</TableHeaderCell>
-            <TableHeaderCell>Status</TableHeaderCell>
+            <TableHeaderCell>{isEs ? "Paciente" : "Patient"}</TableHeaderCell>
+            <TableHeaderCell>{isEs ? "Fecha" : "Date"}</TableHeaderCell>
+            <TableHeaderCell>{isEs ? "Motivos" : "Reasons"}</TableHeaderCell>
+            <TableHeaderCell>{isEs ? "Estado" : "Status"}</TableHeaderCell>
             <TableHeaderCell className="text-right">
-              <span className="sr-only">Actions</span>
+              <span className="sr-only">{isEs ? "Acciones" : "Actions"}</span>
             </TableHeaderCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {rows.length === 0 ? (
-            <TableEmptyRow colSpan={5}>No check-in notices yet.</TableEmptyRow>
+            <TableEmptyRow colSpan={5}>
+              {isEs
+                ? "Aún no hay avisos de registro."
+                : "No check-in notices yet."}
+            </TableEmptyRow>
           ) : (
             rows.map((row) => {
               const name = noticeName(row);
@@ -889,14 +964,20 @@ function CheckInsTable({ onOpen }: { onOpen: (patientId: string) => void }) {
                     <span className="flex flex-wrap gap-inline-xs">
                       {row.reasons.map((reason) => (
                         <Badge key={reason} tone="warning">
-                          {noticeReasonLabel(reason)}
+                          {noticeReasonText(reason, isEs)}
                         </Badge>
                       ))}
                     </span>
                   </TableCell>
                   <TableCell>
                     <Badge tone={row.seen ? "neutral" : "info"}>
-                      {row.seen ? "Seen" : "New"}
+                      {row.seen
+                        ? isEs
+                          ? "Visto"
+                          : "Seen"
+                        : isEs
+                          ? "Nuevo"
+                          : "New"}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -906,18 +987,22 @@ function CheckInsTable({ onOpen }: { onOpen: (patientId: string) => void }) {
                         variant="neutral"
                         appearance="fill-stroke"
                         onClick={() => setOpen(row)}
-                        aria-label={`View check-in of ${name}`}
+                        aria-label={
+                          isEs
+                            ? `Ver el registro de ${name}`
+                            : `View check-in of ${name}`
+                        }
                       >
-                        View
+                        {isEs ? "Ver" : "View"}
                       </Button>
                       <Button
                         size="small"
                         variant="neutral"
                         appearance="fill-stroke"
                         onClick={() => onOpen(row.patientId)}
-                        aria-label={`Open ${name}`}
+                        aria-label={isEs ? `Abrir ${name}` : `Open ${name}`}
                       >
-                        Open
+                        {isEs ? "Abrir" : "Open"}
                       </Button>
                     </span>
                   </TableCell>
@@ -948,6 +1033,7 @@ function InboxTable({
   canResolve: boolean;
   onOpen: (patientId: string) => void;
 }) {
+  const isEs = useIsEs();
   const now = useNow();
   const [page, setPage] = useState(1);
   const inbox = useCcmInbox({ page, limit: INBOX_PAGE });
@@ -957,26 +1043,33 @@ function InboxTable({
       pending={inbox.isPending}
       {...readError(
         inbox.error,
-        "The CCM inbox could not be loaded",
+        isEs
+          ? "No se pudo cargar la bandeja de entrada de CCM"
+          : "The CCM inbox could not be loaded",
         inbox.refetch,
+        isEs,
       )}
       skeleton={<Skeleton height={240} className="mx-card" />}
     >
       <Table minWidth={820}>
         <TableHead>
           <TableRow>
-            <TableHeaderCell>Patient</TableHeaderCell>
-            <TableHeaderCell>Type</TableHeaderCell>
-            <TableHeaderCell>Detail</TableHeaderCell>
-            <TableHeaderCell>Received</TableHeaderCell>
+            <TableHeaderCell>{isEs ? "Paciente" : "Patient"}</TableHeaderCell>
+            <TableHeaderCell>{isEs ? "Tipo" : "Type"}</TableHeaderCell>
+            <TableHeaderCell>{isEs ? "Detalle" : "Detail"}</TableHeaderCell>
+            <TableHeaderCell>{isEs ? "Recibido" : "Received"}</TableHeaderCell>
             <TableHeaderCell className="text-right">
-              <span className="sr-only">Actions</span>
+              <span className="sr-only">{isEs ? "Acciones" : "Actions"}</span>
             </TableHeaderCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {items.length === 0 ? (
-            <TableEmptyRow colSpan={5}>The inbox is clear.</TableEmptyRow>
+            <TableEmptyRow colSpan={5}>
+              {isEs
+                ? "La bandeja de entrada está vacía."
+                : "The inbox is clear."}
+            </TableEmptyRow>
           ) : (
             items.map((item) => {
               const name = patientName(item);
@@ -986,11 +1079,11 @@ function InboxTable({
                     <PatientCell mrn={item.mrn} name={name} />
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
-                    {item.kind}
+                    {ccmText(item.kind, isEs)}
                   </TableCell>
                   <TableCell>{item.text}</TableCell>
                   <TableCell className="whitespace-nowrap">
-                    {messaging.relativeLabel(item.receivedAt, now)}
+                    {messaging.relativeLabel(item.receivedAt, now, isEs)}
                   </TableCell>
                   <TableCell>
                     <span className="flex justify-end gap-inline-sm">
@@ -999,9 +1092,9 @@ function InboxTable({
                         variant="neutral"
                         appearance="fill-stroke"
                         onClick={() => onOpen(item.patientId)}
-                        aria-label={`Open ${name}`}
+                        aria-label={isEs ? `Abrir ${name}` : `Open ${name}`}
                       >
-                        Open
+                        {isEs ? "Abrir" : "Open"}
                       </Button>
                       {canResolve ? (
                         <Button
@@ -1016,7 +1109,7 @@ function InboxTable({
                           }
                           leadingIcon={<Check aria-hidden="true" />}
                         >
-                          Resolve
+                          {isEs ? "Resolver" : "Resolve"}
                         </Button>
                       ) : null}
                     </span>
@@ -1046,28 +1139,40 @@ function FollowUpTable({
   today: string;
   onOpen: (patientId: string) => void;
 }) {
+  const isEs = useIsEs();
   return (
     <AsyncSection
       pending={read.isPending}
-      {...readError(read.error, "Follow-ups could not be loaded", read.refetch)}
+      {...readError(
+        read.error,
+        isEs
+          ? "No se pudieron cargar los seguimientos"
+          : "Follow-ups could not be loaded",
+        read.refetch,
+        isEs,
+      )}
       skeleton={<Skeleton height={240} className="mx-card" />}
     >
       <Table minWidth={820}>
         <TableHead>
           <TableRow>
-            <TableHeaderCell>Patient</TableHeaderCell>
-            <TableHeaderCell>Care Manager</TableHeaderCell>
-            <TableHeaderCell>Overdue</TableHeaderCell>
-            <TableHeaderCell>Due</TableHeaderCell>
+            <TableHeaderCell>{isEs ? "Paciente" : "Patient"}</TableHeaderCell>
+            <TableHeaderCell>
+              {isEs ? "Gestor de atención" : "Care Manager"}
+            </TableHeaderCell>
+            <TableHeaderCell>{isEs ? "Vencidos" : "Overdue"}</TableHeaderCell>
+            <TableHeaderCell>{isEs ? "Fecha límite" : "Due"}</TableHeaderCell>
             <TableHeaderCell className="text-right">
-              <span className="sr-only">Actions</span>
+              <span className="sr-only">{isEs ? "Acciones" : "Actions"}</span>
             </TableHeaderCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {rows.length === 0 ? (
             <TableEmptyRow colSpan={5}>
-              No follow-ups due this week.
+              {isEs
+                ? "No hay seguimientos pendientes esta semana."
+                : "No follow-ups due this week."}
             </TableEmptyRow>
           ) : (
             rows.map((row) => {
@@ -1078,12 +1183,13 @@ function FollowUpTable({
                     <PatientCell mrn={row.mrn} name={name} />
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
-                    {row.careManagerName || "Unassigned"}
+                    {row.careManagerName ||
+                      (isEs ? "Sin asignar" : "Unassigned")}
                   </TableCell>
                   <TableCell className="tabular-nums">
                     {row.overdueFollowUps > 0 ? (
                       <Badge tone="danger">
-                        {row.overdueFollowUps} overdue
+                        {row.overdueFollowUps} {isEs ? "vencidos" : "overdue"}
                       </Badge>
                     ) : (
                       "—"
@@ -1093,7 +1199,7 @@ function FollowUpTable({
                     {row.nextFollowUpOn ? usDate(row.nextFollowUpOn) : "—"}
                     {row.nextFollowUpOn && row.nextFollowUpOn < today ? (
                       <Badge tone="danger" className="ml-inline-sm">
-                        Overdue
+                        {isEs ? "Vencido" : "Overdue"}
                       </Badge>
                     ) : null}
                   </TableCell>
@@ -1120,6 +1226,11 @@ type YesNo = "yes" | "no";
 
 const YES_NO = [
   { value: "yes" as const, label: "Yes" },
+  { value: "no" as const, label: "No" },
+];
+
+const YES_NO_ES = [
+  { value: "yes" as const, label: "Sí" },
   { value: "no" as const, label: "No" },
 ];
 
@@ -1165,7 +1276,7 @@ type ActivityPrefill = { type: string; note: string };
 
 /** The office's active staff, for "Assign To" (user ids; needs staff View:
  *  without it only "Unassigned" is offered and the server still checks). */
-function useAssignees(enabled: boolean) {
+function useAssignees(enabled: boolean, isEs = false) {
   /* Not read without staff read: the server would refuse it (P16d). */
   const staff = useStaffList(
     { page: 1, limit: 150, status: "ACTIVE" },
@@ -1174,7 +1285,7 @@ function useAssignees(enabled: boolean) {
   return enabled && !staff.error
     ? staff.rows.map((m) => ({
         id: m.userId,
-        label: [m.name ?? m.email ?? "Staff", m.title]
+        label: [m.name ?? m.email ?? (isEs ? "Personal" : "Staff"), m.title]
           .filter(Boolean)
           .join(", "),
       }))
@@ -1197,9 +1308,10 @@ function ActivityForm({
   /** CCM billing is deactivated for this patient: nothing can be saved. */
   locked?: boolean;
 }) {
+  const isEs = useIsEs();
   const office = useOfficeOrg();
-  const me = useOptionalAuth()?.user?.name ?? "You";
-  const assignees = useAssignees(office.can("staff", 1));
+  const me = useOptionalAuth()?.user?.name ?? (isEs ? "Usted" : "You");
+  const assignees = useAssignees(office.can("staff", 1), isEs);
   const [type, setType] = useState(prefill?.type ?? "");
   const [date, setDate] = useState(today);
   const [mode, setMode] = useState<EntryMode>("minutes");
@@ -1222,21 +1334,42 @@ function ActivityForm({
     mode === "times" ? durationMinutes(start, end) : Number(typedMinutes) || 0;
 
   const errors = {
-    type: type === "" ? "Choose an activity type" : null,
-    date: !date || date > today ? "Pick a date on or before today" : null,
+    type:
+      type === ""
+        ? isEs
+          ? "Elija un tipo de actividad"
+          : "Choose an activity type"
+        : null,
+    date:
+      !date || date > today
+        ? isEs
+          ? "Elija una fecha igual o anterior a hoy"
+          : "Pick a date on or before today"
+        : null,
     time:
       mode === "times" && minutes <= 0
-        ? "End time must be after start time"
+        ? isEs
+          ? "La hora de fin debe ser posterior a la hora de inicio"
+          : "End time must be after start time"
         : null,
     minutes:
       mode === "minutes" && (minutes < 1 || minutes > 240)
-        ? "Enter 1 to 240 minutes"
+        ? isEs
+          ? "Ingrese de 1 a 240 minutos"
+          : "Enter 1 to 240 minutes"
         : null,
     followDate:
       needsFollowUp === "yes" && (!followDate || followDate < date)
-        ? "Pick a follow-up date"
+        ? isEs
+          ? "Elija una fecha de seguimiento"
+          : "Pick a follow-up date"
         : null,
-    task: needsFollowUp === "yes" && task.trim() === "" ? "Add the task" : null,
+    task:
+      needsFollowUp === "yes" && task.trim() === ""
+        ? isEs
+          ? "Agregue la tarea"
+          : "Add the task"
+        : null,
   };
   const valid = Object.values(errors).every((error) => error === null);
   const show = (error: string | null) =>
@@ -1275,24 +1408,32 @@ function ActivityForm({
 
   return (
     <section
-      aria-label="Add CCM activity"
+      aria-label={isEs ? "Agregar actividad de CCM" : "Add CCM activity"}
       className="mb-stack-lg space-y-stack-md rounded-card-nested border border-line p-inset-md"
     >
       {locked ? <ComplianceBadge /> : null}
       <div>
-        <h3 className="text-heading-5 text-fg">Add CCM Activity</h3>
+        <h3 className="text-heading-5 text-fg">
+          {isEs ? "Agregar actividad de CCM" : "Add CCM Activity"}
+        </h3>
         <p className="mt-stack-xs text-caption text-fg-muted">
-          Key facts only. The full clinical note stays in the practice EHR.
+          {isEs
+            ? "Solo los datos clave. La nota clínica completa permanece en el EHR del consultorio."
+            : "Key facts only. The full clinical note stays in the practice EHR."}
         </p>
       </div>
       {failure ? (
         <Alert tone="danger" onDismiss={() => setFailure(null)}>
-          {actionErrorText(failure)}
+          {actionErrorText(failure, isEs)}
         </Alert>
       ) : null}
 
       <div className="grid gap-stack-md sm:grid-cols-2">
-        <FormField label="Activity Type" required error={show(errors.type)}>
+        <FormField
+          label={isEs ? "Tipo de actividad" : "Activity Type"}
+          required
+          error={show(errors.type)}
+        >
           {(field) => (
             <Select
               {...field}
@@ -1300,15 +1441,23 @@ function ActivityForm({
               onChange={(e) => setType(e.target.value)}
             >
               <option value="" disabled>
-                Select activity type
+                {isEs
+                  ? "Seleccione el tipo de actividad"
+                  : "Select activity type"}
               </option>
               {ACTIVITY_TYPES.map((option) => (
-                <option key={option}>{option}</option>
+                <option key={option} value={option}>
+                  {ccmText(option, isEs)}
+                </option>
               ))}
             </Select>
           )}
         </FormField>
-        <FormField label="Date" required error={show(errors.date)}>
+        <FormField
+          label={isEs ? "Fecha" : "Date"}
+          required
+          error={show(errors.date)}
+        >
           {(field) => (
             <Input
               {...field}
@@ -1322,18 +1471,28 @@ function ActivityForm({
       </div>
 
       <SegmentedChoice
-        label="Time"
+        label={isEs ? "Tiempo" : "Time"}
         value={mode}
         onChange={(next: EntryMode) => setMode(next)}
         options={[
-          { value: "minutes", label: "Minutes or Timer" },
-          { value: "times", label: "Start / End Time" },
+          {
+            value: "minutes",
+            label: isEs ? "Minutos o temporizador" : "Minutes or Timer",
+          },
+          {
+            value: "times",
+            label: isEs ? "Hora de inicio / fin" : "Start / End Time",
+          },
         ]}
       />
 
       {mode === "times" ? (
         <div className="grid gap-stack-md sm:grid-cols-3">
-          <FormField label="Start Time" required error={show(errors.time)}>
+          <FormField
+            label={isEs ? "Hora de inicio" : "Start Time"}
+            required
+            error={show(errors.time)}
+          >
             {(field) => (
               <Input
                 {...field}
@@ -1343,7 +1502,7 @@ function ActivityForm({
               />
             )}
           </FormField>
-          <FormField label="End Time" required>
+          <FormField label={isEs ? "Hora de fin" : "End Time"} required>
             {(field) => (
               <Input
                 {...field}
@@ -1353,12 +1512,12 @@ function ActivityForm({
               />
             )}
           </FormField>
-          <FormField label="Duration">
+          <FormField label={isEs ? "Duración" : "Duration"}>
             {(field) => (
               <Input
                 {...field}
                 readOnly
-                value={`${minutes} minutes`}
+                value={isEs ? `${minutes} minutos` : `${minutes} minutes`}
                 className="tabular-nums"
               />
             )}
@@ -1367,7 +1526,7 @@ function ActivityForm({
       ) : (
         <div className="flex flex-wrap items-end gap-inline-md">
           <FormField
-            label="Minutes"
+            label={isEs ? "Minutos" : "Minutes"}
             required
             error={show(errors.minutes)}
             className="w-40"
@@ -1393,7 +1552,7 @@ function ActivityForm({
               leadingIcon={<Pause aria-hidden="true" />}
             >
               <span className="tabular-nums">
-                Stop · {clock(timer.elapsed)}
+                {isEs ? "Detener" : "Stop"} · {clock(timer.elapsed)}
               </span>
             </Button>
           ) : (
@@ -1404,7 +1563,7 @@ function ActivityForm({
               disabled={locked}
               leadingIcon={<Play aria-hidden="true" />}
             >
-              Start Timer
+              {isEs ? "Iniciar temporizador" : "Start Timer"}
             </Button>
           )}
         </div>
@@ -1412,24 +1571,30 @@ function ActivityForm({
 
       <div className="grid gap-stack-md sm:grid-cols-2">
         <SegmentedChoice
-          label="Include in CCM time?"
+          label={
+            isEs ? "¿Incluir en el tiempo de CCM?" : "Include in CCM time?"
+          }
           value={counts}
           onChange={(next: CountsToward) => setCounts(next)}
           options={(["yes", "no", "pending"] as const).map((value) => ({
             value,
-            label: COUNTS_LABEL[value],
+            label: ccmText(COUNTS_LABEL[value], isEs),
           }))}
         />
         <SegmentedChoice
-          label="EHR documentation completed?"
+          label={
+            isEs
+              ? "¿Documentación en el EHR completada?"
+              : "EHR documentation completed?"
+          }
           value={ehr}
           onChange={(next: YesNo) => setEhr(next)}
-          options={YES_NO}
+          options={isEs ? YES_NO_ES : YES_NO}
         />
       </div>
 
       <div className="grid gap-stack-md sm:grid-cols-2">
-        <FormField label="Outcome" required>
+        <FormField label={isEs ? "Resultado" : "Outcome"} required>
           {(field) => (
             <Select
               {...field}
@@ -1437,28 +1602,33 @@ function ActivityForm({
               onChange={(e) => setOutcome(e.target.value)}
             >
               {OUTCOMES.map((option) => (
-                <option key={option}>{option}</option>
+                <option key={option} value={option}>
+                  {ccmText(option, isEs)}
+                </option>
               ))}
             </Select>
           )}
         </FormField>
         {/* The server records the signed-in staff member; not a choice. */}
-        <FormField label="Entered By" hint="Recorded as you">
+        <FormField
+          label={isEs ? "Registrado por" : "Entered By"}
+          hint={isEs ? "Se registra a su nombre" : "Recorded as you"}
+        >
           {(field) => <Input {...field} readOnly value={me} />}
         </FormField>
       </div>
 
       <SegmentedChoice
-        label="Follow-up needed?"
+        label={isEs ? "¿Se necesita seguimiento?" : "Follow-up needed?"}
         value={needsFollowUp}
         onChange={(next: YesNo) => setNeedsFollowUp(next)}
-        options={YES_NO}
+        options={isEs ? YES_NO_ES : YES_NO}
       />
 
       {needsFollowUp === "yes" ? (
         <div className="grid gap-stack-md sm:grid-cols-3">
           <FormField
-            label="Follow-up Date"
+            label={isEs ? "Fecha de seguimiento" : "Follow-up Date"}
             required
             error={show(errors.followDate)}
           >
@@ -1472,14 +1642,14 @@ function ActivityForm({
               />
             )}
           </FormField>
-          <FormField label="Assign To">
+          <FormField label={isEs ? "Asignar a" : "Assign To"}>
             {(field) => (
               <Select
                 {...field}
                 value={assignee}
                 onChange={(e) => setAssignee(e.target.value)}
               >
-                <option value="">Unassigned</option>
+                <option value="">{isEs ? "Sin asignar" : "Unassigned"}</option>
                 {assignees.map((option) => (
                   <option key={option.id} value={option.id}>
                     {option.label}
@@ -1488,7 +1658,11 @@ function ActivityForm({
               </Select>
             )}
           </FormField>
-          <FormField label="Task" required error={show(errors.task)}>
+          <FormField
+            label={isEs ? "Tarea" : "Task"}
+            required
+            error={show(errors.task)}
+          >
             {(field) => (
               <Input
                 {...field}
@@ -1501,15 +1675,21 @@ function ActivityForm({
       ) : null}
 
       <FormField
-        label="Administrative Note"
-        hint={`Optional and non-clinical. ${note.length}/250`}
+        label={isEs ? "Nota administrativa" : "Administrative Note"}
+        hint={
+          isEs
+            ? `Opcional y no clínica. ${note.length}/250`
+            : `Optional and non-clinical. ${note.length}/250`
+        }
       >
         {(field) => (
           <Textarea
             {...field}
             rows={2}
             maxLength={250}
-            placeholder="Brief note (non-clinical)…"
+            placeholder={
+              isEs ? "Nota breve (no clínica)…" : "Brief note (non-clinical)…"
+            }
             value={note}
             onChange={(e) => setNote(e.target.value)}
           />
@@ -1523,14 +1703,14 @@ function ActivityForm({
           size="small"
           onClick={onDone}
         >
-          Cancel
+          {isEs ? "Cancelar" : "Cancel"}
         </Button>
         <Button
           size="small"
           onClick={() => void save()}
           disabled={locked || timer.running || actions.isSaving}
         >
-          Save Activity
+          {isEs ? "Guardar actividad" : "Save Activity"}
         </Button>
       </div>
     </section>
@@ -1541,9 +1721,10 @@ function ActivityForm({
 
 /** The client's soft compliance badge (2026-10-07). */
 function ComplianceBadge() {
+  const isEs = useIsEs();
   return (
     <Alert tone="warning" live={false}>
-      {CCM_BILLING_DEACTIVATED}
+      {ccmText(CCM_BILLING_DEACTIVATED, isEs)}
     </Alert>
   );
 }
@@ -1562,28 +1743,45 @@ function ComplianceSection({
     isOnHomeHealthOrHospice: boolean;
   }) => void;
 }) {
+  const isEs = useIsEs();
   const flags = {
     isOnDialysis: row.isOnDialysis,
     isOnHomeHealthOrHospice: row.isOnHomeHealthOrHospice,
   };
   return (
     <section className="space-y-stack-sm">
-      <h3 className="text-heading-5 text-fg">CCM Billing Eligibility</h3>
+      <h3 className="text-heading-5 text-fg">
+        {isEs
+          ? "Elegibilidad para facturación de CCM"
+          : "CCM Billing Eligibility"}
+      </h3>
       {row.billingBlocked ? <ComplianceBadge /> : null}
       <div className="space-y-stack-xs">
         <SwitchRow
           checked={flags.isOnDialysis}
           disabled={!canEdit}
           onChange={(on) => onChange({ ...flags, isOnDialysis: on })}
-          title="On dialysis (ESRD)"
-          description="Receiving maintenance dialysis."
+          title={isEs ? "En diálisis (ESRD)" : "On dialysis (ESRD)"}
+          description={
+            isEs
+              ? "Recibe diálisis de mantenimiento."
+              : "Receiving maintenance dialysis."
+          }
         />
         <SwitchRow
           checked={flags.isOnHomeHealthOrHospice}
           disabled={!canEdit}
           onChange={(on) => onChange({ ...flags, isOnHomeHealthOrHospice: on })}
-          title="Home health or hospice"
-          description="Under a home health or hospice plan of care."
+          title={
+            isEs
+              ? "Atención médica domiciliaria o cuidados paliativos (hospicio)"
+              : "Home health or hospice"
+          }
+          description={
+            isEs
+              ? "Bajo un plan de atención médica domiciliaria o de cuidados paliativos (hospicio)."
+              : "Under a home health or hospice plan of care."
+          }
         />
       </div>
     </section>
@@ -1637,6 +1835,7 @@ function RequirementRow({
   readOnly?: boolean;
   onSave: (body: ReturnType<typeof requirementBody>) => void;
 }) {
+  const isEs = useIsEs();
   const status = current.status;
   const [editing, setEditing] = useState(false);
   const glyph = requirementGlyph[status] ?? requirementGlyph.missing;
@@ -1644,12 +1843,20 @@ function RequirementRow({
 
   const when =
     current.met && current.date
-      ? `Completed ${usDate(current.date.slice(0, 10))}`
+      ? isEs
+        ? `Completado el ${usDate(current.date.slice(0, 10))}`
+        : `Completed ${usDate(current.date.slice(0, 10))}`
       : status === "in-progress"
-        ? "Under way"
+        ? isEs
+          ? "En curso"
+          : "Under way"
         : status === "not-applicable"
-          ? "Does not apply"
-          : "Not yet completed";
+          ? isEs
+            ? "No aplica"
+            : "Does not apply"
+          : isEs
+            ? "Aún no completado"
+            : "Not yet completed";
 
   const saveNote = (value: string) => {
     const detail = value.trim();
@@ -1671,8 +1878,8 @@ function RequirementRow({
             inputSize="small"
             autoFocus
             defaultValue={current.detail}
-            placeholder="Add a short note"
-            aria-label={`Note: ${label}`}
+            placeholder={isEs ? "Agregue una nota breve" : "Add a short note"}
+            aria-label={isEs ? `Nota: ${label}` : `Note: ${label}`}
             className="mt-stack-xs"
             onBlur={(e) => saveNote(e.target.value)}
             onKeyDown={(e) => {
@@ -1698,7 +1905,13 @@ function RequirementRow({
           appearance="ghost"
           iconOnly
           aria-label={
-            current.detail ? `Edit note: ${label}` : `Add note: ${label}`
+            current.detail
+              ? isEs
+                ? `Editar nota: ${label}`
+                : `Edit note: ${label}`
+              : isEs
+                ? `Agregar nota: ${label}`
+                : `Add note: ${label}`
           }
           onClick={() => setEditing(true)}
           disabled={readOnly}
@@ -1709,7 +1922,7 @@ function RequirementRow({
         <div className="w-36">
           <Select
             selectSize="small"
-            aria-label={`Status: ${label}`}
+            aria-label={isEs ? `Estado: ${label}` : `Status: ${label}`}
             value={status}
             disabled={readOnly}
             className="w-full"
@@ -1726,7 +1939,7 @@ function RequirementRow({
             {(Object.keys(requirementLabel) as RequirementStatus[]).map(
               (value) => (
                 <option key={value} value={value}>
-                  {requirementLabel[value]}
+                  {(isEs ? requirementLabelEs : requirementLabel)[value]}
                 </option>
               ),
             )}
@@ -1738,16 +1951,22 @@ function RequirementRow({
 }
 
 function EhrMark({ documented }: { documented: boolean }) {
+  const isEs = useIsEs();
   return documented ? (
-    <Badge tone="success">In EHR</Badge>
+    <Badge tone="success">{isEs ? "En el EHR" : "In EHR"}</Badge>
   ) : (
-    <Badge tone="warning">EHR pending</Badge>
+    <Badge tone="warning">{isEs ? "EHR pendiente" : "EHR pending"}</Badge>
   );
 }
 
-function staffLabel(ref: { name: string | null; title: string | null } | null) {
-  if (!ref) return "Unassigned";
-  return [ref.name ?? "Staff", ref.title].filter(Boolean).join(", ");
+function staffLabel(
+  ref: { name: string | null; title: string | null } | null,
+  isEs = false,
+) {
+  if (!ref) return isEs ? "Sin asignar" : "Unassigned";
+  return [ref.name ?? (isEs ? "Personal" : "Staff"), ref.title]
+    .filter(Boolean)
+    .join(", ");
 }
 
 /* The month's activities as rows that wrap, not a seven-column table that
@@ -1763,12 +1982,17 @@ function ActivityTable({
   total?: number;
   limit?: number;
 }) {
+  const isEs = useIsEs();
   const shown = limit ? activities.slice(0, limit) : activities;
   if (shown.length === 0) {
     return (
       <EmptyState
         variant="bare"
-        title={`No activity logged in ${monthLabel(month)}`}
+        title={
+          isEs
+            ? `No hay actividad registrada en ${monthLabel(month, true)}`
+            : `No activity logged in ${monthLabel(month)}`
+        }
       />
     );
   }
@@ -1790,11 +2014,13 @@ function ActivityTable({
               ) : null}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-label-md text-fg">{activity.type}</p>
+              <p className="text-label-md text-fg">
+                {ccmText(activity.type, isEs)}
+              </p>
               <p className="text-caption text-fg-muted">
-                {staffLabel(activity.staff)}
+                {staffLabel(activity.staff, isEs)}
                 {activity.followUp
-                  ? ` · Follow-up ${usDate(activity.followUp.date.slice(0, 10))}`
+                  ? ` · ${isEs ? "Seguimiento" : "Follow-up"} ${usDate(activity.followUp.date.slice(0, 10))}`
                   : ""}
               </p>
               {activity.note ? (
@@ -1812,8 +2038,12 @@ function ActivityTable({
                     }
                   >
                     {activity.countsToward === "pending"
-                      ? "Pending review"
-                      : "Not counted"}
+                      ? isEs
+                        ? "Pendiente de revisión"
+                        : "Pending review"
+                      : isEs
+                        ? "No contabilizado"
+                        : "Not counted"}
                   </Badge>
                 ) : null}
                 <EhrMark documented={activity.ehrDocumented} />
@@ -1827,7 +2057,10 @@ function ActivityTable({
       </ul>
       {total !== undefined ? (
         <p className="flex items-center justify-between gap-inline-md border-t border-line bg-surface-sunken p-inset-sm text-label-md text-fg">
-          <span>{monthLabel(month)} · counted toward CCM</span>
+          <span>
+            {monthLabel(month, isEs)} ·{" "}
+            {isEs ? "contabilizado para CCM" : "counted toward CCM"}
+          </span>
           <span className="tabular-nums">{total} min</span>
         </p>
       ) : null}
@@ -1904,33 +2137,44 @@ function PatientSummary({
   row: CcmEnrollment;
   followUp?: { task: string; assignee: string };
 }) {
+  const isEs = useIsEs();
   const plural = (n: number, word: string) =>
     `${n} ${word}${n === 1 ? "" : "s"}`;
   const reason =
     row.status === "Action Needed"
       ? [
-          row.openAlerts > 0 ? plural(row.openAlerts, "open alert") : null,
+          row.openAlerts > 0
+            ? isEs
+              ? `${row.openAlerts} ${row.openAlerts === 1 ? "alerta abierta" : "alertas abiertas"}`
+              : plural(row.openAlerts, "open alert")
+            : null,
           row.overdueFollowUps > 0
-            ? plural(row.overdueFollowUps, "overdue follow-up")
+            ? isEs
+              ? `${row.overdueFollowUps} ${row.overdueFollowUps === 1 ? "seguimiento vencido" : "seguimientos vencidos"}`
+              : plural(row.overdueFollowUps, "overdue follow-up")
             : null,
         ]
           .filter(Boolean)
           .join(" · ")
       : row.status === "Ready for Review"
-        ? "Practice review required"
-        : `${row.remainingMinutes} min to go`;
+        ? isEs
+          ? "Se requiere revisión del consultorio"
+          : "Practice review required"
+        : isEs
+          ? `Faltan ${row.remainingMinutes} min`
+          : `${row.remainingMinutes} min to go`;
   const total = row.requirementsTotal || REQUIRED;
   const missing = total - row.requirementsMet;
 
   return (
     <dl
-      aria-label="This month"
+      aria-label={isEs ? "Este mes" : "This month"}
       className="mb-stack-lg grid grid-cols-1 gap-inline-md sm:grid-cols-2 lg:grid-cols-4"
     >
       <SummaryTile
         icon={ClockSolid}
         tone={statusTile[row.status]}
-        label="CCM minutes"
+        label={isEs ? "Minutos de CCM" : "CCM minutes"}
         value={
           <>
             {row.minutes}
@@ -1942,7 +2186,9 @@ function PatientSummary({
         }
         note={
           row.pendingMinutes > 0
-            ? `+${row.pendingMinutes} min pending review`
+            ? isEs
+              ? `+${row.pendingMinutes} min pendientes de revisión`
+              : `+${row.pendingMinutes} min pending review`
             : undefined
         }
       >
@@ -1952,7 +2198,7 @@ function PatientSummary({
             max={CCM_THRESHOLD_MINUTES}
             tone={statusBar[row.status]}
             size="small"
-            label="CCM minutes this month"
+            label={isEs ? "Minutos de CCM este mes" : "CCM minutes this month"}
           />
         </dd>
       </SummaryTile>
@@ -1963,16 +2209,28 @@ function PatientSummary({
             : AlertTriangleSolid
         }
         tone={statusTile[row.status]}
-        label="Status"
-        value={row.status}
+        label={isEs ? "Estado" : "Status"}
+        value={ccmText(row.status, isEs)}
         note={reason}
       />
       <SummaryTile
         icon={ListChecks}
         tone={missing === 0 ? "success" : "neutral"}
-        label="Checklist"
-        value={`${row.requirementsMet} of ${total} complete`}
-        note={missing === 0 ? "All requirements met" : `${missing} still open`}
+        label={isEs ? "Lista de verificación" : "Checklist"}
+        value={
+          isEs
+            ? `${row.requirementsMet} de ${total} completos`
+            : `${row.requirementsMet} of ${total} complete`
+        }
+        note={
+          missing === 0
+            ? isEs
+              ? "Todos los requisitos cumplidos"
+              : "All requirements met"
+            : isEs
+              ? `${missing} aún pendientes`
+              : `${missing} still open`
+        }
       />
       <SummaryTile
         icon={CalendarClock}
@@ -1983,9 +2241,13 @@ function PatientSummary({
               ? "brand"
               : "neutral"
         }
-        label="Next follow-up"
+        label={isEs ? "Próximo seguimiento" : "Next follow-up"}
         value={
-          row.nextFollowUpOn ? usDate(row.nextFollowUpOn) : "None scheduled"
+          row.nextFollowUpOn
+            ? usDate(row.nextFollowUpOn)
+            : isEs
+              ? "Ninguno programado"
+              : "None scheduled"
         }
         note={
           followUp
@@ -2022,18 +2284,22 @@ function AttentionPanel({
   /** Absent when the signed-in role may not log time. */
   onLog?: (alert: CcmInboxItem) => void;
 }) {
+  const isEs = useIsEs();
   if (alerts.length === 0 && overdue.length === 0) return null;
   const item =
     "flex flex-wrap items-center justify-between gap-inline-md py-inset-xs first:pt-0 last:pb-0";
   return (
-    <Alert tone="danger" title="Action needed">
+    <Alert tone="danger" title={isEs ? "Requiere acción" : "Action needed"}>
       <ul className="mt-stack-sm divide-y divide-danger-line">
         {alerts.map((alert) => (
           <li key={alert.id} className={item}>
             <span className="min-w-0 flex-1">
-              <span className="text-label-md">{alert.kind}:</span> {alert.text}
+              <span className="text-label-md">
+                {ccmText(alert.kind, isEs)}:
+              </span>{" "}
+              {alert.text}
               <span className="block text-caption text-fg-muted">
-                {activityTypeFor(alert)}
+                {ccmText(activityTypeFor(alert), isEs)}
               </span>
             </span>
             <span className="flex flex-wrap gap-inline-sm">
@@ -2045,7 +2311,7 @@ function AttentionPanel({
                   onClick={() => onLog(alert)}
                   leadingIcon={<Plus aria-hidden="true" />}
                 >
-                  Log Time
+                  {isEs ? "Registrar tiempo" : "Log Time"}
                 </Button>
               ) : null}
               {canAct ? (
@@ -2057,7 +2323,7 @@ function AttentionPanel({
                   onClick={() => onResolve(alert)}
                   leadingIcon={<Check aria-hidden="true" />}
                 >
-                  Resolve
+                  {isEs ? "Resolver" : "Resolve"}
                 </Button>
               ) : null}
             </span>
@@ -2066,8 +2332,11 @@ function AttentionPanel({
         {overdue.map(({ activity, followUp }) => (
           <li key={activity.id} className={item}>
             <span>
-              <span className="text-label-md">Overdue follow-up:</span>{" "}
-              {followUp.task} (due {usDate(followUp.date.slice(0, 10))})
+              <span className="text-label-md">
+                {isEs ? "Seguimiento vencido:" : "Overdue follow-up:"}
+              </span>{" "}
+              {followUp.task} ({isEs ? "vence el" : "due"}{" "}
+              {usDate(followUp.date.slice(0, 10))})
             </span>
             {canAct ? (
               <Button
@@ -2078,7 +2347,7 @@ function AttentionPanel({
                 onClick={() => onDone(activity)}
                 leadingIcon={<Check aria-hidden="true" />}
               >
-                Done
+                {isEs ? "Listo" : "Done"}
               </Button>
             ) : null}
           </li>
@@ -2100,17 +2369,19 @@ function ConditionsSection({
   canEdit: boolean;
   onSave: (next: string[]) => void;
 }) {
+  const isEs = useIsEs();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(values);
   const [tried, setTried] = useState(false);
   const tooFew = chronicCount(draft, library) < 2;
-  const sorted = sortedConditions(values, library);
+  const sorted = sortedConditions(values, library, isEs);
 
   return (
     <section>
       <div className="mb-stack-sm flex flex-wrap items-center justify-between gap-inline-md">
         <h3 className="text-heading-5 text-fg">
-          Chronic Conditions ({sorted.length})
+          {isEs ? "Afecciones crónicas" : "Chronic Conditions"} ({sorted.length}
+          )
         </h3>
         {canEdit && !editing ? (
           <Button
@@ -2124,7 +2395,7 @@ function ConditionsSection({
               setEditing(true);
             }}
           >
-            Edit Conditions
+            {isEs ? "Editar afecciones" : "Edit Conditions"}
           </Button>
         ) : null}
       </div>
@@ -2138,7 +2409,9 @@ function ConditionsSection({
           />
           {tried && tooFew ? (
             <p role="alert" className="text-caption text-danger">
-              CCM needs two or more chronic conditions.
+              {isEs
+                ? "CCM requiere dos o más afecciones crónicas."
+                : "CCM needs two or more chronic conditions."}
             </p>
           ) : null}
           <div className="flex justify-end gap-inline-md">
@@ -2148,7 +2421,7 @@ function ConditionsSection({
               appearance="fill-stroke"
               onClick={() => setEditing(false)}
             >
-              Cancel
+              {isEs ? "Cancelar" : "Cancel"}
             </Button>
             <Button
               size="small"
@@ -2159,7 +2432,7 @@ function ConditionsSection({
                 setEditing(false);
               }}
             >
-              Save Conditions
+              {isEs ? "Guardar afecciones" : "Save Conditions"}
             </Button>
           </div>
         </div>
@@ -2169,7 +2442,7 @@ function ConditionsSection({
             <li key={condition.value}>
               <Badge tone={condition.other ? "neutral" : "info"}>
                 {condition.label}
-                {condition.other ? " (Other)" : ""}
+                {condition.other ? (isEs ? " (Otra)" : " (Other)") : ""}
               </Badge>
             </li>
           ))}
@@ -2181,6 +2454,7 @@ function ConditionsSection({
 
 /** The CCM sheet's patient check-ins: the notices they sent this office. */
 function PatientCheckIns({ patientId }: { patientId: string }) {
+  const isEs = useIsEs();
   const notices = useCheckInNotices({ patientId, page: 1, limit: 25 });
   const [open, setOpen] = useState<CheckInNotice | null>(null);
   const rows = notices.data?.items ?? [];
@@ -2189,11 +2463,19 @@ function PatientCheckIns({ patientId }: { patientId: string }) {
       pending={notices.isPending}
       {...readError(
         notices.error,
-        "Check-ins could not be loaded",
+        isEs
+          ? "No se pudieron cargar los registros"
+          : "Check-ins could not be loaded",
         notices.refetch,
+        isEs,
       )}
       isEmpty={rows.length === 0}
-      empty={<EmptyState variant="bare" title="No check-in notices" />}
+      empty={
+        <EmptyState
+          variant="bare"
+          title={isEs ? "No hay avisos de registro" : "No check-in notices"}
+        />
+      }
       skeleton={<Skeleton height={120} />}
     >
       <ul className="divide-y divide-line-subtle">
@@ -2207,7 +2489,9 @@ function PatientCheckIns({ patientId }: { patientId: string }) {
                 {usDate(notice.deliverOn)}
               </p>
               <p className="text-body-sm text-fg-secondary">
-                {notice.reasons.map(noticeReasonLabel).join(" · ")}
+                {notice.reasons
+                  .map((reason) => noticeReasonText(reason, isEs))
+                  .join(" · ")}
               </p>
             </div>
             <Button
@@ -2216,7 +2500,7 @@ function PatientCheckIns({ patientId }: { patientId: string }) {
               appearance="fill-stroke"
               onClick={() => setOpen(notice)}
             >
-              View
+              {isEs ? "Ver" : "View"}
             </Button>
           </li>
         ))}
@@ -2246,6 +2530,7 @@ function PatientModal({
   canLog: boolean;
   onClose: () => void;
 }) {
+  const isEs = useIsEs();
   const [tab, setTab] = useState<PatientTab>("overview");
   const [adding, setAdding] = useState(false);
   const [prefill, setPrefill] = useState<ActivityPrefill | undefined>();
@@ -2281,7 +2566,7 @@ function PatientModal({
 
   const count = (label: string, n: number) =>
     n > 0 ? `${label} (${n})` : label;
-  const name = row ? patientName(row) : "Patient";
+  const name = row ? patientName(row) : isEs ? "Paciente" : "Patient";
   const notFound = isApiError(patient.error, { status: 404 });
 
   return (
@@ -2295,7 +2580,9 @@ function PatientModal({
           ? [
               row.mrn ? `MRN ${row.mrn}` : null,
               row.dateOfBirth
-                ? `${ageOn(row.dateOfBirth.slice(0, 10), today)} y/o (DOB ${usDate(row.dateOfBirth.slice(0, 10))})`
+                ? isEs
+                  ? `${ageOn(row.dateOfBirth.slice(0, 10), today)} años (fecha de nacimiento ${usDate(row.dateOfBirth.slice(0, 10))})`
+                  : `${ageOn(row.dateOfBirth.slice(0, 10), today)} y/o (DOB ${usDate(row.dateOfBirth.slice(0, 10))})`
                 : null,
               row.providerName,
               row.location,
@@ -2310,13 +2597,23 @@ function PatientModal({
         error={patient.error}
         errorTitle={
           notFound
-            ? "This patient is no longer in this office's CCM"
-            : errorTitleFor(patient.error, "The patient could not be loaded")
+            ? isEs
+              ? "Este paciente ya no está en el CCM de este consultorio"
+              : "This patient is no longer in this office's CCM"
+            : errorTitleFor(
+                patient.error,
+                isEs
+                  ? "No se pudo cargar el paciente"
+                  : "The patient could not be loaded",
+                isEs ? "es" : "en",
+              )
         }
         errorMessage={
           notFound
-            ? "The care relationship ended or the enrollment was removed. Close this and refresh the worklist."
-            : errorMessageFor(patient.error, undefined)
+            ? isEs
+              ? "La relación de atención terminó o se eliminó la inscripción. Cierre esta ventana y actualice la lista de trabajo."
+              : "The care relationship ended or the enrollment was removed. Close this and refresh the worklist."
+            : errorMessageFor(patient.error, undefined, isEs ? "es" : "en")
         }
         onRetry={
           !notFound && canRetry(patient.error) ? patient.refetch : undefined
@@ -2331,7 +2628,10 @@ function PatientModal({
                 followUps[0]
                   ? {
                       task: followUps[0].followUp.task,
-                      assignee: staffLabel(followUps[0].followUp.assignee),
+                      assignee: staffLabel(
+                        followUps[0].followUp.assignee,
+                        isEs,
+                      ),
                     }
                   : undefined
               }
@@ -2343,21 +2643,30 @@ function PatientModal({
             <div className="mb-stack-lg flex flex-wrap items-center justify-between gap-inline-md">
               <div className="no-scrollbar min-w-0 overflow-x-auto">
                 <Tabs
-                  label="Patient CCM"
+                  label={isEs ? "CCM del paciente" : "Patient CCM"}
                   value={tab}
                   onChange={setTab}
                   items={[
-                    { id: "overview", label: "Overview" },
-                    { id: "activity", label: "Activity" },
-                    { id: "checkins", label: "Check-Ins" },
-                    { id: "education", label: "Education" },
+                    { id: "overview", label: isEs ? "Resumen" : "Overview" },
+                    { id: "activity", label: isEs ? "Actividad" : "Activity" },
+                    { id: "checkins", label: isEs ? "Registros" : "Check-Ins" },
+                    {
+                      id: "education",
+                      label: isEs ? "Educación" : "Education",
+                    },
                     {
                       id: "documents",
-                      label: count("Documents", undocumentedCount),
+                      label: count(
+                        isEs ? "Documentos" : "Documents",
+                        undocumentedCount,
+                      ),
                     },
                     {
                       id: "followups",
-                      label: count("Follow-Ups", followUps.length),
+                      label: count(
+                        isEs ? "Seguimientos" : "Follow-Ups",
+                        followUps.length,
+                      ),
                     },
                   ]}
                 />
@@ -2372,7 +2681,7 @@ function PatientModal({
                   }}
                   leadingIcon={<Plus aria-hidden="true" />}
                 >
-                  Log Activity
+                  {isEs ? "Registrar actividad" : "Log Activity"}
                 </Button>
               ) : null}
             </div>
@@ -2381,9 +2690,16 @@ function PatientModal({
               {alertsRead.error || activityRead.error ? (
                 <Alert
                   tone="danger"
-                  title="Some of this patient's data could not be loaded"
+                  title={
+                    isEs
+                      ? "No se pudieron cargar algunos datos de este paciente"
+                      : "Some of this patient's data could not be loaded"
+                  }
                 >
-                  {actionErrorText(alertsRead.error ?? activityRead.error)}
+                  {actionErrorText(
+                    alertsRead.error ?? activityRead.error,
+                    isEs,
+                  )}
                 </Alert>
               ) : null}
               <AttentionPanel
@@ -2404,7 +2720,10 @@ function PatientModal({
                     ? (alert) => {
                         setPrefill({
                           type: activityTypeFor(alert),
-                          note: `${alert.kind}: ${alert.text}`.slice(0, 250),
+                          note: `${ccmText(alert.kind, isEs)}: ${alert.text}`.slice(
+                            0,
+                            250,
+                          ),
                         });
                         setTab("activity");
                         setAdding(true);
@@ -2431,26 +2750,36 @@ function PatientModal({
               <section>
                 <div className="mb-stack-sm flex flex-wrap items-baseline justify-between gap-inline-md">
                   <h3 className="text-heading-5 text-fg">
-                    CCM Checklist (Tracking Only)
+                    {isEs
+                      ? "Lista de verificación de CCM (solo seguimiento)"
+                      : "CCM Checklist (Tracking Only)"}
                   </h3>
                   <span className="text-caption text-fg-muted">
-                    {row.requirementsMet} of {row.requirementsTotal || REQUIRED}{" "}
-                    complete or not applicable
+                    {row.requirementsMet} {isEs ? "de" : "of"}{" "}
+                    {row.requirementsTotal || REQUIRED}{" "}
+                    {isEs
+                      ? "completos o no aplicables"
+                      : "complete or not applicable"}
                   </span>
                 </div>
                 {/* The client's disclaimer and status meanings (2026-10-07). */}
                 <p className="mb-stack-sm text-caption text-fg-muted">
-                  {CCM_CHECKLIST_DISCLAIMER}
+                  {ccmText(CCM_CHECKLIST_DISCLAIMER, isEs)}
                 </p>
                 <dl className="mb-stack-sm grid gap-x-inline-lg gap-y-stack-xs text-caption sm:grid-cols-2">
                   {(Object.keys(requirementLabel) as RequirementStatus[]).map(
                     (value) => (
                       <div key={value} className="min-w-0">
                         <dt className="inline text-label-sm text-fg">
-                          {requirementLabel[value]}:{" "}
+                          {
+                            (isEs ? requirementLabelEs : requirementLabel)[
+                              value
+                            ]
+                          }
+                          :{" "}
                         </dt>
                         <dd className="inline text-fg-muted">
-                          {REQUIREMENT_STATUS_MEANING[value]}
+                          {ccmText(REQUIREMENT_STATUS_MEANING[value], isEs)}
                         </dd>
                       </div>
                     ),
@@ -2465,7 +2794,7 @@ function PatientModal({
                           (r) => r.id === requirement.id,
                         ) ?? { ...EMPTY_REQUIREMENT, id: requirement.id }
                       }
-                      label={requirement.label}
+                      label={ccmText(requirement.label, isEs)}
                       today={today}
                       readOnly={!canLog}
                       onSave={(body) =>
@@ -2491,7 +2820,10 @@ function PatientModal({
               <section>
                 <div className="mb-stack-sm flex flex-wrap items-center justify-between gap-inline-md">
                   <h3 className="text-heading-5 text-fg">
-                    Recent CCM Activities ({monthLabel(month)})
+                    {isEs
+                      ? "Actividades recientes de CCM"
+                      : "Recent CCM Activities"}{" "}
+                    ({monthLabel(month, isEs)})
                   </h3>
                   {activities.length > 5 ? (
                     <Button
@@ -2500,7 +2832,9 @@ function PatientModal({
                       appearance="ghost"
                       onClick={() => setTab("activity")}
                     >
-                      View all {activities.length}
+                      {isEs
+                        ? `Ver las ${activities.length}`
+                        : `View all ${activities.length}`}
                     </Button>
                   ) : null}
                 </div>
@@ -2534,8 +2868,11 @@ function PatientModal({
                 pending={activityRead.isPending}
                 {...readError(
                   activityRead.error,
-                  "Activities could not be loaded",
+                  isEs
+                    ? "No se pudieron cargar las actividades"
+                    : "Activities could not be loaded",
                   activityRead.refetch,
+                  isEs,
                 )}
                 skeleton={<Skeleton height={160} />}
               >
@@ -2556,20 +2893,33 @@ function PatientModal({
             <TabPanel id="education" value={tab}>
               <EmptyState
                 variant="bare"
-                title="Not available here yet"
-                description="Program progress is shown on the Members page."
+                title={
+                  isEs
+                    ? "Aún no está disponible aquí"
+                    : "Not available here yet"
+                }
+                description={
+                  isEs
+                    ? "El progreso del programa se muestra en la página de Miembros."
+                    : "Program progress is shown on the Members page."
+                }
               />
             </TabPanel>
 
             <TabPanel id="documents" value={tab} className="space-y-stack-md">
               <p className="text-body-sm text-fg-secondary">
-                Clinical documentation lives in the practice EHR. Mark each
-                activity once it has been charted there.
+                {isEs
+                  ? "La documentación clínica está en el EHR del consultorio. Marque cada actividad una vez que se haya registrado allí."
+                  : "Clinical documentation lives in the practice EHR. Mark each activity once it has been charted there."}
               </p>
               {activities.length === 0 ? (
                 <EmptyState
                   variant="bare"
-                  title={`No activity logged in ${monthLabel(month)}`}
+                  title={
+                    isEs
+                      ? `No hay actividad registrada en ${monthLabel(month, true)}`
+                      : `No activity logged in ${monthLabel(month)}`
+                  }
                 />
               ) : (
                 <ul className="divide-y divide-line-subtle">
@@ -2579,14 +2929,19 @@ function PatientModal({
                       className="flex items-center gap-inline-lg py-inset-xs first:pt-0 last:pb-0"
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="text-label-lg text-fg">{activity.type}</p>
+                        <p className="text-label-lg text-fg">
+                          {ccmText(activity.type, isEs)}
+                        </p>
                         <p className="text-body-sm text-fg-secondary tabular-nums">
                           {usDate(activity.activityDate.slice(0, 10))} ·{" "}
-                          {staffLabel(activity.staff)} · {activity.minutes} min
+                          {staffLabel(activity.staff, isEs)} ·{" "}
+                          {activity.minutes} min
                         </p>
                       </div>
                       {activity.ehrDocumented ? (
-                        <Badge tone="success">In EHR</Badge>
+                        <Badge tone="success">
+                          {isEs ? "En el EHR" : "In EHR"}
+                        </Badge>
                       ) : canLog ? (
                         <Button
                           size="small"
@@ -2604,7 +2959,7 @@ function PatientModal({
                           }
                           leadingIcon={<Check aria-hidden="true" />}
                         >
-                          Mark Documented
+                          {isEs ? "Marcar como documentado" : "Mark Documented"}
                         </Button>
                       ) : (
                         <EhrMark documented={false} />
@@ -2617,7 +2972,12 @@ function PatientModal({
 
             <TabPanel id="followups" value={tab}>
               {followUps.length === 0 ? (
-                <EmptyState variant="bare" title="No open follow-ups" />
+                <EmptyState
+                  variant="bare"
+                  title={
+                    isEs ? "No hay seguimientos abiertos" : "No open follow-ups"
+                  }
+                />
               ) : (
                 <ul className="divide-y divide-line-subtle">
                   {followUps.map(({ activity, followUp }) => (
@@ -2628,11 +2988,12 @@ function PatientModal({
                       <div className="min-w-0 flex-1">
                         <p className="text-label-lg text-fg">{followUp.task}</p>
                         <p className="text-body-sm text-fg-secondary">
-                          {staffLabel(followUp.assignee)} · due{" "}
+                          {staffLabel(followUp.assignee, isEs)} ·{" "}
+                          {isEs ? "vence el" : "due"}{" "}
                           {usDate(followUp.date.slice(0, 10))}
                           {followUp.date.slice(0, 10) < today ? (
                             <Badge tone="danger" className="ml-inline-sm">
-                              Overdue
+                              {isEs ? "Vencido" : "Overdue"}
                             </Badge>
                           ) : null}
                         </p>
@@ -2650,7 +3011,7 @@ function PatientModal({
                           }
                           leadingIcon={<Check aria-hidden="true" />}
                         >
-                          Done
+                          {isEs ? "Listo" : "Done"}
                         </Button>
                       ) : null}
                     </li>
@@ -2682,6 +3043,7 @@ function AddToCcmModal({
   actions: CcmActions;
   onClose: () => void;
 }) {
+  const isEs = useIsEs();
   const roster = useRosterPicks();
   const candidates: RosterPick[] = roster.patients;
   const [chosen, setChosen] = useState("");
@@ -2697,9 +3059,19 @@ function AddToCcmModal({
     conditions:
       chronicCount(conditions, library) >= 2
         ? undefined
-        : "CCM needs two or more chronic conditions",
-    provider: provider.trim() ? undefined : "Enter the provider",
-    careManager: careManager.trim() ? undefined : "Enter the care manager",
+        : isEs
+          ? "CCM requiere dos o más afecciones crónicas"
+          : "CCM needs two or more chronic conditions",
+    provider: provider.trim()
+      ? undefined
+      : isEs
+        ? "Ingrese el proveedor"
+        : "Enter the provider",
+    careManager: careManager.trim()
+      ? undefined
+      : isEs
+        ? "Ingrese el gestor de atención"
+        : "Enter the care manager",
   };
 
   async function add() {
@@ -2731,18 +3103,22 @@ function AddToCcmModal({
       open
       onClose={onClose}
       size="big"
-      title="Add to CCM"
-      description="For a patient who has consented to Chronic Care Management."
+      title={isEs ? "Agregar a CCM" : "Add to CCM"}
+      description={
+        isEs
+          ? "Para un paciente que dio su consentimiento para la Gestión de Atención Crónica (CCM)."
+          : "For a patient who has consented to Chronic Care Management."
+      }
       footer={
         <>
           <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
-            Cancel
+            {isEs ? "Cancelar" : "Cancel"}
           </Button>
           <Button
             disabled={candidates.length === 0 || actions.isSaving}
             onClick={() => void add()}
           >
-            Add to CCM
+            {isEs ? "Agregar a CCM" : "Add to CCM"}
           </Button>
         </>
       }
@@ -2751,22 +3127,32 @@ function AddToCcmModal({
         pending={roster.isPending}
         {...readError(
           roster.error,
-          "Your patients could not be loaded",
+          isEs
+            ? "No se pudieron cargar sus pacientes"
+            : "Your patients could not be loaded",
           roster.refetch,
+          isEs,
         )}
         isEmpty={candidates.length === 0}
         empty={
-          <EmptyState variant="bare" title="No patients on your roster yet" />
+          <EmptyState
+            variant="bare"
+            title={
+              isEs
+                ? "Aún no hay pacientes en su lista de pacientes"
+                : "No patients on your roster yet"
+            }
+          />
         }
         skeleton={<Skeleton height={240} />}
       >
         <div className="space-y-stack-md">
           {failure ? (
             <Alert tone="danger" onDismiss={() => setFailure(null)}>
-              {actionErrorText(failure)}
+              {actionErrorText(failure, isEs)}
             </Alert>
           ) : null}
-          <FormField label="Patient" required>
+          <FormField label={isEs ? "Paciente" : "Patient"} required>
             {(field) => (
               <Select
                 {...field}
@@ -2783,15 +3169,21 @@ function AddToCcmModal({
             )}
           </FormField>
           <p className="text-body-sm text-fg-secondary">
-            Date of birth:{" "}
+            {isEs ? "Fecha de nacimiento:" : "Date of birth:"}{" "}
             {picked?.dateOfBirth
               ? usDate(picked.dateOfBirth.slice(0, 10))
-              : "not on file"}
+              : isEs
+                ? "no registrada"
+                : "not on file"}
           </p>
           <FormField
-            label="Chronic conditions"
+            label={isEs ? "Afecciones crónicas" : "Chronic conditions"}
             required
-            hint="Choose every condition that applies. Use Other for anything not listed."
+            hint={
+              isEs
+                ? "Elija todas las afecciones que correspondan. Use Otra para cualquiera que no esté en la lista."
+                : "Choose every condition that applies. Use Other for anything not listed."
+            }
             error={tried ? errors.conditions : undefined}
           >
             {(field) => (
@@ -2806,7 +3198,7 @@ function AddToCcmModal({
           </FormField>
           <div className="grid gap-stack-md sm:grid-cols-3">
             <FormField
-              label="Provider"
+              label={isEs ? "Proveedor" : "Provider"}
               required
               error={tried ? errors.provider : undefined}
             >
@@ -2820,7 +3212,7 @@ function AddToCcmModal({
               )}
             </FormField>
             <FormField
-              label="Care manager"
+              label={isEs ? "Gestor de atención" : "Care manager"}
               required
               error={tried ? errors.careManager : undefined}
             >
@@ -2833,7 +3225,7 @@ function AddToCcmModal({
                 />
               )}
             </FormField>
-            <FormField label="Location">
+            <FormField label={isEs ? "Ubicación" : "Location"}>
               {(field) => (
                 <Input
                   {...field}
@@ -2869,6 +3261,7 @@ function PageSkeleton() {
 }
 
 export default function ClinicCcm() {
+  const isEs = useIsEs();
   const actions = useCcm();
   const office = useOfficeOrg();
   const canLog = useCan("ccm.log");
@@ -2943,19 +3336,19 @@ export default function ClinicCcm() {
                 onClick={() => setAdding(true)}
                 leadingIcon={<Plus aria-hidden="true" />}
               >
-                Add to CCM
+                {isEs ? "Agregar a CCM" : "Add to CCM"}
               </Button>
             ) : null}
             <Select
               selectSize="small"
-              aria-label="Month"
+              aria-label={isEs ? "Mes" : "Month"}
               value={month}
               onChange={(e) => setMonth(e.target.value)}
               className="w-48"
             >
               {months.map((option) => (
                 <option key={option} value={option}>
-                  {monthLabel(option)}
+                  {monthLabel(option, isEs)}
                 </option>
               ))}
             </Select>
@@ -2966,48 +3359,72 @@ export default function ClinicCcm() {
         pending={summary.isPending}
         {...readError(
           summary.error,
-          "CCM data could not be loaded",
+          isEs
+            ? "No se pudieron cargar los datos de CCM"
+            : "CCM data could not be loaded",
           summary.refetch,
+          isEs,
         )}
         skeleton={<PageSkeleton />}
       >
         {actions.writeError ? (
           <Alert tone="danger" onDismiss={actions.clearWriteError}>
-            That change did not save. {actionErrorText(actions.writeError)}
+            {isEs ? "No se guardó ese cambio." : "That change did not save."}{" "}
+            {actionErrorText(actions.writeError, isEs)}
           </Alert>
         ) : null}
 
         <section
-          aria-label="CCM summary"
+          aria-label={isEs ? "Resumen de CCM" : "CCM summary"}
           className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2"
         >
           <KeyCard
             tone="brand"
             icon={<UsersSolid />}
             value={s?.billingQueue ?? 0}
-            label="Enrolled Patients"
-            note={`Active in ${monthLabel(month)}`}
+            label={isEs ? "Pacientes inscritos" : "Enrolled Patients"}
+            note={
+              isEs
+                ? `Activos en ${monthLabel(month, true)}`
+                : `Active in ${monthLabel(month)}`
+            }
           />
           <KeyCard
             tone="danger"
             icon={<AlertTriangleSolid />}
             value={s?.actionNeeded ?? 0}
-            label="Action Needed"
-            note="Open alert or overdue follow-up"
+            label={ccmText("Action Needed", isEs)}
+            note={
+              isEs
+                ? "Alerta abierta o seguimiento vencido"
+                : "Open alert or overdue follow-up"
+            }
           />
           <KeyCard
             tone="warning"
             icon={<ClockSolid />}
             value={s?.belowThreshold ?? 0}
-            label={`Below ${CCM_THRESHOLD_MINUTES} Minutes`}
-            note={`0–${CCM_THRESHOLD_MINUTES - 1} minutes recorded`}
+            label={
+              isEs
+                ? `Menos de ${CCM_THRESHOLD_MINUTES} minutos`
+                : `Below ${CCM_THRESHOLD_MINUTES} Minutes`
+            }
+            note={
+              isEs
+                ? `0–${CCM_THRESHOLD_MINUTES - 1} minutos registrados`
+                : `0–${CCM_THRESHOLD_MINUTES - 1} minutes recorded`
+            }
           />
           <KeyCard
             tone="success"
             icon={<CheckCircleSolid />}
             value={s?.readyForReview ?? 0}
-            label="Ready for Review"
-            note={`${CCM_THRESHOLD_MINUTES}+ minutes · practice review required`}
+            label={ccmText("Ready for Review", isEs)}
+            note={
+              isEs
+                ? `${CCM_THRESHOLD_MINUTES}+ minutos · se requiere revisión del consultorio`
+                : `${CCM_THRESHOLD_MINUTES}+ minutes · practice review required`
+            }
           />
         </section>
         {s ? <StatusSplit summary={s} /> : null}
@@ -3016,25 +3433,36 @@ export default function ClinicCcm() {
           <div className="p-card pb-stack-lg">
             <div className="overflow-x-auto">
               <Tabs
-                label="CCM views"
+                label={isEs ? "Vistas de CCM" : "CCM views"}
                 value={tab}
                 onChange={setTab}
                 items={[
-                  { id: "worklist", label: "Patient Worklist" },
+                  {
+                    id: "worklist",
+                    label: isEs
+                      ? "Lista de trabajo de pacientes"
+                      : "Patient Worklist",
+                  },
                   {
                     id: "checkins",
                     label: count(
-                      "Patient Check-Ins",
+                      isEs ? "Registros de pacientes" : "Patient Check-Ins",
                       totalOf(unseenNotices.data),
                     ),
                   },
                   {
                     id: "inbox",
-                    label: count("CCM Inbox", totalOf(inboxCount.data)),
+                    label: count(
+                      isEs ? "Bandeja de entrada de CCM" : "CCM Inbox",
+                      totalOf(inboxCount.data),
+                    ),
                   },
                   {
                     id: "followups",
-                    label: count("Follow-Up Due", due.length),
+                    label: count(
+                      isEs ? "Seguimientos pendientes" : "Follow-Up Due",
+                      due.length,
+                    ),
                   },
                 ]}
               />
@@ -3072,24 +3500,31 @@ export default function ClinicCcm() {
           </TabPanel>
           <p className="flex items-center gap-inline-sm border-t border-line px-(--table-edge) py-inset-sm text-caption text-fg-muted">
             <ShieldCheck aria-hidden="true" className="size-4 shrink-0" />
-            Practice staff enter activities and the practice decides what counts
-            for billing. NephroReach tracks time and makes no medical decisions.
+            {isEs
+              ? "El personal del consultorio ingresa las actividades y el consultorio decide qué cuenta para la facturación. NephroReach registra el tiempo y no toma decisiones médicas."
+              : "Practice staff enter activities and the practice decides what counts for billing. NephroReach tracks time and makes no medical decisions."}
           </p>
         </Card>
 
         {deactivated.error ? (
           <Alert tone="danger">
-            Billing-deactivated patients could not be loaded.{" "}
-            {actionErrorText(deactivated.error)}
+            {isEs
+              ? "No se pudieron cargar los pacientes con facturación desactivada."
+              : "Billing-deactivated patients could not be loaded."}{" "}
+            {actionErrorText(deactivated.error, isEs)}
           </Alert>
         ) : deactivatedRows.length > 0 ? (
           <Card as="section" padding="small">
             <h2 className="text-heading-4 text-fg">
-              CCM Billing Deactivated ({totalOf(deactivated.data)})
+              {isEs
+                ? "Facturación de CCM desactivada"
+                : "CCM Billing Deactivated"}{" "}
+              ({totalOf(deactivated.data)})
             </h2>
             <p className="mt-stack-xs text-body-sm text-fg-muted">
-              On dialysis, home health or hospice. Not in the billing queue and
-              no CCM time can be saved.
+              {isEs
+                ? "En diálisis, atención médica domiciliaria o cuidados paliativos (hospicio). No están en la cola de facturación y no se puede guardar tiempo de CCM."
+                : "On dialysis, home health or hospice. Not in the billing queue and no CCM time can be saved."}
             </p>
             <ul className="mt-stack-md divide-y divide-line-subtle">
               {deactivatedRows.map((row) => {
@@ -3106,9 +3541,15 @@ export default function ClinicCcm() {
                       <span className="block text-caption text-fg-muted">
                         {row.mrn ? `MRN ${row.mrn} · ` : ""}
                         {[
-                          row.isOnDialysis ? "On dialysis (ESRD)" : null,
+                          row.isOnDialysis
+                            ? isEs
+                              ? "En diálisis (ESRD)"
+                              : "On dialysis (ESRD)"
+                            : null,
                           row.isOnHomeHealthOrHospice
-                            ? "Home health or hospice"
+                            ? isEs
+                              ? "Atención médica domiciliaria o cuidados paliativos (hospicio)"
+                              : "Home health or hospice"
                             : null,
                         ]
                           .filter(Boolean)
@@ -3116,7 +3557,11 @@ export default function ClinicCcm() {
                       </span>
                     </span>
                     <span className="flex shrink-0 items-center gap-inline-md">
-                      <Badge tone="warning">Billing deactivated</Badge>
+                      <Badge tone="warning">
+                        {isEs
+                          ? "Facturación desactivada"
+                          : "Billing deactivated"}
+                      </Badge>
                       <OpenButton
                         name={name}
                         onOpen={() => setOpenId(row.patientId)}

@@ -67,6 +67,8 @@ import {
   programOptions,
   shareOf,
   statusOptions,
+  statusLabel,
+  currentModuleLabel,
   rosterMemberFor,
   statusTone,
   type RosterMember,
@@ -84,6 +86,7 @@ import {
   errorMessageFor,
   errorTitleFor,
 } from "@/lib/data/asyncState";
+import { useLanguage } from "@/context/LanguageContext";
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
@@ -160,13 +163,15 @@ function SummaryCards({
   total: number;
   seats: ClinicData["seats"];
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const cards = MEMBER_STATUSES.filter((s) => s !== "Not Started");
   /* Seats are the contract's (null: unknown to this role, or no limit). */
   const allowed = seats?.allowed ?? null;
 
   return (
     <section
-      aria-label="Member summary"
+      aria-label={isEs ? "Resumen de miembros" : "Member summary"}
       className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2"
     >
       <KeyCard
@@ -180,7 +185,7 @@ function SummaryCards({
             ) : null}
           </>
         }
-        label="Total Members"
+        label={isEs ? "Total de miembros" : "Total Members"}
       />
 
       {cards.map((card) => {
@@ -194,11 +199,15 @@ function SummaryCards({
             tone={statusKeyTone[card]}
             icon={<Icon />}
             value={unsourced ? "—" : count}
-            label={card}
+            label={statusLabel(card, isEs)}
             note={
               unsourced
-                ? "Not tracked yet"
-                : `${shareOf(count, list.length)}% of members`
+                ? isEs
+                  ? "Aún sin seguimiento"
+                  : "Not tracked yet"
+                : isEs
+                  ? `${shareOf(count, list.length)}% de los miembros`
+                  : `${shareOf(count, list.length)}% of members`
             }
           />
         );
@@ -212,7 +221,7 @@ function SummaryCards({
             ? Math.max(0, seats.available ?? seats.allowed - seats.used)
             : "—"
         }
-        label="Available Slots"
+        label={isEs ? "Cupos disponibles" : "Available Slots"}
       />
     </section>
   );
@@ -255,6 +264,8 @@ function MemberTable({
   selectedId: string | null;
   onSelect: (patientId: string) => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const rows = view.rows ?? [];
 
@@ -287,7 +298,7 @@ function MemberTable({
 
   return (
     <Card as="section" padding="small" className="h-full min-w-0">
-      <PanelHeading title="Member List" />
+      <PanelHeading title={isEs ? "Lista de miembros" : "Member List"} />
 
       <div className="mb-stack-lg flex flex-col gap-inline-md lg:flex-row lg:items-center">
         <Input
@@ -295,30 +306,36 @@ function MemberTable({
           inputSize="small"
           value={filters.query}
           onChange={(event) => onFilters({ query: event.target.value })}
-          placeholder="Search by name or MRN..."
-          aria-label="Search members"
+          placeholder={
+            isEs ? "Buscar por nombre o MRN..." : "Search by name or MRN..."
+          }
+          aria-label={isEs ? "Buscar miembros" : "Search members"}
           leadingIcon={<Search aria-hidden="true" />}
           className="lg:max-w-60 lg:flex-1"
         />
         <Select
           selectSize="small"
-          aria-label="Program"
+          aria-label={isEs ? "Programa" : "Program"}
           value={filters.program}
           onChange={(event) => onFilters({ program: event.target.value })}
         >
           {programOptions.map((option) => (
-            <option key={option}>{option}</option>
+            <option key={option} value={option}>
+              {statusLabel(option, isEs)}
+            </option>
           ))}
         </Select>
         <Select
           selectSize="small"
-          aria-label="Status"
+          aria-label={isEs ? "Estado" : "Status"}
           value={filters.status}
           onChange={(event) => onFilters({ status: event.target.value })}
           className="lg:w-48"
         >
           {statusOptions.map((option) => (
-            <option key={option}>{option}</option>
+            <option key={option} value={option}>
+              {statusLabel(option, isEs)}
+            </option>
           ))}
         </Select>
         {/* Patients are added in one place, Enroll Patients; this page
@@ -329,7 +346,7 @@ function MemberTable({
           className={cn(buttonStyles({ size: "small" }), "lg:ml-auto")}
         >
           <Plus className="h-4 w-4" />
-          Enroll Patient
+          {isEs ? "Inscribir paciente" : "Enroll Patient"}
         </Link>
       </div>
 
@@ -338,13 +355,17 @@ function MemberTable({
       {checked.size > 0 ? (
         <div
           role="region"
-          aria-label="Selected members"
+          aria-label={isEs ? "Miembros seleccionados" : "Selected members"}
           className="mb-stack-md flex flex-wrap items-center gap-inline-md rounded-control border border-line bg-surface-sunken px-inset-sm py-inset-xs"
         >
-          <p className="text-label-md text-fg">{checked.size} selected</p>
+          <p className="text-label-md text-fg">
+            {isEs
+              ? `${checked.size} seleccionados`
+              : `${checked.size} selected`}
+          </p>
           <Link href={MESSAGES} className={outlineLink}>
             <MessageSquareText className="h-4 w-4" />
-            Message selected
+            {isEs ? "Enviar mensaje a seleccionados" : "Message selected"}
           </Link>
           <Button
             variant="neutral"
@@ -352,7 +373,7 @@ function MemberTable({
             size="small"
             onClick={() => setChecked(new Set())}
           >
-            Clear
+            {isEs ? "Borrar" : "Clear"}
           </Button>
         </div>
       ) : null}
@@ -361,8 +382,14 @@ function MemberTable({
 
       {view.error ? (
         <ErrorState
-          title={errorTitleFor(view.error, "Members could not be loaded")}
-          message={errorMessageFor(view.error, undefined)}
+          title={errorTitleFor(
+            view.error,
+            isEs
+              ? "No se pudieron cargar los miembros"
+              : "Members could not be loaded",
+            isEs ? "es" : "en",
+          )}
+          message={errorMessageFor(view.error, undefined, isEs ? "es" : "en")}
           error={view.error}
           onRetry={canRetry(view.error) ? view.refetch : undefined}
         />
@@ -382,17 +409,27 @@ function MemberTable({
                     checked={allOnPage}
                     disabled={pageMrns.length === 0}
                     onChange={toggleAll}
-                    aria-label="Select all members on this page"
+                    aria-label={
+                      isEs
+                        ? "Seleccionar todos los miembros de esta página"
+                        : "Select all members on this page"
+                    }
                     className="h-4 w-4 cursor-pointer accent-brand-600"
                   />
                 </TableHeaderCell>
-                <TableHeaderCell>Name</TableHeaderCell>
-                <TableHeaderCell>Program</TableHeaderCell>
-                <TableHeaderCell>Status</TableHeaderCell>
-                <TableHeaderCell>Progress</TableHeaderCell>
-                <TableHeaderCell>Last Activity</TableHeaderCell>
+                <TableHeaderCell>{isEs ? "Nombre" : "Name"}</TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Programa" : "Program"}
+                </TableHeaderCell>
+                <TableHeaderCell>{isEs ? "Estado" : "Status"}</TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Progreso" : "Progress"}
+                </TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Última actividad" : "Last Activity"}
+                </TableHeaderCell>
                 <TableHeaderCell className="text-right">
-                  Actions
+                  {isEs ? "Acciones" : "Actions"}
                 </TableHeaderCell>
               </TableRow>
             </TableHead>
@@ -400,7 +437,9 @@ function MemberTable({
               {rows.length === 0 ? (
                 <TableEmptyRow colSpan={7}>
                   <span className="flex flex-wrap items-center gap-inline-md text-body-sm text-fg-secondary">
-                    No members match these filters.
+                    {isEs
+                      ? "Ningún miembro coincide con estos filtros."
+                      : "No members match these filters."}
                     {filtersOn ? (
                       <Button
                         variant="neutral"
@@ -414,7 +453,7 @@ function MemberTable({
                           })
                         }
                       >
-                        Clear filters
+                        {isEs ? "Borrar filtros" : "Clear filters"}
                       </Button>
                     ) : null}
                   </span>
@@ -433,7 +472,11 @@ function MemberTable({
                           type="checkbox"
                           checked={checked.has(member.id)}
                           onChange={() => toggleOne(member.id)}
-                          aria-label={`Select ${member.name}`}
+                          aria-label={
+                            isEs
+                              ? `Seleccionar a ${member.name}`
+                              : `Select ${member.name}`
+                          }
                           className="h-4 w-4 cursor-pointer accent-brand-600"
                         />
                       </TableCell>
@@ -462,7 +505,7 @@ function MemberTable({
                             tone={statusTone[member.status]}
                             icon={<Icon aria-hidden="true" />}
                           >
-                            {member.status}
+                            {statusLabel(member.status, isEs)}
                           </Badge>
                         ) : (
                           <span className="text-fg-muted">—</span>
@@ -472,7 +515,11 @@ function MemberTable({
                         <span className="flex items-center gap-inline-md">
                           <Progress
                             value={member.progress}
-                            label={`${member.name} progress`}
+                            label={
+                              isEs
+                                ? `Progreso de ${member.name}`
+                                : `${member.name} progress`
+                            }
                             size="small"
                             className="w-14"
                           />
@@ -490,16 +537,24 @@ function MemberTable({
                             type="button"
                             onClick={() => onSelect(member.id)}
                             className={iconControl}
-                            aria-label={`View ${member.name}`}
-                            title="View details"
+                            aria-label={
+                              isEs
+                                ? `Ver a ${member.name}`
+                                : `View ${member.name}`
+                            }
+                            title={isEs ? "Ver detalles" : "View details"}
                           >
                             <Eye aria-hidden="true" />
                           </button>
                           <Link
                             href={messageLink(member.id)}
                             className={iconControl}
-                            aria-label={`Message ${member.name}`}
-                            title="Send message"
+                            aria-label={
+                              isEs
+                                ? `Enviar mensaje a ${member.name}`
+                                : `Message ${member.name}`
+                            }
+                            title={isEs ? "Enviar mensaje" : "Send message"}
                           >
                             <MessageSquareText aria-hidden="true" />
                           </Link>
@@ -516,7 +571,7 @@ function MemberTable({
 
       <div className="mt-stack-md flex flex-col gap-inline-md sm:flex-row sm:items-center sm:justify-between">
         <label className="flex items-center gap-inline-md text-body-sm text-fg-secondary">
-          Rows per page
+          {isEs ? "Filas por página" : "Rows per page"}
           <Select
             selectSize="small"
             value={String(perPage)}
@@ -532,7 +587,11 @@ function MemberTable({
           page={view.page}
           pageCount={view.pageCount}
           onPageChange={onPage}
-          summary={`Showing ${view.firstShown}–${view.lastShown} of ${view.total} members`}
+          summary={
+            isEs
+              ? `Mostrando ${view.firstShown}–${view.lastShown} de ${view.total} miembros`
+              : `Showing ${view.firstShown}–${view.lastShown} of ${view.total} members`
+          }
         />
       </div>
     </Card>
@@ -583,22 +642,31 @@ function MemberDetailsModal({
   member: RosterMember;
   onClose: () => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const Icon = member.status ? statusIcon[member.status] : null;
+  const of = isEs ? "de" : "of";
   /* No source yet for these (NEW-2): "—", never a made-up figure. */
   const classes = member.liveClasses
-    ? `${member.liveClasses[0]} of ${member.liveClasses[1]}`
+    ? `${member.liveClasses[0]} ${of} ${member.liveClasses[1]}`
     : "—";
   const checkIns = member.checkIns
-    ? `${member.checkIns[0]} of ${member.checkIns[1]}`
+    ? `${member.checkIns[0]} ${of} ${member.checkIns[1]}`
     : "—";
   const questions = !member.questions
     ? "—"
     : member.questions.total === 0
-      ? "None"
+      ? isEs
+        ? "Ninguna"
+        : "None"
       : `${member.questions.total} (${
           member.questions.open === 0
-            ? "Resolved"
-            : `${member.questions.open} open`
+            ? isEs
+              ? "Resueltas"
+              : "Resolved"
+            : isEs
+              ? `${member.questions.open} abiertas`
+              : `${member.questions.open} open`
         })`;
 
   return (
@@ -607,12 +675,16 @@ function MemberDetailsModal({
       onClose={onClose}
       size="wide"
       title={member.name}
-      description={`MRN ${member.mrn || "—"} · Enrolled ${member.enrolledOn}`}
+      description={
+        isEs
+          ? `MRN ${member.mrn || "—"} · Inscrito ${member.enrolledOn}`
+          : `MRN ${member.mrn || "—"} · Enrolled ${member.enrolledOn}`
+      }
       footer={
         <>
           <Link href={messageLink(member.id)} className={outlineLink}>
             <MessageSquareText className="h-4 w-4" />
-            Send Message
+            {isEs ? "Enviar mensaje" : "Send Message"}
           </Link>
           {/* The popup is the profile; the detail behind it is the patient's
               progress, which Curriculum Progress opens by patientId. */}
@@ -620,7 +692,7 @@ function MemberDetailsModal({
             href={curriculumLink({ patientId: member.id })}
             className={buttonStyles({ size: "small" })}
           >
-            View Progress
+            {isEs ? "Ver progreso" : "View Progress"}
           </Link>
         </>
       }
@@ -637,7 +709,7 @@ function MemberDetailsModal({
             tone={statusTone[member.status]}
             icon={<Icon aria-hidden="true" />}
           >
-            {member.status}
+            {statusLabel(member.status, isEs)}
           </Badge>
         ) : null}
       </div>
@@ -645,7 +717,7 @@ function MemberDetailsModal({
       <div className="mt-stack-lg">
         <div className="flex items-baseline justify-between gap-inline-md">
           <span className="text-body-sm text-fg-secondary">
-            Program progress
+            {isEs ? "Progreso del programa" : "Program progress"}
           </span>
           <span className="text-heading-5 text-fg tabular-nums">
             {member.progress}%
@@ -653,29 +725,46 @@ function MemberDetailsModal({
         </div>
         <Progress
           value={member.progress}
-          label={`${member.name} progress`}
+          label={
+            isEs ? `Progreso de ${member.name}` : `${member.name} progress`
+          }
           size="medium"
           className="mt-stack-xs"
         />
       </div>
 
       <dl className="mt-stack-lg grid gap-inline-md sm:grid-cols-2">
-        <DetailTile icon={BookOpen} label="Current Module">
-          {member.currentModule}
+        <DetailTile
+          icon={BookOpen}
+          label={isEs ? "Módulo actual" : "Current Module"}
+        >
+          {currentModuleLabel(member.currentModule, isEs)}
         </DetailTile>
-        <DetailTile icon={Clock3} label="Last Activity">
+        <DetailTile
+          icon={Clock3}
+          label={isEs ? "Última actividad" : "Last Activity"}
+        >
           {member.lastSeen}
         </DetailTile>
-        <DetailTile icon={Video} label="Live Classes Attended">
+        <DetailTile
+          icon={Video}
+          label={isEs ? "Clases en vivo asistidas" : "Live Classes Attended"}
+        >
           {classes}
         </DetailTile>
-        <DetailTile icon={CalendarCheck} label="Weekly Check-Ins">
+        <DetailTile
+          icon={CalendarCheck}
+          label={isEs ? "Registros semanales" : "Weekly Check-Ins"}
+        >
           {checkIns}
         </DetailTile>
-        <DetailTile icon={MessageCircleQuestion} label="Questions Submitted">
+        <DetailTile
+          icon={MessageCircleQuestion}
+          label={isEs ? "Preguntas enviadas" : "Questions Submitted"}
+        >
           {questions}
         </DetailTile>
-        <DetailTile icon={GraduationCap} label="Program">
+        <DetailTile icon={GraduationCap} label={isEs ? "Programa" : "Program"}>
           {member.program}
         </DetailTile>
       </dl>
@@ -698,19 +787,23 @@ function MembersByProgram({
   program: string;
   onProgram: (program: string) => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const slices = programBreakdownOf(list);
 
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading title="Members by Program" />
+      <PanelHeading
+        title={isEs ? "Miembros por programa" : "Members by Program"}
+      />
       <div className="grid items-center gap-inset-md sm:grid-cols-[150px_minmax(0,1fr)]">
         <DonutChart
           segments={slices.filter((slice) => slice.value > 0)}
-          label="Members by program"
+          label={isEs ? "Miembros por programa" : "Members by program"}
           size={150}
           thickness={28}
           centerValue={list.length}
-          centerLabel="Members"
+          centerLabel={isEs ? "Miembros" : "Members"}
           className="mx-auto"
         />
         <ul className="space-y-stack-xs">
@@ -726,7 +819,9 @@ function MembersByProgram({
                   style={{ background: toneVar[slice.tone] }}
                 />
                 <span className="min-w-0 flex-1 text-body-sm text-fg">
-                  {shortProgram(slice.label)}
+                  {slice.label === "Other"
+                    ? statusLabel(slice.label, isEs)
+                    : shortProgram(slice.label)}
                 </span>
                 <span className="text-label-md text-fg tabular-nums">
                   {slice.value}
@@ -781,9 +876,11 @@ const statusBar: Record<RosterStatus, ProgressTone | undefined> = {
  * is one glyph, the name, the numbers, and the bar.
  */
 function StatusBreakdown({ list }: { list: RosterMember[] }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading title="Status Breakdown" />
+      <PanelHeading title={isEs ? "Desglose por estado" : "Status Breakdown"} />
       <ul className="space-y-stack-md">
         {MEMBER_STATUSES.map((row) => {
           const count = countStatus(list, row);
@@ -800,7 +897,7 @@ function StatusBreakdown({ list }: { list: RosterMember[] }) {
                   )}
                 />
                 <span className="min-w-0 flex-1 truncate text-label-md text-fg-secondary">
-                  {row}
+                  {statusLabel(row, isEs)}
                 </span>
                 <span className="shrink-0 text-label-md text-fg tabular-nums">
                   {count}
@@ -812,7 +909,11 @@ function StatusBreakdown({ list }: { list: RosterMember[] }) {
               <Progress
                 value={count}
                 max={Math.max(1, list.length)}
-                label={`${row} members`}
+                label={
+                  isEs
+                    ? `Miembros: ${statusLabel(row, true)}`
+                    : `${row} members`
+                }
                 tone={statusBar[row]}
                 size="small"
                 className="mt-stack-xs"
@@ -834,12 +935,20 @@ function RecentMemberActivity({
   activity: ClinicData["activity"];
   onSelect: (patientId: string) => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   return (
     <Card as="section" padding="small" className="h-full">
       {/* Every entry is already listed, so there is no "View All". */}
-      <PanelHeading title="Recent Member Activity" />
+      <PanelHeading
+        title={
+          isEs ? "Actividad reciente de miembros" : "Recent Member Activity"
+        }
+      />
       {activity.length === 0 ? (
-        <p className="text-body-sm text-fg-muted">No activity yet.</p>
+        <p className="text-body-sm text-fg-muted">
+          {isEs ? "Aún no hay actividad." : "No activity yet."}
+        </p>
       ) : (
         <ul className="divide-y divide-line-subtle">
           {activity.map((entry) => {
@@ -910,6 +1019,8 @@ function PageSkeleton() {
  * stale link falls back to the default view instead of an empty one.
  */
 function MembersView() {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -1030,8 +1141,14 @@ function MembersView() {
   if (clinic.error) {
     return (
       <ErrorState
-        title={errorTitleFor(clinic.error, "Members could not be loaded")}
-        message={errorMessageFor(clinic.error, undefined)}
+        title={errorTitleFor(
+          clinic.error,
+          isEs
+            ? "No se pudieron cargar los miembros"
+            : "Members could not be loaded",
+          isEs ? "es" : "en",
+        )}
+        message={errorMessageFor(clinic.error, undefined, isEs ? "es" : "en")}
         error={clinic.error}
         onRetry={canRetry(clinic.error) ? clinic.refetch : undefined}
       />
@@ -1045,12 +1162,16 @@ function MembersView() {
       <>
         <EmptyState
           icon={<Users />}
-          title="No members yet"
-          description="Patients you enroll will appear here, with their progress and status."
+          title={isEs ? "Aún no hay miembros" : "No members yet"}
+          description={
+            isEs
+              ? "Los pacientes que inscriba aparecerán aquí, con su progreso y estado."
+              : "Patients you enroll will appear here, with their progress and status."
+          }
           action={
             <Link href={ENROLL} className={buttonStyles({ size: "small" })}>
               <Plus className="h-4 w-4" />
-              Enroll a patient
+              {isEs ? "Inscribir a un paciente" : "Enroll a patient"}
             </Link>
           }
         />
@@ -1067,8 +1188,12 @@ function MembersView() {
       />
       <WindowNote
         window={clinic.data?.window}
-        what="Status counts and charts cover"
-        noun="members"
+        what={
+          isEs
+            ? "Los conteos de estado y los gráficos cubren"
+            : "Status counts and charts cover"
+        }
+        noun={isEs ? "miembros" : "members"}
       />
 
       <MemberTable
@@ -1080,8 +1205,10 @@ function MembersView() {
           serverMode ? null : (
             <WindowNote
               window={clinic.data?.window}
-              what="The status filter covers"
-              noun="members"
+              what={
+                isEs ? "El filtro de estado cubre" : "The status filter covers"
+              }
+              noun={isEs ? "miembros" : "members"}
               className="mb-stack-md"
             />
           )

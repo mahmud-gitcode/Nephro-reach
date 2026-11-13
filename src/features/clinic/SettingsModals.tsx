@@ -3,6 +3,7 @@
 import React from "react";
 import { ShieldCheck } from "lucide-react";
 import { Button, Modal, Switch } from "@/components/ui";
+import { useLanguage } from "@/context/LanguageContext";
 import { SHARING_OPTIONS, type SharingId } from "./settings.actions";
 import type { SharingState } from "./settings.data";
 
@@ -30,13 +31,19 @@ export function DataSharingModal({
   sharing: SharingState;
   onToggle: (id: SharingId, on: boolean) => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="Data Sharing"
-      description="Everything here is off unless you turn it on."
-      footer={<Button onClick={onClose}>Done</Button>}
+      title={isEs ? "Compartir datos" : "Data Sharing"}
+      description={
+        isEs
+          ? "Todo aquí está desactivado a menos que usted lo active."
+          : "Everything here is off unless you turn it on."
+      }
+      footer={<Button onClick={onClose}>{isEs ? "Listo" : "Done"}</Button>}
     >
       <ul className="divide-y divide-line-subtle">
         {SHARING_OPTIONS.map((option) => (
@@ -46,23 +53,25 @@ export function DataSharingModal({
           >
             <span className="min-w-0 flex-1">
               <span className="block text-label-md text-fg">
-                {option.label}
+                {isEs ? option.labelEs : option.label}
               </span>
               <span className="block text-body-sm text-fg-muted">
-                {option.note}
+                {isEs ? option.noteEs : option.note}
               </span>
             </span>
             <Switch
               checked={sharing[option.id]}
               onChange={(next) => onToggle(option.id, next)}
-              label={option.label}
+              label={isEs ? option.labelEs : option.label}
             />
           </li>
         ))}
       </ul>
 
       <p className="mt-stack-lg text-body-sm text-fg-muted">
-        No patient-identifying information is shared under any of these.
+        {isEs
+          ? "En ninguna de estas opciones se comparte información que identifique a los pacientes."
+          : "No patient-identifying information is shared under any of these."}
       </p>
     </Modal>
   );
@@ -71,6 +80,29 @@ export function DataSharingModal({
 /* --------------------------------------------------------------------------
    8 · HIPAA & security
    -------------------------------------------------------------------------- */
+
+const HIPAA_POINTS_ES: [string, string][] = [
+  [
+    "Sus pacientes son solo suyos",
+    "Los registros de un centro nunca son accesibles desde el portal de otro. Cada consulta se limita al consultorio con sesión iniciada.",
+  ],
+  [
+    "Mínimo privilegio por rol",
+    "Administrador, Proveedor, Personal, Coordinador y Asistente médico (MA) ven solo lo que cada rol necesita.",
+  ],
+  [
+    "Acceso auditado",
+    "Quién abrió qué registro, y cuándo, queda registrado y disponible para el administrador de su consultorio.",
+  ],
+  [
+    "Cifrado en tránsito y en reposo",
+    "TLS en cada solicitud y almacenamiento cifrado para todo lo que se guarda sobre un paciente.",
+  ],
+  [
+    "Acuerdo de Socio Comercial (BAA)",
+    "NephroReach firma un BAA con cada centro contratado antes de comenzar.",
+  ],
+];
 
 const HIPAA_POINTS: [string, string][] = [
   [
@@ -102,17 +134,23 @@ export function HipaaModal({
   open: boolean;
   onClose: () => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   return (
     <Modal
       open={open}
       onClose={onClose}
       size="wide"
-      title="HIPAA & Security"
-      description="How your office's data is kept separate and protected."
-      footer={<Button onClick={onClose}>Close</Button>}
+      title={isEs ? "HIPAA y seguridad" : "HIPAA & Security"}
+      description={
+        isEs
+          ? "Cómo se mantienen separados y protegidos los datos de su consultorio."
+          : "How your office's data is kept separate and protected."
+      }
+      footer={<Button onClick={onClose}>{isEs ? "Cerrar" : "Close"}</Button>}
     >
       <ul className="space-y-stack-md">
-        {HIPAA_POINTS.map(([title, detail]) => (
+        {(isEs ? HIPAA_POINTS_ES : HIPAA_POINTS).map(([title, detail]) => (
           <li key={title} className="flex items-start gap-inline-md">
             <ShieldCheck
               aria-hidden="true"

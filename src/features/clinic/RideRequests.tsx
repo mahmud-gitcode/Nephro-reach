@@ -50,6 +50,7 @@ import {
   type AccessActions,
 } from "@/features/vascular-access/useAccess";
 import { useAuth } from "@/features/auth/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { userCan } from "@/features/staff/staff";
 
 /* ==========================================================================
@@ -73,10 +74,12 @@ import { userCan } from "@/features/staff/staff";
 const focusRing =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
-function refusal(error: unknown): string {
+function refusal(error: unknown, isEs = false): string {
   return isApiError(error) && error.messages[0]
     ? error.messages[0]
-    : "That change did not save. Try again.";
+    : isEs
+      ? "No se pudo guardar el cambio. Inténtelo de nuevo."
+      : "That change did not save. Try again.";
 }
 
 /* ----------------------------------------------------------- ride booking */
@@ -92,6 +95,8 @@ function ConfirmRideModal({
   actions: AccessActions;
   onClose: () => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const { request } = ride;
   const appointment = request.appointment;
   const current = request.confirmation;
@@ -109,15 +114,27 @@ function ConfirmRideModal({
     setForm((f) => ({ ...f, ...change }));
 
   const errors = {
-    pickupTime: toHhMm(form.pickupTime) ? undefined : "Set the pickup time",
-    provider: form.provider.trim() ? undefined : "Who is driving?",
+    pickupTime: toHhMm(form.pickupTime)
+      ? undefined
+      : isEs
+        ? "Indique la hora de recogida"
+        : "Set the pickup time",
+    provider: form.provider.trim()
+      ? undefined
+      : isEs
+        ? "¿Quién conduce?"
+        : "Who is driving?",
     phone:
       form.phone.replace(/\D/g, "").length >= 7
         ? undefined
-        : "Enter a phone number",
+        : isEs
+          ? "Ingrese un número de teléfono"
+          : "Enter a phone number",
     confirmationNumber: form.confirmationNumber.trim()
       ? undefined
-      : "Enter the confirmation number",
+      : isEs
+        ? "Ingrese el número de confirmación"
+        : "Enter the confirmation number",
   };
   const valid = Object.values(errors).every((e) => !e);
   const show = (e?: string) => (tried ? e : undefined);
@@ -127,12 +144,20 @@ function ConfirmRideModal({
       open
       onClose={onClose}
       size="wide"
-      title={current ? "Edit Ride" : "Confirm Ride"}
-      description={`${ride.memberName} · ${appointment ? `${appointment.title}, ${formatDay(appointment.date)} at ${formatTime(appointment.time)}` : "Appointment removed"}`}
+      title={
+        current
+          ? isEs
+            ? "Editar transporte"
+            : "Edit Ride"
+          : isEs
+            ? "Confirmar transporte"
+            : "Confirm Ride"
+      }
+      description={`${ride.memberName} · ${appointment ? `${appointment.title}, ${formatDay(appointment.date, isEs)} ${isEs ? "a las" : "at"} ${formatTime(appointment.time)}` : isEs ? "Cita eliminada" : "Appointment removed"}`}
       footer={
         <>
           <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
-            Cancel
+            {isEs ? "Cancelar" : "Cancel"}
           </Button>
           <Button
             disabled={actions.isSaving}
@@ -149,7 +174,13 @@ function ConfirmRideModal({
               else setFailed(true);
             }}
           >
-            {current ? "Save Changes" : "Confirm & Notify Patient"}
+            {current
+              ? isEs
+                ? "Guardar cambios"
+                : "Save Changes"
+              : isEs
+                ? "Confirmar y avisar al paciente"
+                : "Confirm & Notify Patient"}
           </Button>
         </>
       }
@@ -157,18 +188,18 @@ function ConfirmRideModal({
       <div className="space-y-stack-lg">
         {failed ? (
           <Alert tone="danger" onDismiss={() => setFailed(null)}>
-            {refusal(actions.error ?? failed)}
+            {refusal(actions.error ?? failed, isEs)}
           </Alert>
         ) : null}
         <section className="rounded-card-nested border border-line p-inset-sm">
           <h3 className="mb-stack-sm text-heading-5 text-fg">
-            What the patient asked for
+            {isEs ? "Lo que pidió el paciente" : "What the patient asked for"}
           </h3>
           <TransportAsk request={request} />
         </section>
         <div className="grid gap-stack-md sm:grid-cols-2">
           <FormField
-            label="Pickup time"
+            label={isEs ? "Hora de recogida" : "Pickup time"}
             required
             error={show(errors.pickupTime)}
           >
@@ -183,8 +214,14 @@ function ConfirmRideModal({
           </FormField>
           {request.returnTrip ? (
             <FormField
-              label="Return pickup time"
-              hint="Or leave blank for will-call."
+              label={
+                isEs ? "Hora de recogida de regreso" : "Return pickup time"
+              }
+              hint={
+                isEs
+                  ? "O déjela en blanco si el paciente llamará cuando esté listo."
+                  : "Or leave blank for will-call."
+              }
             >
               {(field) => (
                 <Input
@@ -197,7 +234,11 @@ function ConfirmRideModal({
             </FormField>
           ) : null}
           <FormField
-            label="Transport company or driver"
+            label={
+              isEs
+                ? "Empresa de transporte o conductor"
+                : "Transport company or driver"
+            }
             required
             error={show(errors.provider)}
           >
@@ -209,7 +250,11 @@ function ConfirmRideModal({
               />
             )}
           </FormField>
-          <FormField label="Phone" required error={show(errors.phone)}>
+          <FormField
+            label={isEs ? "Teléfono" : "Phone"}
+            required
+            error={show(errors.phone)}
+          >
             {(field) => (
               <Input
                 {...field}
@@ -220,7 +265,7 @@ function ConfirmRideModal({
             )}
           </FormField>
           <FormField
-            label="Confirmation number"
+            label={isEs ? "Número de confirmación" : "Confirmation number"}
             required
             error={show(errors.confirmationNumber)}
           >
@@ -233,13 +278,19 @@ function ConfirmRideModal({
             )}
           </FormField>
         </div>
-        <FormField label="Note for the patient">
+        <FormField
+          label={isEs ? "Nota para el paciente" : "Note for the patient"}
+        >
           {(field) => (
             <Input
               {...field}
               value={form.note}
               onChange={(e) => set({ note: e.target.value })}
-              placeholder="E.g. driver will call 10 minutes before"
+              placeholder={
+                isEs
+                  ? "Ej.: el conductor llamará 10 minutos antes"
+                  : "E.g. driver will call 10 minutes before"
+              }
             />
           )}
         </FormField>
@@ -261,6 +312,8 @@ export function RideRequestsPanel({
   /** Opens the patient's access record, where the page has one. */
   onOpen?: (profileId: string) => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const queue = useRideQueue(orgId);
   const actions = useAccessActions(
     orgId ? { kind: "office", organizationId: orgId } : null,
@@ -295,8 +348,14 @@ export function RideRequestsPanel({
   if (queue.error) {
     list = (
       <ErrorState
-        title={errorTitleFor(queue.error, "Ride requests could not be loaded")}
-        message={errorMessageFor(queue.error, undefined)}
+        title={errorTitleFor(
+          queue.error,
+          isEs
+            ? "No se pudieron cargar las solicitudes de transporte"
+            : "Ride requests could not be loaded",
+          isEs ? "es" : "en",
+        )}
+        message={errorMessageFor(queue.error, undefined, isEs ? "es" : "en")}
         error={queue.error}
         onRetry={canRetry(queue.error) ? queue.refetch : undefined}
       />
@@ -304,7 +363,11 @@ export function RideRequestsPanel({
   } else if (queue.isPending) {
     list = <Skeleton height={120} className="rounded-card" />;
   } else if (rides.length === 0) {
-    list = <p className="text-body-sm text-fg-muted">No ride requests.</p>;
+    list = (
+      <p className="text-body-sm text-fg-muted">
+        {isEs ? "No hay solicitudes de transporte." : "No ride requests."}
+      </p>
+    );
   } else {
     list = (
       <ul className="space-y-stack-md">
@@ -334,8 +397,10 @@ export function RideRequestsPanel({
                   )}
                   <p className="text-caption text-fg-muted">
                     {appointment
-                      ? `${appointment.title} · ${formatDay(appointment.date)}, ${formatTime(appointment.time)} · ${appointment.place}`
-                      : "Appointment removed"}
+                      ? `${appointment.title} · ${formatDay(appointment.date, isEs)}, ${formatTime(appointment.time)} · ${appointment.place}`
+                      : isEs
+                        ? "Cita eliminada"
+                        : "Appointment removed"}
                   </p>
                 </div>
                 <TransportStatusBadge status={request.status} />
@@ -365,7 +430,7 @@ export function RideRequestsPanel({
                       }
                       leadingIcon={<Check aria-hidden="true" />}
                     >
-                      Acknowledge
+                      {isEs ? "Acusar recibo" : "Acknowledge"}
                     </Button>
                   ) : null}
                   <Button
@@ -385,8 +450,12 @@ export function RideRequestsPanel({
                     leadingIcon={<Car aria-hidden="true" />}
                   >
                     {request.status === "Confirmed"
-                      ? "Edit Ride"
-                      : "Confirm Ride"}
+                      ? isEs
+                        ? "Editar transporte"
+                        : "Edit Ride"
+                      : isEs
+                        ? "Confirmar transporte"
+                        : "Confirm Ride"}
                   </Button>
                   <Button
                     size="small"
@@ -400,7 +469,7 @@ export function RideRequestsPanel({
                       )
                     }
                   >
-                    Cancel
+                    {isEs ? "Cancelar" : "Cancel"}
                   </Button>
                 </div>
               ) : null}
@@ -414,7 +483,9 @@ export function RideRequestsPanel({
   return (
     <Card as="section" padding="small" className="h-full">
       <div className="mb-stack-sm flex flex-wrap items-center justify-between gap-inline-md">
-        <h2 className="text-heading-4 text-fg">Ride Requests</h2>
+        <h2 className="text-heading-4 text-fg">
+          {isEs ? "Solicitudes de transporte" : "Ride Requests"}
+        </h2>
         {/* The clinic arranges rides to access appointments itself, not
             only when a patient asks (client, 2026-10-07). */}
         {works ? (
@@ -423,19 +494,23 @@ export function RideRequestsPanel({
             leadingIcon={<Plus aria-hidden="true" />}
             onClick={() => setSettingUp(true)}
           >
-            Set Up Transportation
+            {isEs ? "Organizar transporte" : "Set Up Transportation"}
           </Button>
         ) : null}
       </div>
       <p className="mb-stack-md text-caption text-fg-muted">
         {works
-          ? "Patients' rides to access appointments come to your social worker. Confirming sends the details to the patient."
-          : "Your social worker or administrator arranges these rides."}
+          ? isEs
+            ? "Las solicitudes de transporte de los pacientes a sus citas de acceso vascular llegan a su trabajador social. Al confirmar, se envían los detalles al paciente."
+            : "Patients' rides to access appointments come to your social worker. Confirming sends the details to the patient."
+          : isEs
+            ? "Su trabajador social o administrador organiza este transporte."
+            : "Your social worker or administrator arranges these rides."}
       </p>
       {actions.error && !selected && !settingUp ? (
         <div className="mb-stack-md">
           <Alert tone="danger" onDismiss={actions.clearError}>
-            {refusal(actions.error)}
+            {refusal(actions.error, isEs)}
           </Alert>
         </div>
       ) : null}
@@ -448,7 +523,7 @@ export function RideRequestsPanel({
             appearance="fill-stroke"
             onClick={queue.loadMore}
           >
-            Load more
+            {isEs ? "Ver más" : "Load more"}
           </Button>
         </div>
       ) : null}
@@ -493,6 +568,8 @@ function SetUpRideModal({
   onSaved: (profileId: string, appointmentId: string) => void;
   onClose: () => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const [today] = useState(() => dayKey(Date.now()));
   /* The records this office is the dialysis center on. */
   const roster = useAccessRoster(orgId);
@@ -519,19 +596,27 @@ function SetUpRideModal({
   const [mobility, setMobility] = useState<MobilityLevel>("ambulatory");
   const [tried, setTried] = useState(false);
   const [failed, setFailed] = useState<unknown>(null);
-  const pickupError = pickup.trim() ? undefined : "Enter the pickup address.";
+  const pickupError = pickup.trim()
+    ? undefined
+    : isEs
+      ? "Ingrese la dirección de recogida."
+      : "Enter the pickup address.";
   const loadError = roster.error ?? visits.error;
 
   return (
     <Modal
       open
       onClose={onClose}
-      title="Set Up Transportation"
-      description="A ride to a vascular access appointment. Next, add the ride details the patient will see."
+      title={isEs ? "Organizar transporte" : "Set Up Transportation"}
+      description={
+        isEs
+          ? "Transporte a una cita de acceso vascular. Después, agregue los detalles del transporte que verá el paciente."
+          : "A ride to a vascular access appointment. Next, add the ride details the patient will see."
+      }
       footer={
         <>
           <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
-            Cancel
+            {isEs ? "Cancelar" : "Cancel"}
           </Button>
           <Button
             disabled={!chosenAppointment || actions.isSaving}
@@ -550,31 +635,39 @@ function SetUpRideModal({
               else setFailed(true);
             }}
           >
-            Continue
+            {isEs ? "Continuar" : "Continue"}
           </Button>
         </>
       }
     >
       {loadError ? (
         <ErrorState
-          title={errorTitleFor(loadError, "Appointments could not be loaded")}
-          message={errorMessageFor(loadError, undefined)}
+          title={errorTitleFor(
+            loadError,
+            isEs
+              ? "No se pudieron cargar las citas"
+              : "Appointments could not be loaded",
+            isEs ? "es" : "en",
+          )}
+          message={errorMessageFor(loadError, undefined, isEs ? "es" : "en")}
           error={loadError}
         />
       ) : roster.isPending ? (
         <Skeleton height={160} className="rounded-card" />
       ) : choices.length === 0 ? (
         <p className="text-body-sm text-fg-muted">
-          Every upcoming access appointment already has a ride.
+          {isEs
+            ? "Todas las próximas citas de acceso vascular ya tienen transporte."
+            : "Every upcoming access appointment already has a ride."}
         </p>
       ) : (
         <div className="space-y-stack-md">
           {failed ? (
             <Alert tone="danger" onDismiss={() => setFailed(null)}>
-              {refusal(actions.error ?? failed)}
+              {refusal(actions.error ?? failed, isEs)}
             </Alert>
           ) : null}
-          <FormField label="Patient" required>
+          <FormField label={isEs ? "Paciente" : "Patient"} required>
             {(field) => (
               <Select
                 {...field}
@@ -593,7 +686,7 @@ function SetUpRideModal({
               </Select>
             )}
           </FormField>
-          <FormField label="Appointment" required>
+          <FormField label={isEs ? "Cita" : "Appointment"} required>
             {(field) => (
               <Select
                 {...field}
@@ -602,19 +695,21 @@ function SetUpRideModal({
               >
                 {open.length === 0 ? (
                   <option value="">
-                    No upcoming appointment without a ride
+                    {isEs
+                      ? "No hay próximas citas sin transporte"
+                      : "No upcoming appointment without a ride"}
                   </option>
                 ) : null}
                 {open.map((a) => (
                   <option key={a.id} value={a.id}>
-                    {a.title} · {formatDay(a.date)}, {formatTime(a.time)}
+                    {a.title} · {formatDay(a.date, isEs)}, {formatTime(a.time)}
                   </option>
                 ))}
               </Select>
             )}
           </FormField>
           <FormField
-            label="Pickup address"
+            label={isEs ? "Dirección de recogida" : "Pickup address"}
             required
             error={tried ? pickupError : undefined}
           >
@@ -626,7 +721,7 @@ function SetUpRideModal({
               />
             )}
           </FormField>
-          <FormField label="Mobility">
+          <FormField label={isEs ? "Movilidad" : "Mobility"}>
             {(field) => (
               <Select
                 {...field}
@@ -635,7 +730,7 @@ function SetUpRideModal({
               >
                 {MOBILITY_LEVELS.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.en}
+                    {isEs ? m.es : m.en}
                   </option>
                 ))}
               </Select>
@@ -644,8 +739,12 @@ function SetUpRideModal({
           <SwitchRow
             checked={returnTrip}
             onChange={setReturnTrip}
-            title="Return trip"
-            description="A ride home after the appointment."
+            title={isEs ? "Viaje de regreso" : "Return trip"}
+            description={
+              isEs
+                ? "Transporte a casa después de la cita."
+                : "A ride home after the appointment."
+            }
           />
         </div>
       )}

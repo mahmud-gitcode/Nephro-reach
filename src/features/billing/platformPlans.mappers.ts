@@ -203,6 +203,20 @@ export const AUDIENCE_LABEL: Record<string, string> = {
   PLATFORM: "NephroReach",
 };
 
+export const AUDIENCE_LABEL_ES: Record<string, string> = {
+  DIALYSIS_CENTER: "Centro de diálisis",
+  ACCESS_CENTER: "Centro de acceso vascular",
+  NEPHROLOGY_OFFICE: "Consultorio de nefrología",
+  HOSPITAL: "Hospital",
+  TRANSPLANT_CENTER: "Centro de trasplantes",
+  PLATFORM: "NephroReach",
+};
+
+/** The office type's name in the reader's language (the code if unknown). */
+export function audienceLabelFor(code: string, isEs: boolean): string {
+  return (isEs ? AUDIENCE_LABEL_ES : AUDIENCE_LABEL)[code] ?? code;
+}
+
 /** GET /platform/organization-plans (OrganizationPlanResponseDto). */
 export type ApiOrgPlan = {
   id: string;

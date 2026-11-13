@@ -109,6 +109,8 @@ export type HospitalEnrollment = {
   program: string;
   courseId: string | null;
   programName: string;
+  /** The course's Spanish title; blank when the course has none. */
+  programNameEs?: string;
   status: EnrollmentStatus;
   /** ISO instant. */
   enrolledAt: string;
@@ -156,6 +158,7 @@ export function toHospitalEnrollment(
     program: row.program,
     courseId: row.courseId,
     programName: row.courseTitleEn?.trim() || row.program,
+    programNameEs: row.courseTitleEs?.trim() || "",
     status: enrollmentStatusOf(row.status),
     enrolledAt: row.enrolledAt,
     dischargedAt: row.dischargedAt,
@@ -169,6 +172,12 @@ export function toHospitalEnrollment(
       lastActivityAt: row.progress?.lastActivityAt ?? null,
     },
   };
+}
+
+/** The program's name in the viewer's language (Spanish falls back to the
+ *  English title when the course has no Spanish one). */
+export function programNameOf(e: HospitalEnrollment, isEs = false): string {
+  return isEs ? e.programNameEs || e.programName : e.programName;
 }
 
 export function educationStatus(e: HospitalEnrollment): EducationStatus {

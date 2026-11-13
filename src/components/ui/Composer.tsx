@@ -3,6 +3,7 @@
 import React from "react";
 import { ArrowUp, Mic, Paperclip } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { useLanguageCode } from "@/context/LanguageContext";
 import { Button } from "./Button";
 
 /* ==========================================================================
@@ -39,13 +40,14 @@ export function Composer({
   onChange,
   onSend,
   label,
-  placeholder = "Write a message…",
+  placeholder,
   onAttach,
   onDictate,
   sending = false,
   disabled = false,
   className,
 }: ComposerProps) {
+  const isEs = useLanguageCode() === "ES";
   const canSend = value.trim() !== "" && !disabled && !sending;
   const send = () => {
     if (canSend) onSend(value.trim());
@@ -66,7 +68,7 @@ export function Composer({
           appearance="fill-stroke"
           size="small"
           iconOnly
-          aria-label="Attach a file"
+          aria-label={isEs ? "Adjuntar un archivo" : "Attach a file"}
           onClick={onAttach}
           disabled={disabled}
         >
@@ -77,7 +79,9 @@ export function Composer({
       <input
         aria-label={label}
         value={value}
-        placeholder={placeholder}
+        placeholder={
+          placeholder ?? (isEs ? "Escriba un mensaje…" : "Write a message…")
+        }
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={(event) => {
@@ -98,7 +102,7 @@ export function Composer({
           appearance="fill-stroke"
           size="small"
           iconOnly
-          aria-label="Dictate"
+          aria-label={isEs ? "Dictar" : "Dictate"}
           onClick={onDictate}
           disabled={disabled}
         >
@@ -109,7 +113,7 @@ export function Composer({
       <Button
         size="small"
         iconOnly
-        aria-label="Send"
+        aria-label={isEs ? "Enviar" : "Send"}
         onClick={send}
         disabled={!canSend}
         loading={sending}

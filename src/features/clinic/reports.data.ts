@@ -60,17 +60,19 @@ export type TravelReport = { total: number; byStatus: KeyCount[] };
 /* ------------------------------------------------------------- the screen */
 
 /** "2026-10" -> "Oct". An unexpected value shows as given. */
-export function monthLabel(month: string): string {
+export function monthLabel(month: string, isEs = false): string {
   const [y, m] = month.split("-").map(Number);
   if (!y || !m) return month;
-  return new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "short" });
+  return new Date(y, m - 1, 1).toLocaleDateString(isEs ? "es-US" : "en-US", {
+    month: "short",
+  });
 }
 
 /** "2026-10" -> "October 2026". */
-export function longMonth(month: string): string {
+export function longMonth(month: string, isEs = false): string {
   const [y, m] = month.split("-").map(Number);
   if (!y || !m) return month;
-  return new Date(y, m - 1, 1).toLocaleDateString("en-US", {
+  return new Date(y, m - 1, 1).toLocaleDateString(isEs ? "es-US" : "en-US", {
     month: "long",
     year: "numeric",
   });
@@ -91,8 +93,18 @@ const STATUS_LABELS: Record<string, string> = {
   discharged: "Discharged",
 };
 
-export function programStatusLabel(key: string): string {
-  return STATUS_LABELS[key] ?? key;
+const STATUS_LABELS_ES: Record<string, string> = {
+  enrolled: "Inscrito",
+  "pending-start": "Inicio pendiente",
+  "not-started": "Sin iniciar",
+  withdrawn: "Retirado",
+  completed: "Completado",
+  admitted: "Admitido",
+  discharged: "Dado de alta",
+};
+
+export function programStatusLabel(key: string, isEs = false): string {
+  return (isEs ? STATUS_LABELS_ES : STATUS_LABELS)[key] ?? key;
 }
 
 const SHARE_TONES: SeriesTone[] = [
@@ -135,15 +147,41 @@ export const EXPORTS: {
     | "travel"
     | "ccm";
   label: string;
+  labelEs: string;
   nephrologyOnly?: boolean;
 }[] = [
-  { report: "roster", label: "Member Roster Report" },
-  { report: "programs", label: "Program Completion Report" },
-  { report: "check-in-notices", label: "Check-In Compliance Report" },
-  { report: "messages", label: "Messages Report" },
-  { report: "lab-imports", label: "Lab Imports Report" },
-  { report: "travel", label: "Travel Report" },
-  { report: "ccm", label: "CCM Report", nephrologyOnly: true },
+  {
+    report: "roster",
+    label: "Member Roster Report",
+    labelEs: "Informe de la lista de miembros",
+  },
+  {
+    report: "programs",
+    label: "Program Completion Report",
+    labelEs: "Informe de finalización de programas",
+  },
+  {
+    report: "check-in-notices",
+    label: "Check-In Compliance Report",
+    labelEs: "Informe de cumplimiento de registros",
+  },
+  {
+    report: "messages",
+    label: "Messages Report",
+    labelEs: "Informe de mensajes",
+  },
+  {
+    report: "lab-imports",
+    label: "Lab Imports Report",
+    labelEs: "Informe de importaciones de laboratorio",
+  },
+  { report: "travel", label: "Travel Report", labelEs: "Informe de viajes" },
+  {
+    report: "ccm",
+    label: "CCM Report",
+    labelEs: "Informe de CCM",
+    nephrologyOnly: true,
+  },
 ];
 
 /** The per-member files the prototype built in the browser. They have no
@@ -153,4 +191,12 @@ export const PER_MEMBER_REPORTS = [
   "Open Questions Report",
   "Live Class Attendance Report",
   "Member Activity Export (CSV)",
+] as const;
+
+/** PER_MEMBER_REPORTS in Spanish, in the same order. */
+export const PER_MEMBER_REPORTS_ES = [
+  "Informe de participación de miembros",
+  "Informe de preguntas abiertas",
+  "Informe de asistencia a clases en vivo",
+  "Exportación de actividad de miembros (CSV)",
 ] as const;

@@ -30,6 +30,7 @@ import {
 } from "@/features/education/admin/QuestionEditor";
 import { Button, FormField, Input, Modal } from "@/components/ui";
 import { isFirstPartyMediaUrl } from "@/features/education/usePlatformCourses";
+import { useLanguage } from "@/context/LanguageContext";
 
 /** Centred dialog used by the course and module forms. */
 export function AdminModal({
@@ -49,6 +50,8 @@ export function AdminModal({
   submitDisabled?: boolean;
   children: React.ReactNode;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   return (
     // Escape, the scroll lock and the initial focus move were already here.
     // What was missing was the trap that keeps Tab inside the dialog.
@@ -60,7 +63,7 @@ export function AdminModal({
       footer={
         <>
           <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
-            Cancel
+            {isEs ? "Cancelar" : "Cancel"}
           </Button>
           <Button onClick={onSubmit} disabled={submitDisabled}>
             {submitLabel}
@@ -100,30 +103,58 @@ export function CourseModal({
     },
   );
 
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const set = (patch: Partial<CourseFormValues>) =>
     setValues((current) => ({ ...current, ...patch }));
 
   return (
     <AdminModal
-      title={initial ? "Edit course" : "New course"}
+      title={
+        initial
+          ? isEs
+            ? "Editar curso"
+            : "Edit course"
+          : isEs
+            ? "Nuevo curso"
+            : "New course"
+      }
       open={open}
       onClose={onClose}
       onSubmit={() => onSave(values)}
-      submitLabel={initial ? "Save course" : "Create course"}
+      submitLabel={
+        initial
+          ? isEs
+            ? "Guardar curso"
+            : "Save course"
+          : isEs
+            ? "Crear curso"
+            : "Create course"
+      }
       submitDisabled={values.titleEn.trim().length === 0}
     >
-      <Field label="Course name (English)">
+      <Field
+        label={isEs ? "Nombre del curso (inglés)" : "Course name (English)"}
+      >
         <input
           className={FIELD_CLASS}
           value={values.titleEn}
           onChange={(event) => set({ titleEn: event.target.value })}
-          placeholder="e.g. Home Dialysis Essentials"
+          placeholder={
+            isEs
+              ? "p. ej., Home Dialysis Essentials"
+              : "e.g. Home Dialysis Essentials"
+          }
         />
       </Field>
 
       <Field
-        label="Course name (Spanish)"
-        hint="Falls back to English if empty"
+        label={isEs ? "Nombre del curso (español)" : "Course name (Spanish)"}
+        hint={
+          isEs
+            ? "Si está vacío, se usa el inglés"
+            : "Falls back to English if empty"
+        }
       >
         <input
           className={FIELD_CLASS}
@@ -132,7 +163,7 @@ export function CourseModal({
         />
       </Field>
 
-      <Field label="Description (English)">
+      <Field label={isEs ? "Descripción (inglés)" : "Description (English)"}>
         <textarea
           rows={3}
           className={`${FIELD_CLASS} resize-none`}
@@ -141,7 +172,7 @@ export function CourseModal({
         />
       </Field>
 
-      <Field label="Description (Spanish)">
+      <Field label={isEs ? "Descripción (español)" : "Description (Spanish)"}>
         <textarea
           rows={3}
           className={`${FIELD_CLASS} resize-none`}
@@ -172,17 +203,37 @@ export function ModuleModal({
   const [values, setValues] = useState<ModuleFormValues>(
     initial ?? { titleEn: "", titleEs: "" },
   );
+  const { language } = useLanguage();
+  const isEs = language === "ES";
 
   return (
     <AdminModal
-      title={initial ? "Edit module" : "New module"}
+      title={
+        initial
+          ? isEs
+            ? "Editar módulo"
+            : "Edit module"
+          : isEs
+            ? "Nuevo módulo"
+            : "New module"
+      }
       open={open}
       onClose={onClose}
       onSubmit={() => onSave(values)}
-      submitLabel={initial ? "Save module" : "Add module"}
+      submitLabel={
+        initial
+          ? isEs
+            ? "Guardar módulo"
+            : "Save module"
+          : isEs
+            ? "Agregar módulo"
+            : "Add module"
+      }
       submitDisabled={values.titleEn.trim().length === 0}
     >
-      <Field label="Module name (English)">
+      <Field
+        label={isEs ? "Nombre del módulo (inglés)" : "Module name (English)"}
+      >
         <input
           className={FIELD_CLASS}
           value={values.titleEn}
@@ -192,13 +243,21 @@ export function ModuleModal({
               titleEn: event.target.value,
             }))
           }
-          placeholder="e.g. Understanding Dialysis"
+          placeholder={
+            isEs
+              ? "p. ej., Understanding Dialysis"
+              : "e.g. Understanding Dialysis"
+          }
         />
       </Field>
 
       <Field
-        label="Module name (Spanish)"
-        hint="Falls back to English if empty"
+        label={isEs ? "Nombre del módulo (español)" : "Module name (Spanish)"}
+        hint={
+          isEs
+            ? "Si está vacío, se usa el inglés"
+            : "Falls back to English if empty"
+        }
       >
         <input
           className={FIELD_CLASS}
@@ -229,6 +288,8 @@ function DocumentsStep({
   documents: CourseDocument[];
   onChange: (next: CourseDocument[]) => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const fileRef = useRef<HTMLInputElement>(null);
 
   const addFiles = (files: FileList) => {
@@ -267,13 +328,15 @@ function DocumentsStep({
       >
         <Upload className="h-6 w-6 text-fg-subtle" />
         <span className="text-body-sm font-bold text-fg-secondary">
-          Upload handouts
+          {isEs ? "Subir materiales" : "Upload handouts"}
         </span>
       </button>
 
       {documents.length === 0 ? (
         <p className="rounded-control border border-dashed border-line p-6 text-center text-body-sm text-fg-muted">
-          No handouts attached yet.
+          {isEs
+            ? "Todavía no hay materiales adjuntos."
+            : "No handouts attached yet."}
         </p>
       ) : (
         <ul className="space-y-2">
@@ -314,7 +377,9 @@ function DocumentsStep({
                 onClick={() =>
                   onChange(documents.filter((entry) => entry.id !== doc.id))
                 }
-                aria-label={`Remove ${doc.titleEn}`}
+                aria-label={
+                  isEs ? `Quitar ${doc.titleEn}` : `Remove ${doc.titleEn}`
+                }
                 className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-danger-surface hover:text-danger"
               >
                 <Trash2 className="h-4 w-4" />
@@ -328,19 +393,19 @@ function DocumentsStep({
 }
 
 const LESSON_STEPS = [
-  { key: "overview", label: "Overview" },
-  { key: "type", label: "Type" },
-  { key: "media", label: "Media" },
-  { key: "documents", label: "Documents" },
-  { key: "activities", label: "Activities" },
-  { key: "video", label: "Video questions" },
+  { key: "overview", label: "Overview", labelEs: "Resumen" },
+  { key: "type", label: "Type", labelEs: "Tipo" },
+  { key: "media", label: "Media", labelEs: "Multimedia" },
+  { key: "documents", label: "Documents", labelEs: "Documentos" },
+  { key: "activities", label: "Activities", labelEs: "Actividades" },
+  { key: "video", label: "Video questions", labelEs: "Preguntas del video" },
 ] as const;
 
 /* An exam has no media: just what it is called and its questions. */
 const EXAM_STEPS = [
-  { key: "overview", label: "Overview" },
-  { key: "type", label: "Type" },
-  { key: "exam", label: "Exam questions" },
+  { key: "overview", label: "Overview", labelEs: "Resumen" },
+  { key: "type", label: "Type", labelEs: "Tipo" },
+  { key: "exam", label: "Exam questions", labelEs: "Preguntas del examen" },
 ] as const;
 
 type StepKey =
@@ -363,6 +428,8 @@ export function ClassEditorPanel({
   onClose: () => void;
   onSave: (courseClass: CourseClass) => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const [draft, setDraft] = useState<CourseClass>(initial);
   const [stepIndex, setStepIndex] = useState(0);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -394,8 +461,11 @@ export function ClassEditorPanel({
 
   if (!open) return null;
 
-  const STEPS: ReadonlyArray<{ key: StepKey; label: string }> =
-    draft.kind === "exam" ? EXAM_STEPS : LESSON_STEPS;
+  const STEPS: ReadonlyArray<{
+    key: StepKey;
+    label: string;
+    labelEs: string;
+  }> = draft.kind === "exam" ? EXAM_STEPS : LESSON_STEPS;
   const safeIndex = Math.min(stepIndex, STEPS.length - 1);
   const step = STEPS[safeIndex].key;
   const isLastStep = safeIndex === STEPS.length - 1;
@@ -442,7 +512,7 @@ export function ClassEditorPanel({
       open
       onClose={onClose}
       size="wide"
-      title={draft.titleEn || "New class"}
+      title={draft.titleEn || (isEs ? "Nueva clase" : "New class")}
       description={moduleName}
       footer={
         <>
@@ -454,11 +524,11 @@ export function ClassEditorPanel({
             className="mr-auto"
           >
             <ChevronLeft aria-hidden="true" />
-            Back
+            {isEs ? "Atrás" : "Back"}
           </Button>
 
           <Button variant="neutral" appearance="stroke" onClick={onClose}>
-            Cancel
+            {isEs ? "Cancelar" : "Cancel"}
           </Button>
 
           {isLastStep ? (
@@ -466,7 +536,7 @@ export function ClassEditorPanel({
               onClick={() => onSave(draft)}
               disabled={!canContinue || !mediaAddressOk}
             >
-              Save class
+              {isEs ? "Guardar clase" : "Save class"}
             </Button>
           ) : (
             <Button
@@ -475,7 +545,7 @@ export function ClassEditorPanel({
               }
               disabled={!canContinue}
             >
-              Next
+              {isEs ? "Siguiente" : "Next"}
               <ChevronRight aria-hidden="true" />
             </Button>
           )}
@@ -516,7 +586,7 @@ export function ClassEditorPanel({
                   >
                     {done ? <Check className="h-3 w-3" /> : index + 1}
                   </span>
-                  {entry.label}
+                  {isEs ? entry.labelEs : entry.label}
                 </button>
                 {index < STEPS.length - 1 && (
                   <ChevronRight
@@ -549,12 +619,20 @@ export function ClassEditorPanel({
               />
 
               <FormField
-                label="Media address"
-                hint="A path on this site, such as /videos/day-01.mp4. Links to other sites are not accepted."
+                label={
+                  isEs ? "Dirección del archivo multimedia" : "Media address"
+                }
+                hint={
+                  isEs
+                    ? "Una ruta en este sitio, como /videos/day-01.mp4. No se aceptan enlaces a otros sitios."
+                    : "A path on this site, such as /videos/day-01.mp4. Links to other sites are not accepted."
+                }
                 error={
                   isFirstPartyMediaUrl(draft.mediaSrc)
                     ? undefined
-                    : "Use a path on this site."
+                    : isEs
+                      ? "Use una ruta en este sitio."
+                      : "Use a path on this site."
                 }
               >
                 {(props) => (
@@ -567,12 +645,22 @@ export function ClassEditorPanel({
                 )}
               </FormField>
               <FormField
-                label="Cover image address"
-                hint="Optional. A path on this site."
+                label={
+                  isEs
+                    ? "Dirección de la imagen de portada"
+                    : "Cover image address"
+                }
+                hint={
+                  isEs
+                    ? "Opcional. Una ruta en este sitio."
+                    : "Optional. A path on this site."
+                }
                 error={
                   isFirstPartyMediaUrl(draft.poster)
                     ? undefined
-                    : "Use a path on this site."
+                    : isEs
+                      ? "Use una ruta en este sitio."
+                      : "Use a path on this site."
                 }
               >
                 {(props) => (
@@ -587,7 +675,7 @@ export function ClassEditorPanel({
 
               <div className="space-y-4 border-t border-line pt-4">
                 <h3 className="text-caption font-bold text-fg-muted">
-                  Transcript
+                  {isEs ? "Transcripción" : "Transcript"}
                 </h3>
                 <ClassTranscriptUpload
                   draft={draft}
@@ -608,14 +696,19 @@ export function ClassEditorPanel({
           {step === "exam" && (
             <>
               <p className="text-body-sm text-fg-muted">
-                A scored exam, taken in order like any other class. Members need
-                the course pass mark to finish it.
+                {isEs
+                  ? "Un examen calificado que se toma en orden, como cualquier otra clase. Los miembros necesitan la calificación mínima del curso para completarlo."
+                  : "A scored exam, taken in order like any other class. Members need the course pass mark to finish it."}
               </p>
               <QuestionListEditor
                 questions={draft.activities}
                 scoredOnly
                 onChange={(activities) => set({ activities })}
-                emptyText="No exam questions yet."
+                emptyText={
+                  isEs
+                    ? "Todavía no hay preguntas de examen."
+                    : "No exam questions yet."
+                }
               />
             </>
           )}
@@ -623,13 +716,18 @@ export function ClassEditorPanel({
           {step === "activities" && (
             <>
               <p className="text-body-sm text-fg-muted">
-                Questions shown under the lesson. Members answer them to finish
-                the class; they are not marked.
+                {isEs
+                  ? "Preguntas que se muestran debajo de la lección. Los miembros las responden para completar la clase; no se califican."
+                  : "Questions shown under the lesson. Members answer them to finish the class; they are not marked."}
               </p>
               <QuestionListEditor
                 questions={draft.activities}
                 onChange={(activities) => set({ activities })}
-                emptyText="No activities yet. Add a question, reflection or fill-in."
+                emptyText={
+                  isEs
+                    ? "Todavía no hay actividades. Agregue una pregunta, una reflexión o un espacio para completar."
+                    : "No activities yet. Add a question, reflection or fill-in."
+                }
               />
             </>
           )}
@@ -637,7 +735,9 @@ export function ClassEditorPanel({
           {step === "video" &&
             (draft.kind === "reading" ? (
               <p className="rounded-control border border-dashed border-line p-6 text-center text-body-sm text-fg-muted">
-                Pop-up questions need a video or audio class.
+                {isEs
+                  ? "Las preguntas emergentes requieren una clase de video o audio."
+                  : "Pop-up questions need a video or audio class."}
               </p>
             ) : (
               <VideoQuestionListEditor
@@ -661,6 +761,8 @@ export function CourseSettingsModal({
   onClose: () => void;
   onSave: (values: CourseSettings) => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const [values, setValues] = useState<CourseSettings>(initial);
   const set = (patch: Partial<CourseSettings>) =>
     setValues((current) => ({ ...current, ...patch }));
@@ -694,19 +796,25 @@ export function CourseSettingsModal({
 
   return (
     <AdminModal
-      title="Course settings"
+      title={isEs ? "Configuración del curso" : "Course settings"}
       open
       onClose={onClose}
       onSubmit={() => onSave(values)}
-      submitLabel="Save settings"
+      submitLabel={isEs ? "Guardar configuración" : "Save settings"}
       submitDisabled={!valid}
     >
       <div className="space-y-4">
-        <p className="text-caption font-bold text-fg-muted">Names</p>
+        <p className="text-caption font-bold text-fg-muted">
+          {isEs ? "Nombres" : "Names"}
+        </p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field
-            label="A group is called (English)"
-            hint="e.g. Module, Day, Week"
+            label={
+              isEs
+                ? "Nombre de un grupo (inglés)"
+                : "A group is called (English)"
+            }
+            hint={isEs ? "p. ej., Module, Day, Week" : "e.g. Module, Day, Week"}
           >
             <input
               className={FIELD_CLASS}
@@ -715,8 +823,14 @@ export function CourseSettingsModal({
             />
           </Field>
           <Field
-            label="A group is called (Spanish)"
-            hint="e.g. Módulo, Día, Semana"
+            label={
+              isEs
+                ? "Nombre de un grupo (español)"
+                : "A group is called (Spanish)"
+            }
+            hint={
+              isEs ? "p. ej., Módulo, Día, Semana" : "e.g. Módulo, Día, Semana"
+            }
           >
             <input
               className={FIELD_CLASS}
@@ -725,8 +839,14 @@ export function CourseSettingsModal({
             />
           </Field>
           <Field
-            label="A lesson is called (English)"
-            hint="e.g. Class, Lesson, Day"
+            label={
+              isEs
+                ? "Nombre de una lección (inglés)"
+                : "A lesson is called (English)"
+            }
+            hint={
+              isEs ? "p. ej., Class, Lesson, Day" : "e.g. Class, Lesson, Day"
+            }
           >
             <input
               className={FIELD_CLASS}
@@ -735,8 +855,14 @@ export function CourseSettingsModal({
             />
           </Field>
           <Field
-            label="A lesson is called (Spanish)"
-            hint="e.g. Clase, Lección, Día"
+            label={
+              isEs
+                ? "Nombre de una lección (español)"
+                : "A lesson is called (Spanish)"
+            }
+            hint={
+              isEs ? "p. ej., Clase, Lección, Día" : "e.g. Clase, Lección, Día"
+            }
           >
             <input
               className={FIELD_CLASS}
@@ -749,10 +875,10 @@ export function CourseSettingsModal({
 
       <div className="space-y-4">
         <p className="text-caption font-bold text-fg-muted">
-          Checks and final exam
+          {isEs ? "Evaluaciones y examen final" : "Checks and final exam"}
         </p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label="Pass mark (%)">
+          <Field label={isEs ? "Calificación mínima (%)" : "Pass mark (%)"}>
             <input
               type="number"
               min={0}
@@ -764,7 +890,10 @@ export function CourseSettingsModal({
               }
             />
           </Field>
-          <Field label="Attempts allowed" hint="0 means unlimited">
+          <Field
+            label={isEs ? "Intentos permitidos" : "Attempts allowed"}
+            hint={isEs ? "0 significa ilimitados" : "0 means unlimited"}
+          >
             <input
               type="number"
               min={0}
@@ -780,22 +909,36 @@ export function CourseSettingsModal({
         </div>
         {toggle(
           "showAnswers",
-          "Show the right answers after an attempt",
-          "Members see which answers were correct on the results screen.",
+          isEs
+            ? "Mostrar las respuestas correctas después de un intento"
+            : "Show the right answers after an attempt",
+          isEs
+            ? "Los miembros ven qué respuestas eran correctas en la pantalla de resultados."
+            : "Members see which answers were correct on the results screen.",
         )}
       </div>
 
       <div className="space-y-4">
-        <p className="text-caption font-bold text-fg-muted">Certificate</p>
+        <p className="text-caption font-bold text-fg-muted">
+          {isEs ? "Certificado" : "Certificate"}
+        </p>
         {toggle(
           "certificateEnabled",
-          "Issue a certificate of completion",
-          "Unlocks once every lesson is finished.",
+          isEs
+            ? "Emitir un certificado de finalización"
+            : "Issue a certificate of completion",
+          isEs
+            ? "Se desbloquea cuando se completan todas las lecciones."
+            : "Unlocks once every lesson is finished.",
         )}
         {toggle(
           "requireExamPass",
-          "Require a pass on the final exam",
-          "Only applies when the course has a final exam.",
+          isEs
+            ? "Exigir aprobar el examen final"
+            : "Require a pass on the final exam",
+          isEs
+            ? "Solo se aplica cuando el curso tiene un examen final."
+            : "Only applies when the course has a final exam.",
         )}
       </div>
     </AdminModal>

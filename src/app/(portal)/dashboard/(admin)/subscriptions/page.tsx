@@ -17,6 +17,7 @@ import {
   SwitchRow,
   Textarea,
 } from "@/components/ui";
+import { useLanguage } from "@/context/LanguageContext";
 import { useCanLevel } from "@/features/staff/useStaffAccounts";
 import { canRetry } from "@/lib/data/asyncState";
 import {
@@ -75,6 +76,8 @@ function PricingCard({
   statusPending: boolean;
   onStatus: (plan: SubscriptionPlan) => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const card = (
     <article
       className={`flex h-full flex-col justify-between gap-inset-lg overflow-hidden rounded-panel border border-line p-inset-lg transition-shadow duration-300 ${
@@ -102,14 +105,17 @@ function PricingCard({
 
         {plan.accessDays && (
           <div className="inline-flex items-center gap-inline-sm rounded-control-small bg-primary-soft px-inset-xs py-1 text-label-sm text-primary-fg">
-            Full Access: {plan.accessDays} Days
+            {isEs
+              ? `Acceso completo: ${plan.accessDays} días`
+              : `Full Access: ${plan.accessDays} Days`}
           </div>
         )}
 
         {plan.earlierVersions > 0 ? (
           <p className="text-caption text-fg-muted">
-            Version {plan.earlierVersions + 1}: members on an earlier version
-            keep its terms.
+            {isEs
+              ? `Versión ${plan.earlierVersions + 1}: los miembros con una versión anterior conservan sus condiciones.`
+              : `Version ${plan.earlierVersions + 1}: members on an earlier version keep its terms.`}
           </p>
         ) : null}
 
@@ -122,7 +128,7 @@ function PricingCard({
             className="w-full"
           >
             <Edit3 aria-hidden="true" />
-            Edit Plan
+            {isEs ? "Editar plan" : "Edit Plan"}
           </Button>
         ) : null}
         {canManage ? (
@@ -133,9 +139,19 @@ function PricingCard({
             loading={statusPending}
             onClick={() => onStatus(plan)}
             className="w-full"
-            aria-label={`${plan.active ? "Retire" : "Publish"} ${plan.name}`}
+            aria-label={
+              isEs
+                ? `${plan.active ? "Retirar" : "Publicar"} ${plan.name}`
+                : `${plan.active ? "Retire" : "Publish"} ${plan.name}`
+            }
           >
-            {plan.active ? "Retire Plan" : "Publish Plan"}
+            {isEs
+              ? plan.active
+                ? "Retirar plan"
+                : "Publicar plan"
+              : plan.active
+                ? "Retire Plan"
+                : "Publish Plan"}
           </Button>
         ) : null}
       </div>
@@ -172,7 +188,7 @@ function PricingCard({
     // than status colours, which would have read as good → bad.
     <div className="flex h-full flex-col rounded-panel bg-gradient-to-r from-cat-6 via-cat-7 to-cat-8 p-1 pt-2.5 shadow-raised">
       <p className="mb-stack-sm text-center text-overline text-fg-inverse">
-        {plan.badge || "Most Popular"}
+        {plan.badge || (isEs ? "Más popular" : "Most Popular")}
       </p>
       <div className="flex-1">{card}</div>
     </div>
@@ -216,10 +232,18 @@ function EditPlanModal({
   const [badge] = useState(isNew ? "" : plan.badge || "");
   const [tried, setTried] = useState(false);
   const priceCents = parseDollars(price);
-  const nameError = name.trim() ? undefined : "Give the plan a name.";
+  const { language } = useLanguage();
+  const isEs = language === "ES";
+  const nameError = name.trim()
+    ? undefined
+    : isEs
+      ? "Póngale un nombre al plan."
+      : "Give the plan a name.";
   const priceError =
     priceCents === null
-      ? "Enter the price in dollars and cents, e.g. 4.99."
+      ? isEs
+        ? "Ingrese el precio en dólares y centavos, p. ej., 4.99."
+        : "Enter the price in dollars and cents, e.g. 4.99."
       : undefined;
   const accessError =
     accessDays === "" ||
@@ -227,11 +251,15 @@ function EditPlanModal({
       Number(accessDays) >= 1 &&
       Number(accessDays) <= 3650)
       ? undefined
-      : "Enter whole days from 1 to 3650, or leave it blank.";
+      : isEs
+        ? "Ingrese días enteros de 1 a 3650, o déjelo en blanco."
+        : "Enter whole days from 1 to 3650, or leave it blank.";
   const trialError =
     trialDays === "" || (/^\d+$/.test(trialDays) && Number(trialDays) <= 365)
       ? undefined
-      : "Enter whole days from 0 to 365, or leave it blank.";
+      : isEs
+        ? "Ingrese días enteros de 0 a 365, o déjelo en blanco."
+        : "Enter whole days from 0 to 365, or leave it blank.";
   const [features, setFeatures] = useState<
     Array<{ label: string; included: boolean }>
   >(
@@ -293,8 +321,20 @@ function EditPlanModal({
       open
       onClose={onClose}
       size="wide"
-      title={isNew ? "Create New Subscription Plan" : `Edit Plan: ${plan.name}`}
-      description="Edit pricing, billing cycle, access periods, and feature permissions dynamically."
+      title={
+        isNew
+          ? isEs
+            ? "Crear nuevo plan de suscripción"
+            : "Create New Subscription Plan"
+          : isEs
+            ? `Editar plan: ${plan.name}`
+            : `Edit Plan: ${plan.name}`
+      }
+      description={
+        isEs
+          ? "Edite precios, ciclo de facturación, períodos de acceso y permisos de funciones de forma dinámica."
+          : "Edit pricing, billing cycle, access periods, and feature permissions dynamically."
+      }
       footer={
         <>
           <Button
@@ -303,10 +343,10 @@ function EditPlanModal({
             onClick={onClose}
             disabled={saving}
           >
-            Cancel
+            {isEs ? "Cancelar" : "Cancel"}
           </Button>
           <Button type="submit" form="subscription-plan-form" loading={saving}>
-            Save Changes
+            {isEs ? "Guardar cambios" : "Save Changes"}
           </Button>
         </>
       }
@@ -318,19 +358,27 @@ function EditPlanModal({
         noValidate
       >
         {error ? (
-          <Alert tone="danger" title="Your plan changes were not saved">
-            {actionErrorText(error)}
+          <Alert
+            tone="danger"
+            title={
+              isEs
+                ? "Los cambios del plan no se guardaron"
+                : "Your plan changes were not saved"
+            }
+          >
+            {actionErrorText(error, isEs)}
           </Alert>
         ) : null}
         {!isNew && plan.active ? (
           <Alert tone="info" live={false}>
-            If members are on this plan, a new price or feature list is saved as
-            a new version: they keep their current terms.
+            {isEs
+              ? "Si hay miembros en este plan, un nuevo precio o una nueva lista de funciones se guarda como una nueva versión: ellos conservan sus condiciones actuales."
+              : "If members are on this plan, a new price or feature list is saved as a new version: they keep their current terms."}
           </Alert>
         ) : null}
         {/* Plan Name */}
         <FormField
-          label="Plan Name"
+          label={isEs ? "Nombre del plan" : "Plan Name"}
           required
           error={tried ? nameError : undefined}
         >
@@ -341,7 +389,11 @@ function EditPlanModal({
               maxLength={120}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Essential Membership"
+              placeholder={
+                isEs
+                  ? "p. ej., Membresía Esencial"
+                  : "e.g. Essential Membership"
+              }
             />
           )}
         </FormField>
@@ -349,7 +401,7 @@ function EditPlanModal({
         {/* Price & Billing Unit */}
         <div className="grid grid-cols-2 gap-inline-lg">
           <FormField
-            label="Price ($ USD)"
+            label={isEs ? "Precio ($ USD)" : "Price ($ USD)"}
             required
             error={tried ? priceError : undefined}
           >
@@ -373,7 +425,7 @@ function EditPlanModal({
               </div>
             )}
           </FormField>
-          <FormField label="Billing Suffix">
+          <FormField label={isEs ? "Sufijo de facturación" : "Billing Suffix"}>
             {(props) => (
               <Input
                 {...props}
@@ -381,7 +433,11 @@ function EditPlanModal({
                 value={billing}
                 maxLength={40}
                 onChange={(e) => setBilling(e.target.value)}
-                placeholder="e.g. /Month, /Class, or One-time"
+                placeholder={
+                  isEs
+                    ? "p. ej., /Mes, /Clase o Pago único"
+                    : "e.g. /Month, /Class, or One-time"
+                }
               />
             )}
           </FormField>
@@ -389,7 +445,7 @@ function EditPlanModal({
 
         {/* Billing Type & Access Duration */}
         <div className="grid grid-cols-2 gap-inline-lg">
-          <FormField label="Billing Type">
+          <FormField label={isEs ? "Tipo de facturación" : "Billing Type"}>
             {(props) => (
               <Select
                 {...props}
@@ -402,13 +458,17 @@ function EditPlanModal({
                   else setBillingPeriodLabel("One-time payment");
                 }}
               >
-                <option value="recurring">Recurring (Monthly)</option>
-                <option value="one_time">One-time Purchase</option>
+                <option value="recurring">
+                  {isEs ? "Recurrente (mensual)" : "Recurring (Monthly)"}
+                </option>
+                <option value="one_time">
+                  {isEs ? "Compra única" : "One-time Purchase"}
+                </option>
               </Select>
             )}
           </FormField>
           <FormField
-            label="Access Period (Days)"
+            label={isEs ? "Período de acceso (días)" : "Access Period (Days)"}
             error={tried ? accessError : undefined}
           >
             {(props) => (
@@ -417,7 +477,11 @@ function EditPlanModal({
                 type="number"
                 value={accessDays}
                 onChange={(e) => setAccessDays(e.target.value)}
-                placeholder="e.g. 21 for 21-Day Journey"
+                placeholder={
+                  isEs
+                    ? "p. ej., 21 para el Recorrido de 21 Días"
+                    : "e.g. 21 for 21-Day Journey"
+                }
               />
             )}
           </FormField>
@@ -425,8 +489,16 @@ function EditPlanModal({
 
         {/* Free Trial Period */}
         <FormField
-          label="Free Trial Period (Days)"
-          hint="Grants free trial days before recurring payment begins (e.g. 7 days)."
+          label={
+            isEs
+              ? "Período de prueba gratuita (días)"
+              : "Free Trial Period (Days)"
+          }
+          hint={
+            isEs
+              ? "Otorga días de prueba gratuita antes de que comience el pago recurrente (p. ej., 7 días)."
+              : "Grants free trial days before recurring payment begins (e.g. 7 days)."
+          }
           error={tried ? trialError : undefined}
         >
           {(props) => (
@@ -435,13 +507,17 @@ function EditPlanModal({
               type="number"
               value={trialDays}
               onChange={(e) => setTrialDays(e.target.value)}
-              placeholder="e.g. 7 (leave blank if no trial)"
+              placeholder={
+                isEs
+                  ? "p. ej., 7 (déjelo en blanco si no hay prueba)"
+                  : "e.g. 7 (leave blank if no trial)"
+              }
             />
           )}
         </FormField>
 
         {/* Description */}
-        <FormField label="Description">
+        <FormField label={isEs ? "Descripción" : "Description"}>
           {(props) => (
             <Textarea
               {...props}
@@ -449,7 +525,11 @@ function EditPlanModal({
               onChange={(e) => setDescription(e.target.value)}
               maxLength={1000}
               rows={2}
-              placeholder="What this plan includes..."
+              placeholder={
+                isEs
+                  ? "Lo que incluye este plan..."
+                  : "What this plan includes..."
+              }
             />
           )}
         </FormField>
@@ -460,14 +540,22 @@ function EditPlanModal({
         <SwitchRow
           checked={popular}
           onChange={setPopular}
-          title="Highlight as Most Popular"
-          description="Applies gradient badge and emphasis on the landing page"
+          title={
+            isEs ? "Destacar como Más popular" : "Highlight as Most Popular"
+          }
+          description={
+            isEs
+              ? "Aplica una insignia con degradado y énfasis en la página de inicio"
+              : "Applies gradient badge and emphasis on the landing page"
+          }
         />
 
         {/* Features Management */}
         <div>
           <p className="mb-stack-xs text-overline text-fg-muted">
-            Included Features ({features.length})
+            {isEs
+              ? `Funciones incluidas (${features.length})`
+              : `Included Features (${features.length})`}
           </p>
           <div className="max-h-[160px] space-y-stack-sm overflow-y-auto rounded-control border border-line bg-surface-sunken p-inset-xs">
             {features.map((feat, index) => (
@@ -510,7 +598,11 @@ function EditPlanModal({
                   size="small"
                   className="px-inset-xs"
                   onClick={() => handleRemoveFeature(index)}
-                  aria-label={`Remove feature: ${feat.label}`}
+                  aria-label={
+                    isEs
+                      ? `Quitar función: ${feat.label}`
+                      : `Remove feature: ${feat.label}`
+                  }
                 >
                   <X aria-hidden="true" />
                 </Button>
@@ -520,7 +612,7 @@ function EditPlanModal({
 
           <div className="mt-stack-sm flex gap-inline-md">
             <label htmlFor="new-feature" className="sr-only">
-              Add a new feature
+              {isEs ? "Agregar una nueva función" : "Add a new feature"}
             </label>
             <Input
               id="new-feature"
@@ -529,7 +621,9 @@ function EditPlanModal({
               value={newFeatureText}
               maxLength={200}
               onChange={(e) => setNewFeatureText(e.target.value)}
-              placeholder="Add a new feature..."
+              placeholder={
+                isEs ? "Agregar una nueva función..." : "Add a new feature..."
+              }
               className="flex-1"
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
@@ -545,7 +639,7 @@ function EditPlanModal({
               onClick={handleAddFeature}
             >
               <Plus aria-hidden="true" />
-              Add
+              {isEs ? "Agregar" : "Add"}
             </Button>
           </div>
         </div>
@@ -573,6 +667,8 @@ export default function SubscriptionsPage() {
   } = usePlans();
   const canEdit = useCanLevel("plans", 2);
   const canManage = useCanLevel("plans", 3);
+  const { language } = useLanguage();
+  const isEs = language === "ES";
 
   const [editingPlan, setEditingPlan] = useState<
     SubscriptionPlan | "new" | null
@@ -586,7 +682,11 @@ export default function SubscriptionsPage() {
       .then(() => setEditingPlan(null))
       .catch(() => {});
   };
-  const copy = readErrorCopy(error, "The plans did not load");
+  const copy = readErrorCopy(
+    error,
+    isEs ? "Los planes no se cargaron" : "The plans did not load",
+    isEs,
+  );
   const published = plans.filter((plan) => plan.active);
   const recurring = published.filter(
     (plan) => plan.billingType === "recurring",
@@ -598,11 +698,14 @@ export default function SubscriptionsPage() {
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-heading-4 text-fg">
-            Subscription &amp; Pricing Plans
+            {isEs
+              ? "Planes de suscripción y precios"
+              : "Subscription & Pricing Plans"}
           </h1>
           <p className="mt-stack-xs measure text-caption text-fg-muted">
-            Manage the member packages, prices, trial periods, and feature
-            permissions. Published plans show on the landing page.
+            {isEs
+              ? "Administre los paquetes para miembros, los precios, los períodos de prueba y los permisos de funciones. Los planes publicados aparecen en la página de inicio."
+              : "Manage the member packages, prices, trial periods, and feature permissions. Published plans show on the landing page."}
           </p>
         </div>
         {canEdit ? (
@@ -614,7 +717,7 @@ export default function SubscriptionsPage() {
             }}
           >
             <Plus aria-hidden="true" />
-            Add New Plan
+            {isEs ? "Agregar nuevo plan" : "Add New Plan"}
           </Button>
         ) : null}
       </div>
@@ -626,15 +729,25 @@ export default function SubscriptionsPage() {
           onDismiss={dismissOutcome}
         >
           {outcome === "versioned"
-            ? "Saved as a new version. Members already on this plan keep their current terms; new members get the new one."
+            ? isEs
+              ? "Se guardó como una nueva versión. Los miembros que ya tienen este plan conservan sus condiciones actuales; los nuevos miembros reciben la nueva."
+              : "Saved as a new version. Members already on this plan keep their current terms; new members get the new one."
             : outcome === "created"
-              ? "The plan was created. It is not on the landing page until it is published."
-              : "Changes saved."}
+              ? isEs
+                ? "Se creó el plan. No aparece en la página de inicio hasta que se publique."
+                : "The plan was created. It is not on the landing page until it is published."
+              : isEs
+                ? "Cambios guardados."
+                : "Changes saved."}
         </Alert>
       ) : null}
       <ActionError
         error={statusError}
-        title="The plan status did not change"
+        title={
+          isEs
+            ? "El estado del plan no cambió"
+            : "The plan status did not change"
+        }
         onDismiss={dismissStatusError}
         className="mb-stack-xl"
       />
@@ -644,23 +757,51 @@ export default function SubscriptionsPage() {
         tone="info"
         live={false}
         icon={<ShieldAlert />}
-        title="Client Developer Rules Applied"
+        title={
+          isEs
+            ? "Reglas del cliente para desarrolladores aplicadas"
+            : "Client Developer Rules Applied"
+        }
         className="mb-stack-2xl"
       >
         <ul className="list-disc space-y-stack-xs pl-5 text-caption">
-          <li>
-            <strong>21-Day Dialysis Journey ($49.99):</strong> Grants 21 days of
-            Full Membership access upon start; curriculum access is lifetime.
-            Auto-prompts for Essential or Full renewal after Day 21.
-          </li>
-          <li>
-            <strong>Live Class Only ($10.00):</strong> One-time single class
-            unlock without creating recurring subscriptions.
-          </li>
-          <li>
-            <strong>Zero Hard-Coding:</strong> Every tier is edited here and
-            saved on the server; the landing page shows the published ones.
-          </li>
+          {isEs ? (
+            <>
+              <li>
+                <strong>Recorrido de Diálisis de 21 Días ($49.99):</strong>{" "}
+                Otorga 21 días de acceso a la Membresía Completa al comenzar; el
+                acceso al plan de estudios es de por vida. Después del día 21,
+                invita automáticamente a renovar con la membresía Esencial o
+                Completa.
+              </li>
+              <li>
+                <strong>Solo clase en vivo ($10.00):</strong> Desbloqueo único
+                de una sola clase sin crear suscripciones recurrentes.
+              </li>
+              <li>
+                <strong>Nada fijo en el código:</strong> Cada nivel se edita
+                aquí y se guarda en el servidor; la página de inicio muestra los
+                publicados.
+              </li>
+            </>
+          ) : (
+            <>
+              <li>
+                <strong>21-Day Dialysis Journey ($49.99):</strong> Grants 21
+                days of Full Membership access upon start; curriculum access is
+                lifetime. Auto-prompts for Essential or Full renewal after Day
+                21.
+              </li>
+              <li>
+                <strong>Live Class Only ($10.00):</strong> One-time single class
+                unlock without creating recurring subscriptions.
+              </li>
+              <li>
+                <strong>Zero Hard-Coding:</strong> Every tier is edited here and
+                saved on the server; the landing page shows the published ones.
+              </li>
+            </>
+          )}
         </ul>
       </Alert>
 
@@ -673,8 +814,14 @@ export default function SubscriptionsPage() {
         isEmpty={plans.length === 0}
         empty={
           <EmptyState
-            title="No member plans yet"
-            description="Add a plan, then publish it to show it on the landing page."
+            title={
+              isEs ? "Aún no hay planes para miembros" : "No member plans yet"
+            }
+            description={
+              isEs
+                ? "Agregue un plan y luego publíquelo para mostrarlo en la página de inicio."
+                : "Add a plan, then publish it to show it on the landing page."
+            }
           />
         }
         skeleton={
@@ -707,14 +854,26 @@ export default function SubscriptionsPage() {
       {/* Overview Analytics Bar */}
       <section className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
         {[
-          ["Active Products", unknown ? "—" : `${published.length} Published`],
           [
-            "Subscription Types",
+            isEs ? "Productos activos" : "Active Products",
             unknown
               ? "—"
-              : `${recurring} Recurring + ${published.length - recurring} One-Time`,
+              : isEs
+                ? `${published.length} publicados`
+                : `${published.length} Published`,
           ],
-          ["Plan Storage", "Saved on the server"],
+          [
+            isEs ? "Tipos de suscripción" : "Subscription Types",
+            unknown
+              ? "—"
+              : isEs
+                ? `${recurring} recurrentes + ${published.length - recurring} de pago único`
+                : `${recurring} Recurring + ${published.length - recurring} One-Time`,
+          ],
+          [
+            isEs ? "Almacenamiento de planes" : "Plan Storage",
+            isEs ? "Guardado en el servidor" : "Saved on the server",
+          ],
         ].map(([label, value]) => (
           <Card as="article" key={label} padding="none" className="p-inset-lg">
             <div

@@ -205,6 +205,110 @@ export function requirementBody(
 
 export const ALL = "All";
 
+/* ------------------------------------------------------------ Spanish */
+
+/* Spanish display text for the fixed lists above, keyed by the English.
+   The English values stay what the server stores and validates; only what
+   is shown changes (ccmText). */
+const CCM_TEXT_ES: Record<string, string> = {
+  /* statuses */
+  "Action Needed": "Requiere acción",
+  "Below Threshold": "Por debajo del umbral",
+  "Ready for Review": "Listo para revisión",
+  /* requirements */
+  "CCM eligibility: 2+ chronic conditions expected to last 12+ months, with significant risk":
+    "Elegibilidad para CCM: 2 o más afecciones crónicas que se espera que duren 12 meses o más, con riesgo significativo",
+  "Initiating visit completed": "Visita inicial completada",
+  "CCM consent documented in the medical record":
+    "Consentimiento de CCM documentado en el expediente médico",
+  "Comprehensive care plan maintained":
+    "Plan de atención integral mantenido al día",
+  "24/7 access and continuity of care in place":
+    "Acceso 24/7 y continuidad de la atención establecidos",
+  "Structured health record maintained (problems, medications, allergies)":
+    "Expediente de salud estructurado al día (problemas, medicamentos, alergias)",
+  "Care transitions and coordination managed":
+    "Transiciones y coordinación de la atención gestionadas",
+  "Enhanced communication with the patient":
+    "Comunicación ampliada con el paciente",
+  /* activity types */
+  "Medication Review / Reconciliation":
+    "Revisión / conciliación de medicamentos",
+  "Patient Communication": "Comunicación con el paciente",
+  "Caregiver Communication": "Comunicación con el cuidador",
+  "Lab / Test Result Review & Follow-Up":
+    "Revisión y seguimiento de resultados de laboratorio / pruebas",
+  "BP Review & Follow-Up": "Revisión y seguimiento de la presión arterial",
+  "Weight / Fluid Review & Follow-Up":
+    "Revisión y seguimiento de peso / líquidos",
+  "Symptom Review & Follow-Up": "Revisión y seguimiento de síntomas",
+  "Patient Education / Self-Management Support":
+    "Educación del paciente / apoyo al autocuidado",
+  "Appointment Coordination": "Coordinación de citas",
+  "Specialist / Provider Coordination":
+    "Coordinación con especialistas / proveedores",
+  "Dialysis Facility Coordination": "Coordinación con el centro de diálisis",
+  "Hospital / ER / Care Transition Follow-Up":
+    "Seguimiento de hospital / urgencias / transición de la atención",
+  "Home Health / Community Service Coordination":
+    "Coordinación de atención médica domiciliaria / servicios comunitarios",
+  "Medical Record Review": "Revisión del expediente médico",
+  "Care Plan Review / Monitoring": "Revisión / monitoreo del plan de atención",
+  "KRT Education": "Educación sobre terapia de reemplazo renal (KRT)",
+  "Modality Discussion": "Conversación sobre la modalidad de tratamiento",
+  "Vascular Access Planning": "Planificación del acceso vascular",
+  "Vascular Access Referral": "Derivación para acceso vascular",
+  "Access Appointment Coordination": "Coordinación de citas de acceso vascular",
+  "Transplant Referral / Discussion":
+    "Derivación / conversación sobre trasplante",
+  "Other CCM Activity": "Otra actividad de CCM",
+  /* inbox kinds */
+  "Patient message": "Mensaje del paciente",
+  "Lab alert": "Alerta de laboratorio",
+  "Side effect": "Efecto secundario",
+  "Missed doses": "Dosis omitidas",
+  "Blood pressure": "Presión arterial",
+  "BP symptoms": "Síntomas de presión arterial",
+  "Weight change": "Cambio de peso",
+  "Access appointment": "Cita de acceso vascular",
+  "Access concern": "Problema con el acceso vascular",
+  "Missed appointment": "Cita perdida",
+  /* outcomes */
+  "Continue monitoring": "Continuar el monitoreo",
+  "Education provided": "Educación brindada",
+  "Medication adjusted": "Medicamento ajustado",
+  "Provider notified": "Proveedor notificado",
+  "Referral placed": "Derivación realizada",
+  "Care plan updated": "Plan de atención actualizado",
+  /* counts toward */
+  Yes: "Sí",
+  No: "No",
+  "Pending Review": "Pendiente de revisión",
+  /* the client's notices */
+  [CCM_BILLING_DEACTIVATED]:
+    "Facturación de CCM desactivada: este paciente figura actualmente como receptor de servicios concurrentes de ESRD, atención médica domiciliaria o cuidados paliativos (hospicio).",
+  [CCM_CHECKLIST_DISCLAIMER]:
+    "Solo es una herramienta de seguimiento. El personal del consultorio ingresa los estados, que por sí solos no determinan la elegibilidad para Medicare, el cumplimiento ni la facturabilidad. La documentación clínica de respaldo permanece en el EHR del consultorio.",
+  [REQUIREMENT_STATUS_MEANING.complete]:
+    "El personal del consultorio confirmó que este requisito se cumplió y se documentó cuando corresponde.",
+  [REQUIREMENT_STATUS_MEANING["in-progress"]]:
+    "El consultorio está trabajando activamente para cumplir o documentar el requisito.",
+  [REQUIREMENT_STATUS_MEANING.missing]:
+    "El personal del consultorio no ha confirmado que se haya completado; se necesita seguimiento.",
+  [REQUIREMENT_STATUS_MEANING["not-applicable"]]:
+    "El requisito no aplica en esta situación en particular. Por ejemplo, es posible que no se requiera una visita inicial en todos los casos de inscripción en CCM.",
+};
+
+/** One of this file's fixed labels (a status, requirement, activity type,
+ *  inbox kind, outcome or notice) in the reader's language. English, and
+ *  any text the list does not hold (a server value), is returned as is. */
+export function ccmText(text: string, isEs = false): string {
+  if (!isEs) return text;
+  return Object.prototype.hasOwnProperty.call(CCM_TEXT_ES, text)
+    ? CCM_TEXT_ES[text]
+    : text;
+}
+
 /* ------------------------------------------------------------------ dates */
 
 const MONTHS = [
@@ -241,10 +345,25 @@ export function monthOf(key: string): string {
   return key.slice(0, 7);
 }
 
-/** "2026-09" → "September 2026". */
-export function monthLabel(month: string): string {
+const MONTHS_ES = [
+  "enero",
+  "febrero",
+  "marzo",
+  "abril",
+  "mayo",
+  "junio",
+  "julio",
+  "agosto",
+  "septiembre",
+  "octubre",
+  "noviembre",
+  "diciembre",
+];
+
+/** "2026-09" → "September 2026" ("septiembre de 2026" in Spanish). */
+export function monthLabel(month: string, isEs = false): string {
   const [y, m] = month.split("-").map(Number);
-  return `${MONTHS[m - 1]} ${y}`;
+  return isEs ? `${MONTHS_ES[m - 1]} de ${y}` : `${MONTHS[m - 1]} ${y}`;
 }
 
 /** The current month and the two before it, newest first. */

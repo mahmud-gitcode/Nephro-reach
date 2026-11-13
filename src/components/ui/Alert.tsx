@@ -9,6 +9,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { useLanguageCode } from "@/context/LanguageContext";
 import { Button } from "./Button";
 
 /* ==========================================================================
@@ -89,6 +90,7 @@ export function Alert({
   className,
   children,
 }: AlertProps) {
+  const isEs = useLanguageCode() === "ES";
   const { shell, icon: defaultIcon, assertive } = tones[tone];
 
   return (
@@ -125,7 +127,7 @@ export function Alert({
           size="small"
           iconOnly
           onClick={onDismiss}
-          aria-label="Dismiss"
+          aria-label={isEs ? "Descartar" : "Dismiss"}
           className="-mt-1 -mr-1 border-transparent"
         >
           <X />

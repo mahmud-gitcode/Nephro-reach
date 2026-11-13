@@ -20,7 +20,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useOptionalAuth } from "@/features/auth/AuthContext";
-import { useLanguage } from "@/context/LanguageContext";
+import { useLanguage, useLanguageCode } from "@/context/LanguageContext";
 import {
   requireScope,
   scopedKey,
@@ -140,6 +140,7 @@ export function useOfficeInbox(
   office: CareTeamContact,
   filter: { patientId?: string; enabled?: boolean } = {},
 ) {
+  const isEs = useLanguageCode() === "ES";
   const query = useInfiniteQuery({
     queryKey: officeKey(organizationId, {
       inbox,
@@ -161,8 +162,8 @@ export function useOfficeInbox(
     () =>
       (query.data?.pages ?? [])
         .flatMap((page) => page.items)
-        .map((row) => map.fromOfficeConversation(row, office)),
-    [query.data, office],
+        .map((row) => map.fromOfficeConversation(row, office, isEs)),
+    [query.data, office, isEs],
   );
   return { conversations, ...pagedState(query) };
 }
@@ -208,6 +209,9 @@ function threadKey(target: ThreadTarget, conversationId: string) {
 
 /** A thread's messages, oldest first, read newest page first. */
 export function useThread(target: ThreadTarget, conversationId: string | null) {
+  /* The viewer's language, on either side: office staff who chose
+     Spanish see the fallback labels in Spanish too. */
+  const isEs = useLanguageCode() === "ES";
   const query = useInfiniteQuery({
     queryKey: threadKey(target, conversationId ?? ""),
     queryFn: ({ pageParam }) =>
@@ -231,9 +235,9 @@ export function useThread(target: ThreadTarget, conversationId: string | null) {
     () =>
       (query.data?.pages ?? [])
         .flatMap((page) => page.items)
-        .map(map.fromApiMessage)
+        .map((message) => map.fromApiMessage(message, isEs))
         .reverse(),
-    [query.data],
+    [query.data, isEs],
   );
   return { messages, ...pagedState(query) };
 }

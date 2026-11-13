@@ -8,6 +8,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { useLanguageCode } from "@/context/LanguageContext";
 import { Button } from "./Button";
 
 /* ==========================================================================
@@ -286,6 +287,7 @@ export function TablePagination({
   onPageChange,
   summary,
 }: PaginationProps) {
+  const isEs = useLanguageCode() === "ES";
   if (pageCount <= 1 && !summary) return null;
 
   return (
@@ -293,7 +295,8 @@ export function TablePagination({
       <p className="text-caption text-table-meta-fg">
         {summary ?? (
           <>
-            Page <span className="text-metric-sm">{page}</span> of{" "}
+            {isEs ? "Página" : "Page"}{" "}
+            <span className="text-metric-sm">{page}</span> {isEs ? "de" : "of"}{" "}
             <span className="text-metric-sm">{pageCount}</span>
           </>
         )}
@@ -307,7 +310,7 @@ export function TablePagination({
           iconOnly
           disabled={page <= 1}
           onClick={() => onPageChange(page - 1)}
-          aria-label="Previous page"
+          aria-label={isEs ? "Página anterior" : "Previous page"}
         >
           <ChevronLeft />
         </Button>
@@ -321,7 +324,7 @@ export function TablePagination({
           iconOnly
           disabled={page >= pageCount}
           onClick={() => onPageChange(page + 1)}
-          aria-label="Next page"
+          aria-label={isEs ? "Página siguiente" : "Next page"}
         >
           <ChevronRight />
         </Button>

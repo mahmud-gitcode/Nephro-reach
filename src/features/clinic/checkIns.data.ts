@@ -30,7 +30,7 @@ export function weekStartOf(today: string): Date {
 }
 
 /** "Sep 27 – Oct 3, 2026": the Sunday-to-Saturday week holding `today`. */
-export function weekLabel(today: string): string {
+export function weekLabel(today: string, isEs = false): string {
   const start = weekStartOf(today);
   const end = new Date(
     start.getFullYear(),
@@ -38,7 +38,7 @@ export function weekLabel(today: string): string {
     start.getDate() + 6,
   );
   const fmt = (date: Date, year: boolean) =>
-    date.toLocaleDateString("en-US", {
+    date.toLocaleDateString(isEs ? "es-US" : "en-US", {
       month: "short",
       day: "numeric",
       ...(year ? { year: "numeric" } : {}),

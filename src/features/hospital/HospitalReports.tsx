@@ -26,6 +26,7 @@ import {
   UsersSolid,
 } from "@/components/icons/solid";
 import { PageTitle } from "@/components/layout/PageTitle";
+import { useLanguageCode } from "@/context/LanguageContext";
 import {
   canRetry,
   errorMessageFor,
@@ -37,7 +38,7 @@ import { requireOffice } from "@/features/clinic/office.scope";
 import { useCan } from "@/features/staff/useStaffAccounts";
 import { exportEducationReport } from "./hospital.repository";
 import { useHospital } from "./useHospital";
-import { educationStatus } from "./hospital.data";
+import { educationStatus, programNameOf } from "./hospital.data";
 import { DayDots, shortDay } from "./HospitalUi";
 
 /* ==========================================================================
@@ -57,17 +58,21 @@ import { DayDots, shortDay } from "./HospitalUi";
 const HREF = "/dashboard/hospital/reports";
 const PATIENT_REPORT_NOTE =
   "The patient report is not available yet: it needs an audited download from NephroReach.";
+const PATIENT_REPORT_NOTE_ES =
+  "El informe de pacientes aún no está disponible: necesita una descarga auditada de NephroReach.";
 
-function monthLabel(key: string): string {
+function monthLabel(key: string, isEs = false): string {
   const [y, m] = key.split("-").map(Number);
   if (!y || !m) return key;
-  return new Date(y, m - 1, 1).toLocaleDateString("en-US", {
+  return new Date(y, m - 1, 1).toLocaleDateString(isEs ? "es-US" : "en-US", {
     month: "long",
     year: "numeric",
   });
 }
 
 export default function HospitalReports() {
+  const isEs = useLanguageCode() === "ES";
+  const lang = isEs ? "es" : "en";
   const hospital = useHospital();
   const report = hospital.report;
   const canDownload = useCan("hospital.reports.download");
@@ -90,16 +95,18 @@ export default function HospitalReports() {
               <Button
                 leadingIcon={<Download />}
                 disabled
-                title={PATIENT_REPORT_NOTE}
+                title={isEs ? PATIENT_REPORT_NOTE_ES : PATIENT_REPORT_NOTE}
                 aria-describedby="hospital-patient-report-na"
               >
-                Download patient report
+                {isEs
+                  ? "Descargar informe de pacientes"
+                  : "Download patient report"}
               </Button>
               <p
                 id="hospital-patient-report-na"
                 className="text-caption text-fg-muted"
               >
-                Not available yet
+                {isEs ? "Aún no disponible" : "Not available yet"}
               </p>
             </div>
           ) : null
@@ -109,8 +116,12 @@ export default function HospitalReports() {
       <AsyncSection
         pending={report.isPending}
         error={report.error}
-        errorTitle={errorTitleFor(report.error, "The report did not load")}
-        errorMessage={errorMessageFor(report.error, undefined)}
+        errorTitle={errorTitleFor(
+          report.error,
+          isEs ? "El informe no se cargó" : "The report did not load",
+          lang,
+        )}
+        errorMessage={errorMessageFor(report.error, undefined, lang)}
         onRetry={canRetry(report.error) ? report.refetch : undefined}
         skeleton={<Skeleton height={140} />}
       >
@@ -120,27 +131,35 @@ export default function HospitalReports() {
               icon={<UsersSolid />}
               tone="brand"
               value={s.enrolled}
-              label="Patients enrolled"
+              label={isEs ? "Pacientes inscritos" : "Patients enrolled"}
             />
             <KeyCard
               icon={<GraduationCapSolid />}
               tone="accent"
               value={s.started}
-              label="Started education"
-              note={`${s.notStarted} not started`}
+              label={isEs ? "Comenzaron la educación" : "Started education"}
+              note={
+                isEs
+                  ? `${s.notStarted} sin comenzar`
+                  : `${s.notStarted} not started`
+              }
             />
             <KeyCard
               icon={<CheckCircleSolid />}
               tone="success"
               value={s.completed}
-              label="Completed education"
+              label={isEs ? "Completaron la educación" : "Completed education"}
             />
             <KeyCard
               icon={<TargetSolid />}
               tone="warning"
               value={`${s.completionPct}%`}
-              label="Course completion"
-              note={`${s.incomplete} incomplete`}
+              label={isEs ? "Finalización del curso" : "Course completion"}
+              note={
+                isEs
+                  ? `${s.incomplete} incompletos`
+                  : `${s.incomplete} incomplete`
+              }
             />
           </section>
         ) : null}
@@ -148,7 +167,9 @@ export default function HospitalReports() {
 
       <Card padding="none" className="overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-inline-md p-card">
-          <h2 className="text-heading-4 text-fg">Monthly participation</h2>
+          <h2 className="text-heading-4 text-fg">
+            {isEs ? "Participación mensual" : "Monthly participation"}
+          </h2>
           {canDownload && report.months.length > 0 ? (
             <Button
               size="small"
@@ -158,20 +179,24 @@ export default function HospitalReports() {
               loading={download.isPending}
               onClick={() => download.mutate()}
             >
-              Download
+              {isEs ? "Descargar" : "Download"}
             </Button>
           ) : null}
         </div>
         {download.error ? (
           <div className="px-card pb-card">
-            <Alert tone="danger">{actionErrorText(download.error)}</Alert>
+            <Alert tone="danger">{actionErrorText(download.error, isEs)}</Alert>
           </div>
         ) : null}
         <AsyncSection
           pending={report.isPending}
           error={report.error}
-          errorTitle={errorTitleFor(report.error, "The report did not load")}
-          errorMessage={errorMessageFor(report.error, undefined)}
+          errorTitle={errorTitleFor(
+            report.error,
+            isEs ? "El informe no se cargó" : "The report did not load",
+            lang,
+          )}
+          errorMessage={errorMessageFor(report.error, undefined, lang)}
           onRetry={canRetry(report.error) ? report.refetch : undefined}
           isEmpty={report.months.length === 0}
           skeleton={
@@ -179,22 +204,36 @@ export default function HospitalReports() {
               <Skeleton height={160} />
             </div>
           }
-          empty={<EmptyState title="No enrollments yet" />}
+          empty={
+            <EmptyState
+              title={isEs ? "Aún no hay inscripciones" : "No enrollments yet"}
+            />
+          }
         >
           <Table minWidth={640}>
             <TableHead>
               <TableRow>
-                <TableHeaderCell>Month enrolled</TableHeaderCell>
-                <TableHeaderCell numeric>Enrolled</TableHeaderCell>
-                <TableHeaderCell numeric>Started</TableHeaderCell>
-                <TableHeaderCell numeric>Completed</TableHeaderCell>
-                <TableHeaderCell numeric>Completion</TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Mes de inscripción" : "Month enrolled"}
+                </TableHeaderCell>
+                <TableHeaderCell numeric>
+                  {isEs ? "Inscritos" : "Enrolled"}
+                </TableHeaderCell>
+                <TableHeaderCell numeric>
+                  {isEs ? "Comenzaron" : "Started"}
+                </TableHeaderCell>
+                <TableHeaderCell numeric>
+                  {isEs ? "Completaron" : "Completed"}
+                </TableHeaderCell>
+                <TableHeaderCell numeric>
+                  {isEs ? "Finalización" : "Completion"}
+                </TableHeaderCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {report.months.map((row) => (
                 <TableRow key={row.month}>
-                  <TableCell emphasis>{monthLabel(row.month)}</TableCell>
+                  <TableCell emphasis>{monthLabel(row.month, isEs)}</TableCell>
                   <TableCell numeric>{row.enrolled}</TableCell>
                   <TableCell numeric>{row.started}</TableCell>
                   <TableCell numeric>{row.completed}</TableCell>
@@ -208,17 +247,24 @@ export default function HospitalReports() {
 
       <Card padding="none" className="overflow-hidden">
         <div className="p-card">
-          <h2 className="text-heading-4 text-fg">Incomplete courses</h2>
+          <h2 className="text-heading-4 text-fg">
+            {isEs ? "Cursos incompletos" : "Incomplete courses"}
+          </h2>
           <p className="mt-stack-xs text-body-sm text-fg-muted">
-            Patients who have not finished their program (the loaded page of
-            patients).
+            {isEs
+              ? "Pacientes que no han terminado su programa (la página de pacientes cargada)."
+              : "Patients who have not finished their program (the loaded page of patients)."}
           </p>
         </div>
         <AsyncSection
           pending={hospital.isPending}
           error={hospital.error}
-          errorTitle={errorTitleFor(hospital.error, "Patients did not load")}
-          errorMessage={errorMessageFor(hospital.error, undefined)}
+          errorTitle={errorTitleFor(
+            hospital.error,
+            isEs ? "Los pacientes no se cargaron" : "Patients did not load",
+            lang,
+          )}
+          errorMessage={errorMessageFor(hospital.error, undefined, lang)}
           onRetry={canRetry(hospital.error) ? hospital.refetch : undefined}
           isEmpty={incomplete.length === 0}
           skeleton={
@@ -226,34 +272,52 @@ export default function HospitalReports() {
               <Skeleton height={160} />
             </div>
           }
-          empty={<EmptyState title="Every enrolled patient has finished" />}
+          empty={
+            <EmptyState
+              title={
+                isEs
+                  ? "Todos los pacientes inscritos han terminado"
+                  : "Every enrolled patient has finished"
+              }
+            />
+          }
         >
           <Table minWidth={720}>
             <TableHead>
               <TableRow>
-                <TableHeaderCell>Patient</TableHeaderCell>
-                <TableHeaderCell>Program</TableHeaderCell>
-                <TableHeaderCell>Classes</TableHeaderCell>
-                <TableHeaderCell>Enrolled</TableHeaderCell>
-                <TableHeaderCell>Status</TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Paciente" : "Patient"}
+                </TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Programa" : "Program"}
+                </TableHeaderCell>
+                <TableHeaderCell>{isEs ? "Clases" : "Classes"}</TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Inscrito" : "Enrolled"}
+                </TableHeaderCell>
+                <TableHeaderCell>{isEs ? "Estado" : "Status"}</TableHeaderCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {incomplete.map((e) => (
                 <TableRow key={e.id}>
                   <TableCell emphasis>{e.patientName}</TableCell>
-                  <TableCell>{e.programName}</TableCell>
+                  <TableCell>{programNameOf(e, isEs)}</TableCell>
                   <TableCell>
                     <DayDots enrollment={e} />
                   </TableCell>
                   <TableCell className="whitespace-nowrap tabular-nums">
-                    {shortDay(e.enrolledAt)}
+                    {shortDay(e.enrolledAt, isEs)}
                   </TableCell>
                   <TableCell>
                     {educationStatus(e) === "not-started" ? (
-                      <Badge tone="neutral">Not started</Badge>
+                      <Badge tone="neutral">
+                        {isEs ? "Sin comenzar" : "Not started"}
+                      </Badge>
                     ) : (
-                      <Badge tone="warning">In progress</Badge>
+                      <Badge tone="warning">
+                        {isEs ? "En progreso" : "In progress"}
+                      </Badge>
                     )}
                   </TableCell>
                 </TableRow>
@@ -269,7 +333,7 @@ export default function HospitalReports() {
                 disabled={hospital.isLoadingMore}
                 onClick={hospital.loadMore}
               >
-                Show more patients
+                {isEs ? "Ver más pacientes" : "Show more patients"}
               </Button>
             </div>
           ) : null}

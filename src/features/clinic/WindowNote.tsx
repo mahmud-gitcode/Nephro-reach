@@ -1,6 +1,7 @@
 import React from "react";
 import { Info } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { useLanguageCode } from "@/context/LanguageContext";
 import type { RosterWindow } from "./useClinicData";
 
 /** The note's words; null when the window holds everyone. */
@@ -8,8 +9,13 @@ export function windowNoteText(
   window: RosterWindow | undefined,
   what: string,
   noun: string,
+  isEs = false,
 ): string | null {
   if (!window || window.complete) return null;
+  if (isEs)
+    return window.rosterWhole
+      ? `${what} ${window.enrollmentsLoaded} de ${window.enrollmentsTotal} inscripciones al programa, las más recientes.`
+      : `${what} ${window.loaded} de ${window.total} ${noun}, según la fecha de alta más reciente.`;
   return window.rosterWhole
     ? `${what} your ${window.enrollmentsLoaded} most recent program enrollments of ${window.enrollmentsTotal}.`
     : `${what} your ${window.loaded} most recently added ${noun} of ${window.total}.`;
@@ -35,7 +41,8 @@ export function WindowNote({
   noun: string;
   className?: string;
 }) {
-  const text = windowNoteText(window, what, noun);
+  const isEs = useLanguageCode() === "ES";
+  const text = windowNoteText(window, what, noun, isEs);
   if (!text) return null;
   return (
     <p

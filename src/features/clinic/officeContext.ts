@@ -56,14 +56,20 @@ export function requireOffice(orgId: string | null): string {
 
 /** What a failed write says to staff: the server's own message (it never
  *  carries another patient's data), "no access" for a 403. */
-export function actionErrorText(error: unknown): string {
+export function actionErrorText(error: unknown, isEs = false): string {
   if (isApiError(error)) {
     if (error.status === 403)
-      return "You do not have access to do that in this office.";
+      return isEs
+        ? "No tiene acceso para hacer eso en esta organización."
+        : "You do not have access to do that in this office.";
     if (error.status === 404)
-      return "That record is no longer available to this office.";
+      return isEs
+        ? "Ese registro ya no está disponible para esta organización."
+        : "That record is no longer available to this office.";
     return error.messages.join(" ") || error.message;
   }
   if (error instanceof RangeError) return error.message;
-  return "That did not save. Try again.";
+  return isEs
+    ? "No se guardó. Inténtelo de nuevo."
+    : "That did not save. Try again.";
 }

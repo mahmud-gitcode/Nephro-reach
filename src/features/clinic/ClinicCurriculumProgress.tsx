@@ -61,6 +61,7 @@ import {
   ALL_PROGRAMS,
   ALL_STATUSES,
   COURSES,
+  curriculumText,
   filterMembers,
   journeyDetails,
   membersByStatus,
@@ -85,6 +86,7 @@ import {
   errorTitleFor,
 } from "@/lib/data/asyncState";
 import { downloadText, toCsv } from "@/lib/utils/download";
+import { useLanguage } from "@/context/LanguageContext";
 
 const MESSAGES = "/dashboard/clinic/messages";
 
@@ -136,8 +138,14 @@ function CourseTabs({
   program: string;
   onProgram: (program: string) => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const items = [
-    { id: ALL_PROGRAMS, label: ALL_PROGRAMS, short: "All" },
+    {
+      id: ALL_PROGRAMS,
+      label: curriculumText(ALL_PROGRAMS, isEs),
+      short: isEs ? "Todos" : "All",
+    },
     ...COURSES.map((course) => ({
       id: course.id,
       label: course.id,
@@ -166,7 +174,7 @@ function CourseTabs({
       items={items}
       value={program}
       onChange={onProgram}
-      label="Course"
+      label={isEs ? "Curso" : "Course"}
       /* Scrolls rather than wraps: with enough courses the strip has to
          stay one row, or the page header grows a second line per course. */
       className="overflow-x-auto"
@@ -214,49 +222,65 @@ function SummaryCards({
 }) {
   /* Follows the course tabs like everything else on the page: the client's
      own figures across all programs, the roster's own count within one. */
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const summary = summaryFor(list, program);
 
   return (
     <section
-      aria-label="Curriculum summary"
+      aria-label={isEs ? "Resumen del currículo" : "Curriculum summary"}
       className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2"
     >
       <KeyCard
         tone="brand"
         icon={<UsersSolid />}
         value={summary.activeLearners}
-        label="Active Learners"
-        note={`${summary.enrolled} enrolled`}
+        label={isEs ? "Estudiantes activos" : "Active Learners"}
+        note={
+          isEs
+            ? `${summary.enrolled} inscritos`
+            : `${summary.enrolled} enrolled`
+        }
       />
       <KeyCard
         tone="accent"
         icon={<TargetSolid />}
         value={`${summary.averageCompletion}%`}
-        label="Average Curriculum Completion"
+        label={
+          isEs
+            ? "Finalización promedio del currículo"
+            : "Average Curriculum Completion"
+        }
       />
       <KeyCard
         tone="success"
         icon={<CheckCircleSolid />}
         value={summary.completed}
-        label="Members Completed Program"
+        label={
+          isEs
+            ? "Miembros que completaron el programa"
+            : "Members Completed Program"
+        }
       />
       <KeyCard
         tone="warning"
         icon={<ClockSolid />}
         value={summary.inProgress}
-        label="In Progress"
+        label={isEs ? "En curso" : "In Progress"}
       />
       <KeyCard
         tone="neutral"
         icon={<NotStartedSolid />}
         value={summary.notStarted}
-        label="Not Started"
+        label={isEs ? "Sin iniciar" : "Not Started"}
       />
     </section>
   );
 }
 
 function ProgramProgressOverview({ program }: { program: string }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const shown =
     program === ALL_PROGRAMS
       ? programOverview
@@ -266,7 +290,11 @@ function ProgramProgressOverview({ program }: { program: string }) {
     /* No visible heading: the tab strip directly above already says which
        course these cards are for, and each card carries its own name. The
        region keeps a label so it is still announced and reachable. */
-    <Card as="section" padding="small" aria-label="Program progress">
+    <Card
+      as="section"
+      padding="small"
+      aria-label={isEs ? "Progreso del programa" : "Program progress"}
+    >
       {/* auto-fit rather than a fixed three columns: a fourth course must
           wrap into the grid, not squeeze the other three, and a single
           selected course fills the row rather than stranding two gaps. */}
@@ -278,14 +306,20 @@ function ProgramProgressOverview({ program }: { program: string }) {
           >
             <p className="text-heading-5 text-fg">{overview.name}</p>
             <p className="mt-stack-md flex items-baseline justify-between gap-inline-md">
-              <span className="text-body-sm text-fg-secondary">Progress</span>
+              <span className="text-body-sm text-fg-secondary">
+                {isEs ? "Progreso" : "Progress"}
+              </span>
               <span className="text-label-lg text-fg tabular-nums">
                 {overview.progress}%
               </span>
             </p>
             <Progress
               value={overview.progress}
-              label={`${overview.name} progress`}
+              label={
+                isEs
+                  ? `Progreso de ${overview.name}`
+                  : `${overview.name} progress`
+              }
               size="medium"
               className="mt-stack-xs"
             />
@@ -304,7 +338,7 @@ function ProgramProgressOverview({ program }: { program: string }) {
                       className="h-3 w-px shrink-0 bg-line"
                     />
                   ) : null}
-                  {stat}
+                  {curriculumText(stat, isEs)}
                 </li>
               ))}
             </ul>
@@ -329,6 +363,8 @@ function MemberTable({
   onView: (patientId: string) => void;
 }) {
   /* Leaves NephroReach: ask first (client, 2026-10-07). */
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const share = useExternalShare();
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(ROWS_PER_PAGE_OPTIONS[0]);
@@ -380,7 +416,13 @@ function MemberTable({
       id="member-progress"
       className="scroll-mt-4"
     >
-      <PanelHeading title="Member Curriculum Progress" />
+      <PanelHeading
+        title={
+          isEs
+            ? "Progreso del currículo por miembro"
+            : "Member Curriculum Progress"
+        }
+      />
 
       <div className="mb-stack-lg flex flex-col gap-inline-md lg:flex-row lg:items-center">
         <Input
@@ -388,20 +430,24 @@ function MemberTable({
           inputSize="small"
           value={filters.query}
           onChange={(event) => onFilters({ query: event.target.value })}
-          placeholder="Search by name or MRN..."
-          aria-label="Search members"
+          placeholder={
+            isEs ? "Buscar por nombre o MRN..." : "Search by name or MRN..."
+          }
+          aria-label={isEs ? "Buscar miembros" : "Search members"}
           leadingIcon={<Search aria-hidden="true" />}
           className="lg:max-w-xs lg:flex-1"
         />
         <Select
           selectSize="small"
-          aria-label="Status"
+          aria-label={isEs ? "Estado" : "Status"}
           value={filters.status}
           onChange={(event) => onFilters({ status: event.target.value })}
           className="lg:w-48"
         >
           {statusOptions.map((option) => (
-            <option key={option}>{option}</option>
+            <option key={option} value={option}>
+              {curriculumText(option, isEs)}
+            </option>
           ))}
         </Select>
         <Button
@@ -443,7 +489,7 @@ function MemberTable({
           }
         >
           <Download className="h-4 w-4" />
-          Export
+          {isEs ? "Exportar" : "Export"}
         </Button>
         {share.notice}
       </div>
@@ -451,13 +497,17 @@ function MemberTable({
       {selected.size > 0 ? (
         <div
           role="region"
-          aria-label="Selected members"
+          aria-label={isEs ? "Miembros seleccionados" : "Selected members"}
           className="mb-stack-md flex flex-wrap items-center gap-inline-md rounded-control border border-line bg-surface-sunken px-inset-sm py-inset-xs"
         >
-          <p className="text-label-md text-fg">{selected.size} selected</p>
+          <p className="text-label-md text-fg">
+            {isEs
+              ? `${selected.size} seleccionados`
+              : `${selected.size} selected`}
+          </p>
           <Link href={MESSAGES} className={outlineLink}>
             <MessageSquareText className="h-4 w-4" />
-            Message selected
+            {isEs ? "Enviar mensaje a seleccionados" : "Message selected"}
           </Link>
           <Button
             variant="neutral"
@@ -465,7 +515,7 @@ function MemberTable({
             size="small"
             onClick={() => setSelected(new Set())}
           >
-            Clear
+            {isEs ? "Borrar" : "Clear"}
           </Button>
         </div>
       ) : null}
@@ -480,25 +530,41 @@ function MemberTable({
                   checked={allOnPageSelected}
                   disabled={pageMrns.length === 0}
                   onChange={toggleAllOnPage}
-                  aria-label="Select all members on this page"
+                  aria-label={
+                    isEs
+                      ? "Seleccionar todos los miembros de esta página"
+                      : "Select all members on this page"
+                  }
                   className="h-4 w-4 cursor-pointer accent-brand-600"
                 />
               </TableHeaderCell>
-              <TableHeaderCell>Name</TableHeaderCell>
-              <TableHeaderCell>Program</TableHeaderCell>
-              <TableHeaderCell>Current Module</TableHeaderCell>
-              <TableHeaderCell>Day/Module</TableHeaderCell>
-              <TableHeaderCell>Progress</TableHeaderCell>
-              <TableHeaderCell>Status</TableHeaderCell>
-              <TableHeaderCell>Last Activity</TableHeaderCell>
-              <TableHeaderCell className="text-right">Actions</TableHeaderCell>
+              <TableHeaderCell>{isEs ? "Nombre" : "Name"}</TableHeaderCell>
+              <TableHeaderCell>{isEs ? "Programa" : "Program"}</TableHeaderCell>
+              <TableHeaderCell>
+                {isEs ? "Módulo actual" : "Current Module"}
+              </TableHeaderCell>
+              <TableHeaderCell>
+                {isEs ? "Día/Módulo" : "Day/Module"}
+              </TableHeaderCell>
+              <TableHeaderCell>
+                {isEs ? "Progreso" : "Progress"}
+              </TableHeaderCell>
+              <TableHeaderCell>{isEs ? "Estado" : "Status"}</TableHeaderCell>
+              <TableHeaderCell>
+                {isEs ? "Última actividad" : "Last Activity"}
+              </TableHeaderCell>
+              <TableHeaderCell className="text-right">
+                {isEs ? "Acciones" : "Actions"}
+              </TableHeaderCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {view.rows.length === 0 ? (
               <TableEmptyRow colSpan={9}>
                 <span className="flex flex-wrap items-center gap-inline-md text-body-sm text-fg-secondary">
-                  No members match these filters.
+                  {isEs
+                    ? "Ningún miembro coincide con estos filtros."
+                    : "No members match these filters."}
                   {filtersOn ? (
                     <Button
                       variant="neutral"
@@ -512,7 +578,7 @@ function MemberTable({
                         })
                       }
                     >
-                      Clear filters
+                      {isEs ? "Borrar filtros" : "Clear filters"}
                     </Button>
                   ) : null}
                 </span>
@@ -525,7 +591,11 @@ function MemberTable({
                       type="checkbox"
                       checked={selected.has(member.id)}
                       onChange={() => toggleOne(member.id)}
-                      aria-label={`Select ${member.name}`}
+                      aria-label={
+                        isEs
+                          ? `Seleccionar a ${member.name}`
+                          : `Select ${member.name}`
+                      }
                       className="h-4 w-4 cursor-pointer accent-brand-600"
                     />
                   </TableCell>
@@ -545,15 +615,19 @@ function MemberTable({
                     </span>
                   </TableCell>
                   <TableCell>{member.program}</TableCell>
-                  <TableCell>{member.module}</TableCell>
+                  <TableCell>{curriculumText(member.module, isEs)}</TableCell>
                   <TableCell className="whitespace-nowrap tabular-nums">
-                    {stepLabel(member)}
+                    {stepLabel(member, isEs)}
                   </TableCell>
                   <TableCell>
                     <span className="flex items-center gap-inline-md">
                       <Progress
                         value={member.progress}
-                        label={`${member.name} curriculum progress`}
+                        label={
+                          isEs
+                            ? `Progreso del currículo de ${member.name}`
+                            : `${member.name} curriculum progress`
+                        }
                         size="small"
                         className="w-14"
                       />
@@ -562,7 +636,7 @@ function MemberTable({
                   </TableCell>
                   <TableCell>
                     <Badge tone={statusTone[member.status]}>
-                      {member.status}
+                      {curriculumText(member.status, isEs)}
                     </Badge>
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
@@ -574,16 +648,22 @@ function MemberTable({
                         type="button"
                         onClick={() => onView(member.id)}
                         className={iconControl}
-                        aria-label={`View ${member.name}`}
-                        title="View progress"
+                        aria-label={
+                          isEs ? `Ver a ${member.name}` : `View ${member.name}`
+                        }
+                        title={isEs ? "Ver progreso" : "View progress"}
                       >
                         <Eye aria-hidden="true" />
                       </button>
                       <Link
                         href={messageLink(member.id)}
                         className={iconControl}
-                        aria-label={`Message ${member.name}`}
-                        title="Send message"
+                        aria-label={
+                          isEs
+                            ? `Enviar mensaje a ${member.name}`
+                            : `Message ${member.name}`
+                        }
+                        title={isEs ? "Enviar mensaje" : "Send message"}
                       >
                         <MessageSquareText aria-hidden="true" />
                       </Link>
@@ -598,7 +678,7 @@ function MemberTable({
 
       <div className="mt-stack-md flex flex-col gap-inline-md sm:flex-row sm:items-center sm:justify-between">
         <label className="flex items-center gap-inline-md text-body-sm text-fg-secondary">
-          Rows per page
+          {isEs ? "Filas por página" : "Rows per page"}
           <Select
             selectSize="small"
             value={String(perPage)}
@@ -614,7 +694,11 @@ function MemberTable({
           page={view.page}
           pageCount={view.pageCount}
           onPageChange={setPage}
-          summary={`Showing ${view.firstShown}–${view.lastShown} of ${view.total} members`}
+          summary={
+            isEs
+              ? `Mostrando ${view.firstShown}–${view.lastShown} de ${view.total} miembros`
+              : `Showing ${view.firstShown}–${view.lastShown} of ${view.total} members`
+          }
         />
       </div>
     </Card>
@@ -658,6 +742,8 @@ function ProgressModal({
   member: MemberProgress;
   onClose: () => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   return (
     <Modal
       open
@@ -669,13 +755,13 @@ function ProgressModal({
         <>
           <Link href={messageLink(member.id)} className={outlineLink}>
             <MessageSquareText className="h-4 w-4" />
-            Send Message
+            {isEs ? "Enviar mensaje" : "Send Message"}
           </Link>
           <Link
             href={memberLink({ patientId: member.id })}
             className={buttonStyles({ size: "small" })}
           >
-            Open Member Page
+            {isEs ? "Abrir página del miembro" : "Open Member Page"}
           </Link>
         </>
       }
@@ -687,13 +773,15 @@ function ProgressModal({
         >
           {initials(member.name)}
         </span>
-        <Badge tone={statusTone[member.status]}>{member.status}</Badge>
+        <Badge tone={statusTone[member.status]}>
+          {curriculumText(member.status, isEs)}
+        </Badge>
       </div>
 
       <div className="mt-stack-lg">
         <div className="flex items-baseline justify-between gap-inline-md">
           <span className="text-body-sm text-fg-secondary">
-            Curriculum progress
+            {isEs ? "Progreso del currículo" : "Curriculum progress"}
           </span>
           <span className="text-heading-5 text-fg tabular-nums">
             {member.progress}%
@@ -701,23 +789,36 @@ function ProgressModal({
         </div>
         <Progress
           value={member.progress}
-          label={`${member.name} curriculum progress`}
+          label={
+            isEs
+              ? `Progreso del currículo de ${member.name}`
+              : `${member.name} curriculum progress`
+          }
           size="medium"
           className="mt-stack-xs"
         />
       </div>
 
       <dl className="mt-stack-lg grid gap-inline-md sm:grid-cols-2">
-        <DetailTile icon={BookOpen} label="Current Module">
-          {member.module}
+        <DetailTile
+          icon={BookOpen}
+          label={isEs ? "Módulo actual" : "Current Module"}
+        >
+          {curriculumText(member.module, isEs)}
         </DetailTile>
-        <DetailTile icon={TrendingUp} label="Day/Module">
-          {stepLabel(member)}
+        <DetailTile
+          icon={TrendingUp}
+          label={isEs ? "Día/Módulo" : "Day/Module"}
+        >
+          {stepLabel(member, isEs)}
         </DetailTile>
-        <DetailTile icon={GraduationCap} label="Program">
+        <DetailTile icon={GraduationCap} label={isEs ? "Programa" : "Program"}>
           {member.program}
         </DetailTile>
-        <DetailTile icon={Clock} label="Last Activity">
+        <DetailTile
+          icon={Clock}
+          label={isEs ? "Última actividad" : "Last Activity"}
+        >
           {member.lastActivity}
         </DetailTile>
       </dl>
@@ -731,28 +832,36 @@ function ProgressModal({
 
 /** The curriculum as members see it: every day's lesson, in order. */
 function CurriculumModal({ onClose }: { onClose: () => void }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   return (
     <Modal
       open
       onClose={onClose}
       size="wide"
       title={journeyDetails.name}
-      description={`${JOURNEY_DAYS.length} days · the lessons members work through`}
+      description={
+        isEs
+          ? `${JOURNEY_DAYS.length} días · las lecciones que completan los miembros`
+          : `${JOURNEY_DAYS.length} days · the lessons members work through`
+      }
     >
       <ol className="divide-y divide-line-subtle">
         {JOURNEY_DAYS.map((day) => (
           <li key={day.slug} className="flex gap-inline-lg py-inset-xs">
             <span className="w-14 shrink-0 text-label-md text-fg-muted tabular-nums">
-              Day {day.day}
+              {isEs ? "Día" : "Day"} {day.day}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-label-md text-fg">{day.titleEn}</span>
+              <span className="block text-label-md text-fg">
+                {isEs ? day.titleEs : day.titleEn}
+              </span>
               <span className="block text-caption text-fg-muted">
-                {day.kind === "video" ? "Video" : "Reading"} ·{" "}
-                {day.durationMinutes} min
+                {day.kind === "video" ? "Video" : isEs ? "Lectura" : "Reading"}{" "}
+                · {day.durationMinutes} min
               </span>
               <span className="mt-stack-xs block text-body-sm text-fg-secondary">
-                {day.summaryEn}
+                {isEs ? day.summaryEs : day.summaryEn}
               </span>
             </span>
           </li>
@@ -763,15 +872,21 @@ function CurriculumModal({ onClose }: { onClose: () => void }) {
 }
 
 function ProgramDetails() {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const [open, setOpen] = useState(false);
   return (
     <Card as="section" padding="small" className="flex h-full flex-col">
-      <PanelHeading title="Program Details" />
+      <PanelHeading
+        title={isEs ? "Detalles del programa" : "Program Details"}
+      />
       <p className="text-heading-5 text-fg">{journeyDetails.name}</p>
       <p className="mt-stack-xs text-body-sm text-fg-muted">
-        {journeyDetails.description}
+        {curriculumText(journeyDetails.description, isEs)}
       </p>
-      <p className="mt-stack-md text-label-md text-fg-secondary">Includes:</p>
+      <p className="mt-stack-md text-label-md text-fg-secondary">
+        {isEs ? "Incluye:" : "Includes:"}
+      </p>
       <ul className="mt-stack-xs space-y-stack-xs">
         {journeyDetails.includes.map((item) => (
           <li
@@ -782,7 +897,7 @@ function ProgramDetails() {
               aria-hidden="true"
               className="h-4 w-4 shrink-0 text-success"
             />
-            {item}
+            {curriculumText(item, isEs)}
           </li>
         ))}
       </ul>
@@ -794,7 +909,7 @@ function ProgramDetails() {
           fullWidth
           onClick={() => setOpen(true)}
         >
-          View Curriculum
+          {isEs ? "Ver currículo" : "View Curriculum"}
         </Button>
       </div>
       {open ? <CurriculumModal onClose={() => setOpen(false)} /> : null}
@@ -803,12 +918,20 @@ function ProgramDetails() {
 }
 
 function ModuleCompletionBreakdown() {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   return (
     <Card as="section" padding="small" className="flex h-full flex-col">
-      <PanelHeading title="Module Completion Breakdown" />
+      <PanelHeading
+        title={
+          isEs
+            ? "Desglose de finalización de módulos"
+            : "Module Completion Breakdown"
+        }
+      />
       <ChartLegend
         items={moduleBreakdown.map((row) => ({
-          label: row.label,
+          label: curriculumText(row.label, isEs),
           tone: row.tone,
           value: row.value,
         }))}
@@ -816,7 +939,7 @@ function ModuleCompletionBreakdown() {
       <div className="mt-auto border-t border-line-subtle pt-inset-sm">
         <div className="flex items-baseline justify-between gap-inline-md">
           <span className="text-label-md text-fg-secondary">
-            Overall Completion
+            {isEs ? "Finalización general" : "Overall Completion"}
           </span>
           <span className="text-heading-5 text-fg tabular-nums">
             {overallCompletion}%
@@ -824,7 +947,11 @@ function ModuleCompletionBreakdown() {
         </div>
         <Progress
           value={overallCompletion}
-          label="Overall module completion"
+          label={
+            isEs
+              ? "Finalización general de módulos"
+              : "Overall module completion"
+          }
           tone="success"
           size="medium"
           className="mt-stack-xs"
@@ -841,11 +968,19 @@ function RecentModuleActivity({
   list: MemberProgress[];
   onView: (patientId: string) => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading title="Recent Module Activity" />
+      <PanelHeading
+        title={
+          isEs ? "Actividad reciente de módulos" : "Recent Module Activity"
+        }
+      />
       {recentActivity.length === 0 ? (
-        <p className="text-body-sm text-fg-muted">No activity yet.</p>
+        <p className="text-body-sm text-fg-muted">
+          {isEs ? "Aún no hay actividad." : "No activity yet."}
+        </p>
       ) : null}
       <ul className="divide-y divide-line-subtle">
         {recentActivity.map((entry) => {
@@ -898,9 +1033,15 @@ function ProgramCompletionRate({
   program: string;
   onProgram: (program: string) => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading title="Program Completion Rate" />
+      <PanelHeading
+        title={
+          isEs ? "Tasa de finalización del programa" : "Program Completion Rate"
+        }
+      />
       {/* One measure across every course, so one hue — the label carries
           which course, colour would only repeat it. */}
       <ul className="space-y-stack-sm">
@@ -925,7 +1066,11 @@ function ProgramCompletionRate({
                 </span>
                 <Progress
                   value={overview.progress}
-                  label={`${overview.name} completion rate`}
+                  label={
+                    isEs
+                      ? `Tasa de finalización de ${overview.name}`
+                      : `${overview.name} completion rate`
+                  }
                   size="small"
                   className="mt-stack-xs"
                 />
@@ -945,17 +1090,21 @@ function MembersByStatus({
   status: string;
   onStatus: (status: string) => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading title="Members by Status" />
+      <PanelHeading
+        title={isEs ? "Miembros por estado" : "Members by Status"}
+      />
       <div className="grid items-center gap-inset-md sm:grid-cols-[140px_minmax(0,1fr)]">
         <DonutChart
           segments={membersByStatus}
-          label="Members by status"
+          label={isEs ? "Miembros por estado" : "Members by status"}
           size={140}
           thickness={26}
           centerValue={membersByStatusHeading}
-          centerLabel="Members"
+          centerLabel={isEs ? "Miembros" : "Members"}
           className="mx-auto"
         />
         <ul className="space-y-stack-xs">
@@ -978,7 +1127,7 @@ function MembersByStatus({
                     style={{ background: toneVar[row.tone] }}
                   />
                   <span className="min-w-0 flex-1 text-body-sm text-fg">
-                    {row.label}
+                    {curriculumText(row.label, isEs)}
                   </span>
                   <span className="text-label-md text-fg tabular-nums">
                     {row.value}
@@ -1000,9 +1149,17 @@ function TimeToCompletion({
   program: string;
   onProgram: (program: string) => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading title="Time to Completion (Average)" />
+      <PanelHeading
+        title={
+          isEs
+            ? "Tiempo hasta la finalización (promedio)"
+            : "Time to Completion (Average)"
+        }
+      />
       <ul className="space-y-stack-xs">
         {timeToCompletion.map((row) => {
           const on = program === row.program;
@@ -1024,7 +1181,7 @@ function TimeToCompletion({
                   {row.program}
                 </span>
                 <span className="text-label-lg text-fg tabular-nums">
-                  {row.average}
+                  {curriculumText(row.average, isEs)}
                 </span>
               </button>
             </li>
@@ -1058,6 +1215,8 @@ function PageSkeleton() {
  * menus or the roster are ignored rather than trusted.
  */
 function CurriculumView() {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -1107,9 +1266,12 @@ function CurriculumView() {
       <ErrorState
         title={errorTitleFor(
           clinic.error,
-          "Curriculum progress could not be loaded",
+          isEs
+            ? "No se pudo cargar el progreso del currículo"
+            : "Curriculum progress could not be loaded",
+          isEs ? "es" : "en",
         )}
-        message={errorMessageFor(clinic.error, undefined)}
+        message={errorMessageFor(clinic.error, undefined, isEs ? "es" : "en")}
         error={clinic.error}
         onRetry={canRetry(clinic.error) ? clinic.refetch : undefined}
       />
@@ -1122,14 +1284,22 @@ function CurriculumView() {
     return (
       <EmptyState
         icon={<Users />}
-        title="No members in a program yet"
-        description="Enrolled patients appear here as they start their curriculum."
+        title={
+          isEs
+            ? "Aún no hay miembros en un programa"
+            : "No members in a program yet"
+        }
+        description={
+          isEs
+            ? "Los pacientes inscritos aparecen aquí cuando comienzan su currículo."
+            : "Enrolled patients appear here as they start their curriculum."
+        }
         action={
           <Link
             href="/dashboard/clinic/enroll-patients"
             className={buttonStyles({ size: "small" })}
           >
-            Enroll a patient
+            {isEs ? "Inscribir a un paciente" : "Enroll a patient"}
           </Link>
         }
       />

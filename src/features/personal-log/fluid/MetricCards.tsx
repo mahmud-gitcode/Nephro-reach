@@ -146,7 +146,7 @@ export function MetricCards({
                   const note =
                     edwNote || w?.edwMetrics?.edwSetBy || "Set by care team.";
                   return language === "ES" && note === "Set by care team."
-                    ? "Lo fija tu equipo de atención."
+                    ? "Lo fija su equipo de atención."
                     : note;
                 })()}
               </p>
@@ -179,7 +179,9 @@ export function MetricCards({
                 </span>
               </p>
               <p className="mt-stack-xs text-caption text-fg-muted">
-                {todayDateStr}
+                {language === "ES" && todayDateStr === "May 31, 7:30 AM"
+                  ? "31 may, 7:30 a. m."
+                  : todayDateStr}
               </p>
             </div>
           </div>

@@ -27,6 +27,7 @@ import {
   errorMessageFor,
   errorTitleFor,
 } from "@/lib/data/asyncState";
+import { useLanguage } from "@/context/LanguageContext";
 
 /* Phase 13: the library is the server's (GET /platform/courses, every
    status; platform `content` permission, which the server checks). */
@@ -35,6 +36,12 @@ const STATUS_TONE = {
   draft: "neutral",
   archived: "warning",
 } as const;
+
+const STATUS_ES: Record<string, string> = {
+  published: "publicado",
+  draft: "borrador",
+  archived: "archivado",
+};
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
@@ -80,6 +87,8 @@ function CourseCard({
   course: Course;
   onDelete: () => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const classes = courseClassCount(course);
   const minutes = courseMinutes(course);
 
@@ -101,34 +110,43 @@ function CourseCard({
                 "neutral"
               }
             >
-              {course.status}
+              {isEs
+                ? (STATUS_ES[course.status] ?? course.status)
+                : course.status}
             </Badge>
             {course.seeded && (
               <span className="inline-flex shrink-0 items-center gap-1 rounded-pill bg-surface-sunken px-2 py-0.5 text-caption font-bold text-fg-muted">
                 <Lock className="h-3 w-3" />
-                Built-in
+                {isEs ? "Integrado" : "Built-in"}
               </span>
             )}
           </div>
           <p className="mt-1 line-clamp-2 text-body-sm leading-relaxed text-fg-muted">
-            {course.descriptionEn || "No description yet."}
+            {course.descriptionEn ||
+              (isEs ? "Todavía no hay descripción." : "No description yet.")}
           </p>
         </div>
       </div>
 
       <dl className="mt-4 grid grid-cols-3 gap-2 border-t border-line-subtle pt-4 text-center">
         <div>
-          <dt className="text-caption font-semibold text-fg-muted">Modules</dt>
+          <dt className="text-caption font-semibold text-fg-muted">
+            {isEs ? "Módulos" : "Modules"}
+          </dt>
           <dd className="mt-0.5 text-body-md font-bold text-fg">
             {course.counts?.modules ?? course.modules.length}
           </dd>
         </div>
         <div>
-          <dt className="text-caption font-semibold text-fg-muted">Classes</dt>
+          <dt className="text-caption font-semibold text-fg-muted">
+            {isEs ? "Clases" : "Classes"}
+          </dt>
           <dd className="mt-0.5 text-body-md font-bold text-fg">{classes}</dd>
         </div>
         <div>
-          <dt className="text-caption font-semibold text-fg-muted">Length</dt>
+          <dt className="text-caption font-semibold text-fg-muted">
+            {isEs ? "Duración" : "Length"}
+          </dt>
           <dd className="mt-0.5 text-body-md font-bold text-fg">
             {formatTotalDuration(minutes)}
           </dd>
@@ -140,7 +158,7 @@ function CourseCard({
           href={`/dashboard/manage-curriculum/${course.id}`}
           className="flex flex-1 items-center justify-center gap-2 rounded-control bg-primary-solid px-4 py-2.5 text-body-sm font-bold text-primary-on-solid shadow-card transition-colors hover:bg-primary-solid-hover"
         >
-          Manage
+          {isEs ? "Administrar" : "Manage"}
           <ChevronRight className="h-4 w-4" />
         </Link>
 
@@ -148,7 +166,9 @@ function CourseCard({
           <button
             type="button"
             onClick={onDelete}
-            aria-label={`Delete ${course.titleEn}`}
+            aria-label={
+              isEs ? `Eliminar ${course.titleEn}` : `Delete ${course.titleEn}`
+            }
             className="flex h-[42px] w-[42px] shrink-0 cursor-pointer items-center justify-center rounded-control border border-line text-fg-muted transition-colors hover:border-danger-line hover:bg-danger-surface hover:text-danger"
           >
             <Trash2 className="h-4 w-4" />
@@ -171,6 +191,8 @@ export default function ManageCurriculumPage() {
     saveError,
     dismissSaveError,
   } = usePlatformCourses();
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
 
@@ -188,42 +210,48 @@ export default function ManageCurriculumPage() {
     <>
       <div className="mb-6">
         <h1 className="text-heading-1 leading-tight font-semibold tracking-[0.3px] text-fg sm:text-heading-1">
-          Class Management
+          {isEs ? "Gestión de Clases" : "Class Management"}
         </h1>
         <p className="mt-2 text-body-sm font-medium text-fg-muted">
-          Every course holds modules, and every module holds classes.
+          {isEs
+            ? "Cada curso contiene módulos, y cada módulo contiene clases."
+            : "Every course holds modules, and every module holds classes."}
         </p>
       </div>
 
       <section className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
-          label="Courses"
+          label={isEs ? "Cursos" : "Courses"}
           value={totals.courses}
-          detail="Every status, drafts included"
+          detail={
+            isEs
+              ? "Todos los estados, borradores incluidos"
+              : "Every status, drafts included"
+          }
           icon={GraduationCap}
           tone="bg-brand-100"
           iconTone="text-fg-brand"
         />
         <SummaryCard
-          label="Modules"
+          label={isEs ? "Módulos" : "Modules"}
           value={totals.modules}
-          detail="Across every course"
+          detail={isEs ? "En todos los cursos" : "Across every course"}
           icon={Layers}
           tone="bg-success-100"
           iconTone="text-success"
         />
         <SummaryCard
-          label="Classes"
+          label={isEs ? "Clases" : "Classes"}
           value={totals.classes}
-          detail="Video, audio and reading"
+          detail={isEs ? "Video, audio y lectura" : "Video, audio and reading"}
           icon={BookOpen}
           tone="bg-warning-100"
           iconTone="text-warning"
         />
         <SummaryCard
-          label="Total length"
+          label={isEs ? "Duración total" : "Total length"}
           value={formatTotalDuration(totals.minutes)}
-          detail="Across every course"
+          detail={isEs ? "En todos los cursos" : "Across every course"}
           icon={Clock3}
           tone="bg-accent-100"
           iconTone="text-accent-fg"
@@ -233,9 +261,13 @@ export default function ManageCurriculumPage() {
       <section className="mt-6 rounded-card-nested border border-line bg-surface p-4 shadow-card">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-heading-4 text-fg">Course Library</h2>
+            <h2 className="text-heading-4 text-fg">
+              {isEs ? "Biblioteca de cursos" : "Course Library"}
+            </h2>
             <p className="mt-0.5 text-body-md text-fg-muted">
-              Open a course to manage its modules and classes.
+              {isEs
+                ? "Abra un curso para administrar sus módulos y clases."
+                : "Open a course to manage its modules and classes."}
             </p>
           </div>
 
@@ -246,7 +278,7 @@ export default function ManageCurriculumPage() {
                 type="search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search courses..."
+                placeholder={isEs ? "Buscar cursos..." : "Search courses..."}
                 className="h-10 w-full rounded-control border border-field bg-surface pr-3 pl-10 text-body-sm font-medium text-fg-secondary outline-none placeholder:text-fg-muted focus:border-primary-edge focus:ring-2 focus:ring-ring"
               />
             </label>
@@ -257,7 +289,7 @@ export default function ManageCurriculumPage() {
               className="flex h-10 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-control bg-primary-solid px-4 text-body-sm font-bold text-primary-on-solid shadow-card transition-colors hover:bg-primary-solid-hover"
             >
               <Plus className="h-4 w-4" />
-              New Course
+              {isEs ? "Nuevo curso" : "New Course"}
             </button>
           </div>
         </div>
@@ -266,13 +298,15 @@ export default function ManageCurriculumPage() {
       {saveError ? (
         <Alert
           tone="danger"
-          title="That change was not saved"
+          title={isEs ? "Ese cambio no se guardó" : "That change was not saved"}
           className="mt-6"
           onDismiss={dismissSaveError}
         >
           {saveError instanceof Error
             ? saveError.message
-            : "Nothing was changed. Please try again."}
+            : isEs
+              ? "No se cambió nada. Inténtelo de nuevo."
+              : "Nothing was changed. Please try again."}
         </Alert>
       ) : null}
 
@@ -280,8 +314,14 @@ export default function ManageCurriculumPage() {
         pending={isPending}
         error={error}
         onRetry={canRetry(error) ? refetch : undefined}
-        errorTitle={errorTitleFor(error, "The course catalogue did not load")}
-        errorMessage={errorMessageFor(error, undefined)}
+        errorTitle={errorTitleFor(
+          error,
+          isEs
+            ? "El catálogo de cursos no se cargó"
+            : "The course catalogue did not load",
+          isEs ? "es" : "en",
+        )}
+        errorMessage={errorMessageFor(error, undefined, isEs ? "es" : "en")}
         skeleton={
           <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
             <Skeleton height={240} />
@@ -302,7 +342,9 @@ export default function ManageCurriculumPage() {
 
         {visibleCourses.length === 0 && (
           <p className="mt-6 rounded-card-nested border border-line bg-surface p-8 text-center text-body-sm font-medium text-fg-muted">
-            No courses match that search.
+            {isEs
+              ? "Ningún curso coincide con esa búsqueda."
+              : "No courses match that search."}
           </p>
         )}
       </AsyncSection>

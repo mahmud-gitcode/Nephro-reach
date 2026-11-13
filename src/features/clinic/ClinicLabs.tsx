@@ -39,7 +39,12 @@ import {
   type LabImportRow,
   type LabImportRowStatus,
 } from "./labImports.repository";
-import { FLAG_LABEL, SOURCE_LABEL } from "./labsChart.repository";
+import {
+  FLAG_LABEL,
+  FLAG_LABEL_ES,
+  SOURCE_LABEL,
+  SOURCE_LABEL_ES,
+} from "./labsChart.repository";
 import type { RosterPick } from "./ccm.repository";
 import { usDate } from "./ccm.data";
 import { actionErrorText, useOfficeOrg } from "./officeContext";
@@ -50,6 +55,12 @@ import {
   useRosterPicks,
 } from "./useClinicLabs";
 import { UpdatedBar } from "./UpdatedBar";
+import { useLanguage } from "@/context/LanguageContext";
+
+function useIsEs() {
+  const { language } = useLanguage();
+  return language === "ES";
+}
 
 /* ==========================================================================
    Labs: patient lab charts, and the CSV upload (Phase 9: on the API)
@@ -76,15 +87,31 @@ const nameOf = (p: Pick<RosterPick, "firstName" | "lastName">) =>
 
 const ROW_STATUS: Record<
   LabImportRowStatus,
-  { label: string; tone: BadgeTone }
+  { label: string; labelEs: string; tone: BadgeTone }
 > = {
-  MATCHED: { label: "Ready to import", tone: "success" },
-  UNMATCHED: { label: "No matching patient", tone: "warning" },
-  NOT_OPTED_IN: { label: "Not shared with your office", tone: "neutral" },
-  INVALID: { label: "Invalid", tone: "danger" },
-  DUPLICATE: { label: "Already on the chart", tone: "neutral" },
-  EXCLUDED: { label: "Excluded", tone: "neutral" },
-  IMPORTED: { label: "Imported", tone: "success" },
+  MATCHED: {
+    label: "Ready to import",
+    labelEs: "Listo para importar",
+    tone: "success",
+  },
+  UNMATCHED: {
+    label: "No matching patient",
+    labelEs: "Ningún paciente coincide",
+    tone: "warning",
+  },
+  NOT_OPTED_IN: {
+    label: "Not shared with your office",
+    labelEs: "No compartido con su oficina",
+    tone: "neutral",
+  },
+  INVALID: { label: "Invalid", labelEs: "No válido", tone: "danger" },
+  DUPLICATE: {
+    label: "Already on the chart",
+    labelEs: "Ya está en el expediente",
+    tone: "neutral",
+  },
+  EXCLUDED: { label: "Excluded", labelEs: "Excluido", tone: "neutral" },
+  IMPORTED: { label: "Imported", labelEs: "Importado", tone: "success" },
 };
 
 function UploadModal({
@@ -99,6 +126,8 @@ function UploadModal({
   onDone: (count: number) => void;
   onClose: () => void;
 }) {
+  const isEs = useIsEs();
+  const lang = isEs ? "es" : "en";
   const actions = useLabImportActions();
   /* The patient comes first, then the file (client, 2026-10-18). */
   const [patient, setPatient] = useState(initialPatientId || SEVERAL);
@@ -116,7 +145,7 @@ function UploadModal({
     csv: fileText ?? "",
     ...(forOne ? { patientId: patient } : {}),
   };
-  const draftError = fileText === null ? null : uploadDraftError(draft);
+  const draftError = fileText === null ? null : uploadDraftError(draft, isEs);
 
   async function read(file: File) {
     setFileName(file.name);
@@ -144,12 +173,16 @@ function UploadModal({
       open
       onClose={close}
       size={batchId ? "big" : undefined}
-      title="Upload Labs"
-      description="Adds results to patient charts after you review them. A result already on a chart is never replaced."
+      title={isEs ? "Subir laboratorios" : "Upload Labs"}
+      description={
+        isEs
+          ? "Agrega los resultados a los expedientes de los pacientes después de que usted los revise. Un resultado que ya está en un expediente nunca se reemplaza."
+          : "Adds results to patient charts after you review them. A result already on a chart is never replaced."
+      }
       footer={
         <>
           <Button variant="neutral" appearance="fill-stroke" onClick={close}>
-            Cancel
+            {isEs ? "Cancelar" : "Cancel"}
           </Button>
           {batchId ? (
             <Button
@@ -166,8 +199,12 @@ function UploadModal({
               }
             >
               {matched > 0
-                ? `Import ${matched} result${matched === 1 ? "" : "s"}`
-                : "Import"}
+                ? isEs
+                  ? `Importar ${matched} resultado${matched === 1 ? "" : "s"}`
+                  : `Import ${matched} result${matched === 1 ? "" : "s"}`
+                : isEs
+                  ? "Importar"
+                  : "Import"}
             </Button>
           ) : (
             <Button
@@ -186,7 +223,7 @@ function UploadModal({
                 })
               }
             >
-              Review file
+              {isEs ? "Revisar archivo" : "Review file"}
             </Button>
           )}
         </>
@@ -194,13 +231,16 @@ function UploadModal({
     >
       <div className="space-y-stack-md">
         {failure ? (
-          <Alert tone="danger" title="That did not work">
-            {actionErrorText(failure)}
+          <Alert
+            tone="danger"
+            title={isEs ? "No funcionó" : "That did not work"}
+          >
+            {actionErrorText(failure, isEs)}
           </Alert>
         ) : null}
         {batchId ? null : (
           <>
-            <FormField label="Patient" required>
+            <FormField label={isEs ? "Paciente" : "Patient"} required>
               {(field) => (
                 <Select
                   {...field}
@@ -214,18 +254,28 @@ function UploadModal({
                     </option>
                   ))}
                   <option value={SEVERAL}>
-                    Several patients (the file has an MRN column)
+                    {isEs
+                      ? "Varios pacientes (el archivo tiene una columna MRN)"
+                      : "Several patients (the file has an MRN column)"}
                   </option>
                 </Select>
               )}
             </FormField>
             <p className="text-body-sm text-fg-secondary">
-              A CSV file with a header row. Columns:{" "}
+              {isEs
+                ? "Un archivo CSV con una fila de encabezado. Columnas: "
+                : "A CSV file with a header row. Columns: "}
               <span className="text-label-md text-fg">
                 {csvColumns(forOne).join(", ")}
               </span>
-              . The first {forOne ? "three" : "four"} are required; dates are
-              YYYY-MM-DD.
+              {isEs ? (
+                `. Las primeras ${forOne ? "tres" : "cuatro"} son obligatorias; las fechas van en formato AAAA-MM-DD.`
+              ) : (
+                <>
+                  . The first {forOne ? "three" : "four"} are required; dates
+                  are YYYY-MM-DD.
+                </>
+              )}
             </p>
             <div className="flex flex-wrap items-center gap-inline-md">
               <label className="inline-flex">
@@ -240,7 +290,8 @@ function UploadModal({
                 />
                 <span className="inline-flex min-h-10 cursor-pointer items-center gap-inline-sm rounded-button border border-line bg-surface px-inset-sm text-label-md text-fg peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring hover:bg-surface-sunken">
                   <FileUp aria-hidden="true" className="size-4" />
-                  {fileName || "Choose CSV file"}
+                  {fileName ||
+                    (isEs ? "Elegir archivo CSV" : "Choose CSV file")}
                 </span>
               </label>
               <Button
@@ -255,7 +306,7 @@ function UploadModal({
                   )
                 }
               >
-                Download template
+                {isEs ? "Descargar plantilla" : "Download template"}
               </Button>
             </div>
             {draftError ? <Alert tone="warning">{draftError}</Alert> : null}
@@ -268,11 +319,15 @@ function UploadModal({
             error={review.batch.error ?? review.rows.error}
             errorTitle={errorTitleFor(
               review.batch.error ?? review.rows.error,
-              "The file could not be reviewed",
+              isEs
+                ? "No se pudo revisar el archivo"
+                : "The file could not be reviewed",
+              lang,
             )}
             errorMessage={errorMessageFor(
               review.batch.error ?? review.rows.error,
               undefined,
+              lang,
             )}
             onRetry={
               canRetry(review.batch.error ?? review.rows.error)
@@ -287,19 +342,35 @@ function UploadModal({
             <div className="space-y-stack-sm">
               {counts ? (
                 <Alert tone={matched > 0 ? "success" : "warning"}>
-                  {`${matched} result${matched === 1 ? "" : "s"} ready to import. `}
-                  {[
-                    counts.unmatched
-                      ? `${counts.unmatched} with no matching patient`
-                      : null,
-                    counts.notOptedIn
-                      ? `${counts.notOptedIn} not shared with your office`
-                      : null,
-                    counts.invalid ? `${counts.invalid} invalid` : null,
-                    counts.duplicate
-                      ? `${counts.duplicate} already on the chart`
-                      : null,
-                  ]
+                  {isEs
+                    ? `${matched} resultado${matched === 1 ? "" : "s"} listo${matched === 1 ? "" : "s"} para importar. `
+                    : `${matched} result${matched === 1 ? "" : "s"} ready to import. `}
+                  {(isEs
+                    ? [
+                        counts.unmatched
+                          ? `${counts.unmatched} sin paciente que coincida`
+                          : null,
+                        counts.notOptedIn
+                          ? `${counts.notOptedIn} no compartidos con su oficina`
+                          : null,
+                        counts.invalid ? `${counts.invalid} no válidos` : null,
+                        counts.duplicate
+                          ? `${counts.duplicate} ya están en el expediente`
+                          : null,
+                      ]
+                    : [
+                        counts.unmatched
+                          ? `${counts.unmatched} with no matching patient`
+                          : null,
+                        counts.notOptedIn
+                          ? `${counts.notOptedIn} not shared with your office`
+                          : null,
+                        counts.invalid ? `${counts.invalid} invalid` : null,
+                        counts.duplicate
+                          ? `${counts.duplicate} already on the chart`
+                          : null,
+                      ]
+                  )
                     .filter(Boolean)
                     .join(" · ")}
                 </Alert>
@@ -314,10 +385,16 @@ function UploadModal({
                     disabled={page <= 1}
                     onClick={() => setPage((p) => p - 1)}
                   >
-                    Previous
+                    {isEs ? "Anterior" : "Previous"}
                   </Button>
                   <span className="text-caption text-fg-muted tabular-nums">
-                    Page {page} of {lastPage}
+                    {isEs ? (
+                      `Página ${page} de ${lastPage}`
+                    ) : (
+                      <>
+                        Page {page} of {lastPage}
+                      </>
+                    )}
                   </span>
                   <Button
                     size="small"
@@ -326,7 +403,7 @@ function UploadModal({
                     disabled={page >= lastPage}
                     onClick={() => setPage((p) => p + 1)}
                   >
-                    Next
+                    {isEs ? "Siguiente" : "Next"}
                   </Button>
                 </div>
               ) : null}
@@ -340,27 +417,33 @@ function UploadModal({
 
 /** Each staged row as the server read it: its line, its status and why. */
 function ReviewTable({ rows }: { rows: LabImportRow[] }) {
+  const isEs = useIsEs();
   return (
     <div className="overflow-hidden rounded-control border border-line">
       <Table minWidth={640}>
         <TableHead>
           <TableRow>
-            <TableHeaderCell>Line</TableHeaderCell>
+            <TableHeaderCell>{isEs ? "Línea" : "Line"}</TableHeaderCell>
             <TableHeaderCell>MRN</TableHeaderCell>
-            <TableHeaderCell>Test</TableHeaderCell>
-            <TableHeaderCell>Result</TableHeaderCell>
-            <TableHeaderCell>Status</TableHeaderCell>
+            <TableHeaderCell>{isEs ? "Prueba" : "Test"}</TableHeaderCell>
+            <TableHeaderCell>{isEs ? "Resultado" : "Result"}</TableHeaderCell>
+            <TableHeaderCell>{isEs ? "Estado" : "Status"}</TableHeaderCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {rows.length === 0 ? (
-            <TableEmptyRow colSpan={5}>The file has no rows.</TableEmptyRow>
+            <TableEmptyRow colSpan={5}>
+              {isEs ? "El archivo no tiene filas." : "The file has no rows."}
+            </TableEmptyRow>
           ) : (
             rows.map((row) => {
-              const status = ROW_STATUS[row.status] ?? {
-                label: row.status,
-                tone: "neutral" as BadgeTone,
-              };
+              const known = ROW_STATUS[row.status];
+              const status = known
+                ? {
+                    label: isEs ? known.labelEs : known.label,
+                    tone: known.tone,
+                  }
+                : { label: row.status, tone: "neutral" as BadgeTone };
               return (
                 <TableRow key={row.id}>
                   <TableCell className="tabular-nums">
@@ -401,37 +484,51 @@ function LabChart({
    *  office entered itself, so an empty chart says why. */
   sharesLabs: boolean;
 }) {
+  const isEs = useIsEs();
+  const lang = isEs ? "es" : "en";
   const chart = usePatientLabChart(patientId);
   return (
     <AsyncSection
       pending={chart.isPending}
       error={chart.error}
-      errorTitle={errorTitleFor(chart.error, "Labs could not be loaded")}
-      errorMessage={errorMessageFor(chart.error, undefined)}
+      errorTitle={errorTitleFor(
+        chart.error,
+        isEs
+          ? "No se pudieron cargar los laboratorios"
+          : "Labs could not be loaded",
+        lang,
+      )}
+      errorMessage={errorMessageFor(chart.error, undefined, lang)}
       onRetry={canRetry(chart.error) ? chart.refetch : undefined}
       skeleton={<Skeleton className="m-card h-64" />}
     >
       <Table minWidth={640}>
         <TableHead>
           <TableRow>
-            <TableHeaderCell>Date</TableHeaderCell>
-            <TableHeaderCell>Test</TableHeaderCell>
-            <TableHeaderCell>Result</TableHeaderCell>
-            <TableHeaderCell>Reference</TableHeaderCell>
-            <TableHeaderCell>Source</TableHeaderCell>
+            <TableHeaderCell>{isEs ? "Fecha" : "Date"}</TableHeaderCell>
+            <TableHeaderCell>{isEs ? "Prueba" : "Test"}</TableHeaderCell>
+            <TableHeaderCell>{isEs ? "Resultado" : "Result"}</TableHeaderCell>
+            <TableHeaderCell>
+              {isEs ? "Referencia" : "Reference"}
+            </TableHeaderCell>
+            <TableHeaderCell>{isEs ? "Origen" : "Source"}</TableHeaderCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {chart.results.length === 0 ? (
             <TableEmptyRow colSpan={5}>
               {sharesLabs
-                ? "No lab results on this chart in the last year."
-                : "This patient does not share labs with your office. Only results your office entered are shown."}
+                ? isEs
+                  ? "No hay resultados de laboratorio en este expediente en el último año."
+                  : "No lab results on this chart in the last year."
+                : isEs
+                  ? "Este paciente no comparte sus laboratorios con su oficina. Solo se muestran los resultados que su oficina ingresó."
+                  : "This patient does not share labs with your office. Only results your office entered are shown."}
             </TableEmptyRow>
           ) : (
             chart.results.map((result) => {
               const flag = result.abnormalFlag
-                ? FLAG_LABEL[result.abnormalFlag]
+                ? (isEs ? FLAG_LABEL_ES : FLAG_LABEL)[result.abnormalFlag]
                 : null;
               return (
                 <TableRow key={result.id}>
@@ -459,7 +556,8 @@ function LabChart({
                     {result.referenceRange || "—"}
                   </TableCell>
                   <TableCell className="text-fg-muted">
-                    {SOURCE_LABEL[result.source] ?? result.source}
+                    {(isEs ? SOURCE_LABEL_ES : SOURCE_LABEL)[result.source] ??
+                      result.source}
                   </TableCell>
                 </TableRow>
               );
@@ -475,7 +573,7 @@ function LabChart({
             appearance="fill-stroke"
             onClick={chart.loadMore}
           >
-            Show older results
+            {isEs ? "Mostrar resultados anteriores" : "Show older results"}
           </Button>
         </div>
       ) : null}
@@ -484,6 +582,8 @@ function LabChart({
 }
 
 export default function ClinicLabs() {
+  const isEs = useIsEs();
+  const lang = isEs ? "es" : "en";
   const office = useOfficeOrg();
   /* The server decides (lab-imports needs labs Edit); the button follows. */
   const canUpload = office.can("labs", 2);
@@ -513,7 +613,7 @@ export default function ClinicLabs() {
                 onClick={() => setUploading(true)}
                 disabled={patients.length === 0}
               >
-                Upload Labs (CSV)
+                {isEs ? "Subir laboratorios (CSV)" : "Upload Labs (CSV)"}
               </Button>
             ) : null}
           </div>
@@ -521,26 +621,44 @@ export default function ClinicLabs() {
       />
       {imported !== null ? (
         <Alert tone="success" onDismiss={() => setImported(null)}>
-          {imported} lab result{imported === 1 ? "" : "s"} added to patient
-          charts.
+          {isEs ? (
+            `Se agregaron ${imported} resultado${imported === 1 ? "" : "s"} de laboratorio a los expedientes de los pacientes.`
+          ) : (
+            <>
+              {imported} lab result{imported === 1 ? "" : "s"} added to patient
+              charts.
+            </>
+          )}
         </Alert>
       ) : null}
       <AsyncSection
         pending={roster.isPending}
         error={roster.error}
-        errorTitle={errorTitleFor(roster.error, "Labs could not be loaded")}
-        errorMessage={errorMessageFor(roster.error, undefined)}
+        errorTitle={errorTitleFor(
+          roster.error,
+          isEs
+            ? "No se pudieron cargar los laboratorios"
+            : "Labs could not be loaded",
+          lang,
+        )}
+        errorMessage={errorMessageFor(roster.error, undefined, lang)}
         onRetry={canRetry(roster.error) ? roster.refetch : undefined}
         isEmpty={patients.length === 0}
-        empty={<EmptyState title="No patients yet" />}
+        empty={
+          <EmptyState
+            title={isEs ? "Aún no hay pacientes" : "No patients yet"}
+          />
+        }
         skeleton={<Skeleton className="h-96 w-full" />}
       >
         <Card as="section" padding="none" className="min-w-0 overflow-hidden">
           <div className="flex flex-col gap-inline-md p-card pb-stack-lg sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-heading-4 text-fg">Lab Results</h2>
+            <h2 className="text-heading-4 text-fg">
+              {isEs ? "Resultados de laboratorio" : "Lab Results"}
+            </h2>
             <Select
               selectSize="small"
-              aria-label="Patient"
+              aria-label={isEs ? "Paciente" : "Patient"}
               value={selected}
               onChange={(e) => setChosen(e.target.value)}
               className="sm:w-72"

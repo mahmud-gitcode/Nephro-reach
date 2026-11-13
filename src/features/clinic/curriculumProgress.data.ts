@@ -1,7 +1,11 @@
 import type { BadgeTone, SeriesTone } from "@/components/ui";
 import type { Patient } from "./enrollment.data";
 import { relativeActivity } from "./enrollment.mapping";
-import { FOLLOW_UP_AFTER_DAYS, daysInactive } from "./members.data";
+import {
+  FOLLOW_UP_AFTER_DAYS,
+  daysInactive,
+  statusLabel,
+} from "./members.data";
 
 /* ==========================================================================
    Member curriculum progress — demo data
@@ -111,9 +115,11 @@ export type MemberProgress = {
 
 /** "Day 14 of 21", or "Module 4 of 8" for the library; "Not started"
     for a member who has not opened the first one. */
-export function stepLabel(member: MemberProgress): string {
-  if (member.step === 0) return "Not started";
+export function stepLabel(member: MemberProgress, isEs = false): string {
+  if (member.step === 0) return isEs ? "Sin iniciar" : "Not started";
   const unit = courseFor(member.program)?.unit ?? "Day";
+  if (isEs)
+    return `${unit === "Module" ? "Módulo" : "Día"} ${member.step} de ${member.length}`;
   return `${unit} ${member.step} of ${member.length}`;
 }
 
@@ -305,6 +311,36 @@ export const moduleBreakdown: {
 ];
 
 export const overallCompletion = 82;
+
+/* Spanish for the client's verbatim figures and panel text above. The
+   English stays the source (tests pin it); this only changes what a
+   Spanish reader sees. Program names are the client's own titles and are
+   shown as given. */
+const FIGURE_ES: Record<string, string> = {
+  "16 Members Enrolled": "16 miembros inscritos",
+  "12 Completed": "12 completados",
+  "4 In Progress": "4 en curso",
+  "7 Members Enrolled": "7 miembros inscritos",
+  "5 Completed": "5 completados",
+  "2 In Progress": "2 en curso",
+  "Accessed by 20 Members": "Consultado por 20 miembros",
+  "120 Modules Completed": "120 módulos completados",
+  "A step-by-step education program to prepare patients for dialysis and beyond.":
+    "Un programa educativo paso a paso para preparar a los pacientes para la diálisis y más allá.",
+  "21 Self-Paced Modules": "21 módulos a su propio ritmo",
+  "Weekly Live Q&A": "Sesión semanal de preguntas y respuestas en vivo",
+  "Printable Resources": "Recursos imprimibles",
+  "Certificates of Completion": "Certificados de finalización",
+  "18 Days": "18 días",
+  "4 Days": "4 días",
+  Varies: "Varía",
+};
+
+/** A figure, status or panel line in the reader's language. */
+export function curriculumText(text: string, isEs = false): string {
+  if (!isEs) return text;
+  return FIGURE_ES[text] ?? statusLabel(text, true);
+}
 
 /** Recent module activity has no source yet (NEW-2): empty, never the demo
     names. */

@@ -32,6 +32,22 @@ export const QUESTION_LABEL: Record<CampaignQuestion, string> = {
   wellbeing: "How are you feeling (1–5)",
 };
 
+/** Spanish labels for the same keys (the admin screen picks by language). */
+export const KIND_LABEL_ES: Record<CampaignKind, string> = {
+  "check-in": "Seguimiento",
+  reminder: "Recordatorio",
+};
+export const CHANNEL_LABEL_ES: Record<CampaignChannel, string> = {
+  in_app: "En la aplicación",
+  email: "Correo electrónico",
+  push: "Push",
+  sms: "SMS",
+};
+export const QUESTION_LABEL_ES: Record<CampaignQuestion, string> = {
+  "er-visit": "Visita a urgencias esta semana (sí / no)",
+  wellbeing: "¿Cómo se siente? (1–5)",
+};
+
 export const MESSAGE_MAX = 320;
 export const TITLE_MAX = 120;
 
@@ -77,6 +93,15 @@ export const WEEKDAY_LABEL: Record<Weekday, string> = {
   FR: "Friday",
   SA: "Saturday",
   SU: "Sunday",
+};
+export const WEEKDAY_LABEL_ES: Record<Weekday, string> = {
+  MO: "lunes",
+  TU: "martes",
+  WE: "miércoles",
+  TH: "jueves",
+  FR: "viernes",
+  SA: "sábado",
+  SU: "domingo",
 };
 
 export type Timing =
@@ -127,23 +152,27 @@ export function hourLabel(hour: number): string {
 }
 
 /** The card's schedule line. */
-export function timingLabel(timing: Timing): string {
+export function timingLabel(timing: Timing, isEs = false): string {
   switch (timing.mode) {
     case "weekly":
-      return `Every ${WEEKDAY_LABEL[timing.weekday]} at ${hourLabel(timing.hour)} ET`;
+      return isEs
+        ? `Cada ${WEEKDAY_LABEL_ES[timing.weekday]} a las ${hourLabel(timing.hour)} ET`
+        : `Every ${WEEKDAY_LABEL[timing.weekday]} at ${hourLabel(timing.hour)} ET`;
     case "daily":
-      return `Every day at ${hourLabel(timing.hour)} ET`;
+      return isEs
+        ? `Todos los días a las ${hourLabel(timing.hour)} ET`
+        : `Every day at ${hourLabel(timing.hour)} ET`;
     case "once": {
       const date = new Date(timing.sendAt);
-      return Number.isNaN(date.getTime())
-        ? "Once"
-        : `Once, ${date.toLocaleString("en-US", {
-            dateStyle: "medium",
-            timeStyle: "short",
-          })}`;
+      if (Number.isNaN(date.getTime())) return isEs ? "Una vez" : "Once";
+      const when = date.toLocaleString(isEs ? "es-US" : "en-US", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      });
+      return isEs ? `Una vez, ${when}` : `Once, ${when}`;
     }
     default:
-      return "Not scheduled";
+      return isEs ? "Sin programar" : "Not scheduled";
   }
 }
 
@@ -161,21 +190,36 @@ export type CampaignDraft = {
 export function draftError(
   draft: CampaignDraft,
   now = new Date(),
+  isEs = false,
 ): string | null {
-  if (!draft.title.trim()) return "Give the template a name.";
+  if (!draft.title.trim())
+    return isEs
+      ? "Póngale un nombre a la plantilla."
+      : "Give the template a name.";
   if (draft.title.trim().length > TITLE_MAX)
-    return `Keep the name to ${TITLE_MAX} characters.`;
-  if (!CAMPAIGN_KINDS.includes(draft.kind)) return "Choose a message type.";
-  if (!draft.message.trim()) return "Write the message.";
+    return isEs
+      ? `El nombre no puede pasar de ${TITLE_MAX} caracteres.`
+      : `Keep the name to ${TITLE_MAX} characters.`;
+  if (!CAMPAIGN_KINDS.includes(draft.kind))
+    return isEs ? "Elija un tipo de mensaje." : "Choose a message type.";
+  if (!draft.message.trim())
+    return isEs ? "Escriba el mensaje." : "Write the message.";
   if (draft.message.trim().length > MESSAGE_MAX)
-    return `Keep the message to ${MESSAGE_MAX} characters.`;
-  if (draft.channels.length === 0) return "Choose at least one channel.";
+    return isEs
+      ? `El mensaje no puede pasar de ${MESSAGE_MAX} caracteres.`
+      : `Keep the message to ${MESSAGE_MAX} characters.`;
+  if (draft.channels.length === 0)
+    return isEs ? "Elija al menos un canal." : "Choose at least one channel.";
   if (draft.question && !draft.channels.includes("in_app"))
-    return "A question needs the in-app channel (members answer it there).";
+    return isEs
+      ? "Una pregunta necesita el canal en la aplicación (los miembros la responden allí)."
+      : "A question needs the in-app channel (members answer it there).";
   if (draft.timing.mode === "once") {
     const at = new Date(draft.timing.sendAt).getTime();
     if (Number.isNaN(at) || at <= now.getTime())
-      return "Choose a send time in the future.";
+      return isEs
+        ? "Elija una hora de envío en el futuro."
+        : "Choose a send time in the future.";
   }
   return null;
 }

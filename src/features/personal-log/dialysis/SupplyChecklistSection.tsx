@@ -324,13 +324,13 @@ export default function SupplyChecklistSection({
         fileName={`supply-checklist-${checklist.monthKey}`}
         table={{
           header: [
-            "Category",
-            "Item",
-            "I have",
-            "Need per month",
-            "To order",
-            "Status",
-            "Counted",
+            isEs ? "Categoría" : "Category",
+            isEs ? "Artículo" : "Item",
+            isEs ? "Tengo" : "I have",
+            isEs ? "Necesito por mes" : "Need per month",
+            isEs ? "Por pedir" : "To order",
+            isEs ? "Estado" : "Status",
+            isEs ? "Contado" : "Counted",
           ],
           rows: groups.flatMap((group) =>
             group.items.map((item) => {
@@ -342,7 +342,7 @@ export default function SupplyChecklistSection({
                 neededFor(item, count),
                 toOrder(item, count),
                 statusLabel(supplyStatus(item, count), isEs),
-                count?.checked ? "Yes" : "No",
+                count?.checked ? (isEs ? "Sí" : "Yes") : "No",
               ];
             }),
           ),

@@ -25,6 +25,7 @@ import {
   TableRow,
 } from "@/components/ui";
 import { PageTitle } from "@/components/layout/PageTitle";
+import { useLanguageCode } from "@/context/LanguageContext";
 import { patientKey } from "@/lib/data/queryKeys";
 import {
   canRetry,
@@ -38,7 +39,11 @@ import {
   useHospitalOffice,
   useHospitalPrograms,
 } from "./useHospital";
-import { percentDone, type HospitalEnrollment } from "./hospital.data";
+import {
+  percentDone,
+  programNameOf,
+  type HospitalEnrollment,
+} from "./hospital.data";
 import { DayDots, EducationBadge, shortDay } from "./HospitalUi";
 
 /* ==========================================================================
@@ -57,16 +62,21 @@ import { DayDots, EducationBadge, shortDay } from "./HospitalUi";
 
 const HREF = "/dashboard/hospital/education";
 
-const KIND: Record<string, { icon: LucideIcon; label: string }> = {
-  video: { icon: MonitorPlay, label: "Video" },
-  audio: { icon: Headphones, label: "Audio" },
-  reading: { icon: BookOpen, label: "Reading" },
-  exam: { icon: ClipboardCheck, label: "Knowledge check" },
+const KIND: Record<string, { icon: LucideIcon; label: string; es: string }> = {
+  video: { icon: MonitorPlay, label: "Video", es: "Video" },
+  audio: { icon: Headphones, label: "Audio", es: "Audio" },
+  reading: { icon: BookOpen, label: "Reading", es: "Lectura" },
+  exam: {
+    icon: ClipboardCheck,
+    label: "Knowledge check",
+    es: "Prueba de conocimientos",
+  },
 };
-const OTHER = { icon: FileText, label: "Lesson" };
+const OTHER = { icon: FileText, label: "Lesson", es: "Lección" };
 
 /** "4/5 · 5/5": the patient's scored attempts in this course. */
 function KnowledgeChecks({ enrollment }: { enrollment: HospitalEnrollment }) {
+  const isEs = useLanguageCode() === "ES";
   const { orgId } = useHospitalOffice();
   const courseId = enrollment.courseId;
   const scope = orgId
@@ -81,19 +91,31 @@ function KnowledgeChecks({ enrollment }: { enrollment: HospitalEnrollment }) {
     staleTime: 60_000,
   });
   if (!courseId || query.isPending) return <>—</>;
-  if (query.error) return <span className="text-fg-muted">Not available</span>;
+  if (query.error)
+    return (
+      <span className="text-fg-muted">
+        {isEs ? "No disponible" : "Not available"}
+      </span>
+    );
   const attempts = query.data?.attempts ?? [];
   if (attempts.length === 0) return <>—</>;
   return <>{attempts.map((a) => `${a.correct}/${a.total}`).join(" · ")}</>;
 }
 
 function EnrolledCount({ courseId }: { courseId: string }) {
+  const isEs = useLanguageCode() === "ES";
   const list = useHospitalEnrollments({ courseId });
   if (list.isPending || list.error || list.total === null) return null;
-  return <Badge tone="neutral">{list.total} enrolled</Badge>;
+  return (
+    <Badge tone="neutral">
+      {isEs ? `${list.total} inscritos` : <>{list.total} enrolled</>}
+    </Badge>
+  );
 }
 
 export default function HospitalEducation() {
+  const isEs = useLanguageCode() === "ES";
+  const lang = isEs ? "es" : "en";
   const programs = useHospitalPrograms();
   const hospital = useHospitalEnrollments();
   const canMonitor = useCan("hospital.education.monitor");
@@ -105,15 +127,27 @@ export default function HospitalEducation() {
       <AsyncSection
         pending={programs.isPending}
         error={programs.error}
-        errorTitle={errorTitleFor(programs.error, "Programs did not load")}
-        errorMessage={errorMessageFor(programs.error, undefined)}
+        errorTitle={errorTitleFor(
+          programs.error,
+          isEs ? "Los programas no se cargaron" : "Programs did not load",
+          lang,
+        )}
+        errorMessage={errorMessageFor(programs.error, undefined, lang)}
         onRetry={canRetry(programs.error) ? programs.refetch : undefined}
         isEmpty={programs.programs.length === 0}
         skeleton={<Skeleton height={220} />}
         empty={
           <EmptyState
-            title="No program is published yet"
-            description="NephroReach publishes the hospital programs in Class Management."
+            title={
+              isEs
+                ? "Aún no hay ningún programa publicado"
+                : "No program is published yet"
+            }
+            description={
+              isEs
+                ? "NephroReach publica los programas hospitalarios en Gestión de clases."
+                : "NephroReach publishes the hospital programs in Class Management."
+            }
           />
         }
       >
@@ -121,18 +155,32 @@ export default function HospitalEducation() {
           <Card key={program.id} as="section" className="space-y-stack-md">
             <div className="flex flex-wrap items-start justify-between gap-inline-md">
               <div>
-                <h2 className="text-heading-4 text-fg">{program.nameEn}</h2>
+                <h2 className="text-heading-4 text-fg">
+                  {isEs ? program.nameEs : program.nameEn}
+                </h2>
                 <p className="mt-stack-xs measure text-body-sm text-fg-muted">
-                  {program.summaryEn}
+                  {isEs ? program.summaryEs : program.summaryEn}
                 </p>
               </div>
               <div className="flex flex-wrap gap-inline-sm">
                 {program.days.length > 0 ? (
-                  <Badge tone="info">{program.days.length} days</Badge>
+                  <Badge tone="info">
+                    {isEs ? (
+                      `${program.days.length} días`
+                    ) : (
+                      <>{program.days.length} days</>
+                    )}
+                  </Badge>
                 ) : null}
                 <Badge tone="neutral">
-                  Access: while admitted + {program.accessDaysAfterDischarge}{" "}
-                  days after discharge
+                  {isEs ? (
+                    `Acceso: durante la hospitalización + ${program.accessDaysAfterDischarge} días después del alta`
+                  ) : (
+                    <>
+                      Access: while admitted +{" "}
+                      {program.accessDaysAfterDischarge} days after discharge
+                    </>
+                  )}
                 </Badge>
                 {canMonitor ? <EnrolledCount courseId={program.id} /> : null}
               </div>
@@ -144,8 +192,12 @@ export default function HospitalEducation() {
                   key={day.day}
                   className="space-y-stack-sm rounded-card-nested border border-line-subtle p-inset-sm"
                 >
-                  <p className="text-overline text-fg-brand">Day {day.day}</p>
-                  <h3 className="text-heading-5 text-fg">{day.titleEn}</h3>
+                  <p className="text-overline text-fg-brand">
+                    {isEs ? `Día ${day.day}` : <>Day {day.day}</>}
+                  </p>
+                  <h3 className="text-heading-5 text-fg">
+                    {isEs ? day.titleEs : day.titleEn}
+                  </h3>
                   <ul className="space-y-stack-xs">
                     {day.items.map((item, index) => {
                       const kind = KIND[item.kind] ?? OTHER;
@@ -159,7 +211,13 @@ export default function HospitalEducation() {
                             aria-hidden="true"
                             className="size-4 shrink-0 text-fg-muted"
                           />
-                          {kind.label}: {item.titleEn}
+                          {isEs ? (
+                            `${kind.es}: ${item.titleEs}`
+                          ) : (
+                            <>
+                              {kind.label}: {item.titleEn}
+                            </>
+                          )}
                         </li>
                       );
                     })}
@@ -168,9 +226,15 @@ export default function HospitalEducation() {
               ))}
             </div>
             <p className="text-caption text-fg-muted">
-              The course&rsquo;s videos, slides, activities and questions are
-              added by NephroReach in Class Management. Patients complete the
-              course in their own NephroReach account.
+              {isEs ? (
+                "NephroReach agrega los videos, diapositivas, actividades y preguntas del curso en Gestión de clases. Los pacientes completan el curso en su propia cuenta de NephroReach."
+              ) : (
+                <>
+                  The course&rsquo;s videos, slides, activities and questions
+                  are added by NephroReach in Class Management. Patients
+                  complete the course in their own NephroReach account.
+                </>
+              )}
             </p>
           </Card>
         ))}
@@ -179,17 +243,24 @@ export default function HospitalEducation() {
       {canMonitor ? (
         <Card padding="none" className="overflow-hidden">
           <div className="p-card">
-            <h2 className="text-heading-4 text-fg">Patient progress</h2>
+            <h2 className="text-heading-4 text-fg">
+              {isEs ? "Progreso de los pacientes" : "Patient progress"}
+            </h2>
             <p className="mt-stack-xs text-body-sm text-fg-muted">
-              Classes completed, knowledge-check scores, and whether the patient
-              can still open the course.
+              {isEs
+                ? "Clases completadas, puntajes de las pruebas de conocimientos y si el paciente todavía puede abrir el curso."
+                : "Classes completed, knowledge-check scores, and whether the patient can still open the course."}
             </p>
           </div>
           <AsyncSection
             pending={hospital.isPending}
             error={hospital.error}
-            errorTitle={errorTitleFor(hospital.error, "Progress did not load")}
-            errorMessage={errorMessageFor(hospital.error, undefined)}
+            errorTitle={errorTitleFor(
+              hospital.error,
+              isEs ? "El progreso no se cargó" : "Progress did not load",
+              lang,
+            )}
+            errorMessage={errorMessageFor(hospital.error, undefined, lang)}
             onRetry={canRetry(hospital.error) ? hospital.refetch : undefined}
             isEmpty={hospital.enrollments.length === 0}
             skeleton={
@@ -199,20 +270,40 @@ export default function HospitalEducation() {
             }
             empty={
               <EmptyState
-                title="No patients enrolled yet"
-                description="Enroll patients on the Patients page."
+                title={
+                  isEs
+                    ? "Aún no hay pacientes inscritos"
+                    : "No patients enrolled yet"
+                }
+                description={
+                  isEs
+                    ? "Inscriba a los pacientes en la página Pacientes."
+                    : "Enroll patients on the Patients page."
+                }
               />
             }
           >
             <Table minWidth={900}>
               <TableHead>
                 <TableRow>
-                  <TableHeaderCell>Patient</TableHeaderCell>
-                  <TableHeaderCell>Classes</TableHeaderCell>
-                  <TableHeaderCell numeric>Progress</TableHeaderCell>
-                  <TableHeaderCell>Knowledge checks</TableHeaderCell>
-                  <TableHeaderCell>Last activity</TableHeaderCell>
-                  <TableHeaderCell>Course access</TableHeaderCell>
+                  <TableHeaderCell>
+                    {isEs ? "Paciente" : "Patient"}
+                  </TableHeaderCell>
+                  <TableHeaderCell>
+                    {isEs ? "Clases" : "Classes"}
+                  </TableHeaderCell>
+                  <TableHeaderCell numeric>
+                    {isEs ? "Progreso" : "Progress"}
+                  </TableHeaderCell>
+                  <TableHeaderCell>
+                    {isEs ? "Pruebas de conocimientos" : "Knowledge checks"}
+                  </TableHeaderCell>
+                  <TableHeaderCell>
+                    {isEs ? "Última actividad" : "Last activity"}
+                  </TableHeaderCell>
+                  <TableHeaderCell>
+                    {isEs ? "Acceso al curso" : "Course access"}
+                  </TableHeaderCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -221,7 +312,7 @@ export default function HospitalEducation() {
                     <TableCell emphasis>
                       <span className="block">{e.patientName}</span>
                       <span className="block text-caption font-normal text-fg-muted">
-                        {e.programName}
+                        {programNameOf(e, isEs)}
                       </span>
                     </TableCell>
                     <TableCell>
@@ -235,13 +326,17 @@ export default function HospitalEducation() {
                       <KnowledgeChecks enrollment={e} />
                     </TableCell>
                     <TableCell className="whitespace-nowrap tabular-nums">
-                      {shortDay(e.progress.lastActivityAt)}
+                      {shortDay(e.progress.lastActivityAt, isEs)}
                     </TableCell>
                     <TableCell>
                       {e.hasAccess ? (
-                        <Badge tone="success">Open</Badge>
+                        <Badge tone="success">
+                          {isEs ? "Abierto" : "Open"}
+                        </Badge>
                       ) : (
-                        <Badge tone="neutral">Ended</Badge>
+                        <Badge tone="neutral">
+                          {isEs ? "Terminado" : "Ended"}
+                        </Badge>
                       )}
                     </TableCell>
                   </TableRow>
@@ -257,7 +352,7 @@ export default function HospitalEducation() {
                   disabled={hospital.isLoadingMore}
                   onClick={hospital.loadMore}
                 >
-                  Show more patients
+                  {isEs ? "Ver más pacientes" : "Show more patients"}
                 </Button>
               </div>
             ) : null}

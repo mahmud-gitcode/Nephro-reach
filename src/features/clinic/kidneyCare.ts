@@ -32,8 +32,26 @@ export const KRT_ITEMS = [
 ] as const;
 export type KrtItemId = (typeof KRT_ITEMS)[number]["id"];
 
+/** The checklist items' labels in Spanish, for display only. */
+export const KRT_ITEM_LABEL_ES: Record<KrtItemId, string> = {
+  krtEducation: "Educación sobre TRR completada",
+  modalityDiscussion: "Conversación sobre la modalidad documentada",
+  accessPlanning: "Planificación del acceso vascular iniciada",
+  accessReferral: "Derivación vascular/de acceso realizada",
+  accessAppointment: "Cita de acceso programada",
+  planningCompleted: "Planificación del acceso completada",
+  transplantReferral: "Derivación a trasplante conversada/realizada",
+};
+
 export const KRT_ANSWERS = ["Yes", "No", "N/A"] as const;
 export type KrtAnswer = (typeof KRT_ANSWERS)[number];
+
+/** Display text for an answer; the stored value stays English. */
+export const KRT_ANSWER_LABEL_ES: Record<KrtAnswer, string> = {
+  Yes: "Sí",
+  No: "No",
+  "N/A": "N/A",
+};
 
 export const ACCESS_TYPE_CHOICES = [
   "AV fistula",
@@ -43,6 +61,15 @@ export const ACCESS_TYPE_CHOICES = [
   "Not determined",
 ] as const;
 export type AccessTypeChoice = (typeof ACCESS_TYPE_CHOICES)[number];
+
+/** Display text for an access type; the stored value stays English. */
+export const ACCESS_TYPE_LABEL_ES: Record<AccessTypeChoice, string> = {
+  "AV fistula": "Fístula AV",
+  "AV graft": "Injerto AV",
+  "PD catheter": "Catéter de DP",
+  Other: "Otro",
+  "Not determined": "No determinado",
+};
 
 export type KidneyCarePlan = {
   /** Unanswered items are absent. */
@@ -107,6 +134,15 @@ export const PROGRESS_STEPS = [
 ] as const;
 export type ProgressStep = (typeof PROGRESS_STEPS)[number];
 
+/** Display text for a progress step. */
+export const PROGRESS_STEP_LABEL_ES: Record<ProgressStep, string> = {
+  Referral: "Derivación",
+  "Appointment scheduled": "Cita programada",
+  "Appointment completed": "Cita completada",
+  "Procedure scheduled": "Procedimiento programado",
+  "Procedure completed": "Procedimiento completado",
+};
+
 /**
  * How far the referral has got at the access center, as the number of
  * steps reached (0–5). Read from the shared access record: it reflects
@@ -148,6 +184,7 @@ function fromAnswer(answer: KrtAnswer | undefined): MilestoneState {
 export function milestones(
   plan: KidneyCarePlan | undefined,
   progress: number,
+  isEs = false,
 ): Milestone[] {
   const a = plan?.answers ?? {};
   const planning: MilestoneState =
@@ -165,14 +202,33 @@ export function milestones(
           ? "na"
           : "todo";
   return [
-    { label: "CKD education", state: fromAnswer(a.krtEducation) },
-    { label: "Modality education", state: fromAnswer(a.modalityDiscussion) },
-    { label: "Access planning initiated", state: planning },
     {
-      label: "Vascular referral",
+      label: isEs ? "Educación sobre la ERC" : "CKD education",
+      state: fromAnswer(a.krtEducation),
+    },
+    {
+      label: isEs ? "Educación sobre la modalidad" : "Modality education",
+      state: fromAnswer(a.modalityDiscussion),
+    },
+    {
+      label: isEs
+        ? "Planificación del acceso iniciada"
+        : "Access planning initiated",
+      state: planning,
+    },
+    {
+      label: isEs ? "Derivación vascular" : "Vascular referral",
       state: progress >= 1 ? "done" : fromAnswer(a.accessReferral),
     },
-    { label: "Access appointment completed", state: appointment },
-    { label: "Transplant evaluation", state: fromAnswer(a.transplantReferral) },
+    {
+      label: isEs
+        ? "Cita de acceso completada"
+        : "Access appointment completed",
+      state: appointment,
+    },
+    {
+      label: isEs ? "Evaluación para trasplante" : "Transplant evaluation",
+      state: fromAnswer(a.transplantReferral),
+    },
   ];
 }

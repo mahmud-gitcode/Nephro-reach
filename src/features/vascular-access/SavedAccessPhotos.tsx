@@ -31,6 +31,7 @@ export function SavedAccessPhotos({
   if (photos.length === 0) return null;
   const unavailable = notBuiltYet(
     isEs ? "Adjuntar una foto guardada" : "Attaching a saved photo",
+    isEs,
   );
   return (
     <div className="space-y-1.5">

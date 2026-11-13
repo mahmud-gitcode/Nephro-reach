@@ -15,6 +15,7 @@ import {
   TabPanel,
   Tabs,
 } from "@/components/ui";
+import { useLanguageCode } from "@/context/LanguageContext";
 import { LoadMore } from "@/features/profile/LoadMore";
 import { saveErrorText } from "@/features/profile/saveError";
 import {
@@ -49,14 +50,34 @@ import {
 
 type Tab = "tickets" | "organizations";
 
-function errorCopy({ error, title }: { error: unknown; title: string }) {
+/** The server's `dashboard` values, as the Spanish screen names them. */
+const DASHBOARD_ES: Record<string, string> = {
+  Patient: "Paciente",
+  "Dialysis Center": "Centro de diálisis",
+  "Nephrology Office": "Consultorio de nefrología",
+  "Vascular Access Center": "Centro de acceso vascular",
+  Hospital: "Hospital",
+  "NephroReach Admin": "Administrador de NephroReach",
+};
+
+function errorCopy({
+  error,
+  title,
+  lang,
+}: {
+  error: unknown;
+  title: string;
+  lang: "en" | "es";
+}) {
   return {
-    title: errorTitleFor(error, title),
-    message: errorMessageFor(error, undefined),
+    title: errorTitleFor(error, title, lang),
+    message: errorMessageFor(error, undefined, lang),
   };
 }
 
 export default function SupportInbox() {
+  const isEs = useLanguageCode() === "ES";
+  const lang = isEs ? "es" : "en";
   const [tab, setTab] = useState<Tab>("tickets");
   const [filter, setFilter] = useState<InboxFilter>("open");
   const [openId, setOpenId] = useState<string | null>(null);
@@ -66,11 +87,17 @@ export default function SupportInbox() {
   const requests = info.requests;
   const ticketsCopy = errorCopy({
     error: support.list.error,
-    title: "Support requests did not load",
+    title: isEs
+      ? "Las solicitudes de soporte no se cargaron"
+      : "Support requests did not load",
+    lang,
   });
   const requestsCopy = errorCopy({
     error: info.list.error,
-    title: "Organization requests did not load",
+    title: isEs
+      ? "Las solicitudes de organizaciones no se cargaron"
+      : "Organization requests did not load",
+    lang,
   });
 
   return (
@@ -79,29 +106,29 @@ export default function SupportInbox() {
 
       {support.saveError ? (
         <Alert tone="danger" onDismiss={support.clearSaveError}>
-          {saveErrorText(support.saveError)}
+          {saveErrorText(support.saveError, lang)}
         </Alert>
       ) : null}
       {info.toggle.error ? (
         <Alert tone="danger" onDismiss={() => info.toggle.reset()}>
-          {saveErrorText(info.toggle.error)}
+          {saveErrorText(info.toggle.error, lang)}
         </Alert>
       ) : null}
 
       <Card padding="none">
         <div className="p-card pb-stack-md">
           <Tabs
-            label="Support inbox"
+            label={isEs ? "Bandeja de soporte" : "Support inbox"}
             value={tab}
             onChange={setTab}
             items={[
               {
                 id: "tickets",
-                label: `Support Requests${support.openCount ? ` (${support.openCount})` : ""}`,
+                label: `${isEs ? "Solicitudes de soporte" : "Support Requests"}${support.openCount ? ` (${support.openCount})` : ""}`,
               },
               {
                 id: "organizations",
-                label: `Organization Requests${info.newCount ? ` (${info.newCount})` : ""}`,
+                label: `${isEs ? "Solicitudes de organizaciones" : "Organization Requests"}${info.newCount ? ` (${info.newCount})` : ""}`,
               },
             ]}
           />
@@ -110,21 +137,23 @@ export default function SupportInbox() {
         <TabPanel id="tickets" value={tab} className="px-card pb-card">
           <div className="mb-stack-md flex flex-wrap items-center justify-between gap-inline-md">
             <p className="text-body-sm text-fg-muted">
-              From the Support tab on every dashboard.
+              {isEs
+                ? "Desde la pestaña Soporte de cada panel."
+                : "From the Support tab on every dashboard."}
             </p>
             <Select
               selectSize="small"
-              aria-label="Show"
+              aria-label={isEs ? "Mostrar" : "Show"}
               value={filter}
               onChange={(e) => {
                 setFilter(e.target.value as InboxFilter);
                 setOpenId(null);
               }}
             >
-              <option value="open">Open</option>
-              <option value="answered">Answered</option>
-              <option value="resolved">Resolved</option>
-              <option value="all">All</option>
+              <option value="open">{statusLabel("open", isEs)}</option>
+              <option value="answered">{statusLabel("answered", isEs)}</option>
+              <option value="resolved">{statusLabel("resolved", isEs)}</option>
+              <option value="all">{isEs ? "Todas" : "All"}</option>
             </Select>
           </div>
           <AsyncSection
@@ -141,8 +170,12 @@ export default function SupportInbox() {
               <EmptyState
                 variant="bare"
                 icon={<LifeBuoy aria-hidden="true" />}
-                title="Nothing here"
-                description="Support requests from patients and offices appear here."
+                title={isEs ? "No hay nada aquí" : "Nothing here"}
+                description={
+                  isEs
+                    ? "Aquí aparecen las solicitudes de soporte de pacientes y oficinas."
+                    : "Support requests from patients and offices appear here."
+                }
               />
             }
           >
@@ -163,31 +196,35 @@ export default function SupportInbox() {
                         </span>
                         <span className="block text-caption text-fg-muted">
                           {ticket.displayId} · {ticket.from.name || "—"} (
-                          {ticket.from.dashboard}
+                          {isEs
+                            ? (DASHBOARD_ES[ticket.from.dashboard] ??
+                              ticket.from.dashboard)
+                            : ticket.from.dashboard}
                           {ticket.from.organization
                             ? ` · ${ticket.from.organization}`
                             : ""}
-                          ) · {categoryLabel(ticket.category)} ·{" "}
+                          ) · {categoryLabel(ticket.category, isEs)} ·{" "}
                           {new Date(ticket.createdAt).toLocaleDateString(
-                            "en-US",
+                            isEs ? "es-US" : "en-US",
                           )}
                         </span>
                       </span>
                       <Badge tone={STATUS_TONE[ticket.status]}>
-                        {statusLabel(ticket.status)}
+                        {statusLabel(ticket.status, isEs)}
                       </Badge>
                     </button>
                     {open ? (
                       <div className="mt-stack-sm space-y-stack-sm">
                         {ticket.from.email ? (
                           <p className="text-caption text-fg-muted">
-                            Reply to {ticket.from.email}
+                            {isEs ? "Responder a" : "Reply to"}{" "}
+                            {ticket.from.email}
                           </p>
                         ) : null}
                         <TicketDetail
                           side="platform"
                           ticket={ticket}
-                          isEs={false}
+                          isEs={isEs}
                           onReply={(body) =>
                             support.reply.mutateAsync({ id: ticket.id, body })
                           }
@@ -208,8 +245,12 @@ export default function SupportInbox() {
                           }
                         >
                           {ticket.status === "resolved"
-                            ? "Reopen"
-                            : "Mark Resolved"}
+                            ? isEs
+                              ? "Reabrir"
+                              : "Reopen"
+                            : isEs
+                              ? "Marcar como resuelta"
+                              : "Mark Resolved"}
                         </Button>
                       </div>
                     ) : null}
@@ -223,9 +264,20 @@ export default function SupportInbox() {
 
         <TabPanel id="organizations" value={tab} className="px-card pb-card">
           <p className="mb-stack-md text-body-sm text-fg-muted">
-            Offices that received a secure share from a patient and pressed
-            &ldquo;Request information for your organization&rdquo;. Follow up,
-            then mark them contacted.
+            {isEs ? (
+              <>
+                Oficinas que recibieron contenido compartido de forma segura por
+                un paciente y pulsaron &ldquo;Solicitar información para su
+                organización&rdquo;. Haga el seguimiento y luego márquelas como
+                contactadas.
+              </>
+            ) : (
+              <>
+                Offices that received a secure share from a patient and pressed
+                &ldquo;Request information for your organization&rdquo;. Follow
+                up, then mark them contacted.
+              </>
+            )}
           </p>
           <AsyncSection
             pending={info.list.isPending}
@@ -239,8 +291,16 @@ export default function SupportInbox() {
               <EmptyState
                 variant="bare"
                 icon={<Building2 aria-hidden="true" />}
-                title="No organization requests yet"
-                description="They appear here as soon as an office sends one from a secure share page."
+                title={
+                  isEs
+                    ? "Aún no hay solicitudes de organizaciones"
+                    : "No organization requests yet"
+                }
+                description={
+                  isEs
+                    ? "Aparecen aquí en cuanto una oficina envía una desde una página de contenido compartido seguro."
+                    : "They appear here as soon as an office sends one from a secure share page."
+                }
               />
             }
           >
@@ -252,29 +312,45 @@ export default function SupportInbox() {
                 >
                   <span className="min-w-0">
                     <span className="block text-label-lg text-fg">
-                      {request.organization || "Organization not given"}
+                      {request.organization ||
+                        (isEs
+                          ? "Organización no indicada"
+                          : "Organization not given")}
                     </span>
                     <span className="block text-body-sm text-fg-secondary">
                       {request.name} · {request.email}
                       {request.phone ? ` · ${request.phone}` : ""}
                     </span>
                     <span className="block text-caption text-fg-muted">
-                      {new Date(request.at).toLocaleString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                        hour: "numeric",
-                        minute: "2-digit",
-                      })}{" "}
+                      {new Date(request.at).toLocaleString(
+                        isEs ? "es-US" : "en-US",
+                        {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                        },
+                      )}{" "}
                       ·{" "}
                       {request.sharedByOrganization
-                        ? `from a share sent by ${request.sharedByOrganization}`
-                        : "from a share sent by a NephroReach member"}
+                        ? isEs
+                          ? `de contenido compartido por ${request.sharedByOrganization}`
+                          : `from a share sent by ${request.sharedByOrganization}`
+                        : isEs
+                          ? "de contenido compartido por un miembro de NephroReach"
+                          : "from a share sent by a NephroReach member"}
                     </span>
                   </span>
                   <span className="flex shrink-0 items-center gap-inline-md">
                     <Badge tone={request.contacted ? "success" : "warning"}>
-                      {request.contacted ? "Contacted" : "New"}
+                      {request.contacted
+                        ? isEs
+                          ? "Contactada"
+                          : "Contacted"
+                        : isEs
+                          ? "Nueva"
+                          : "New"}
                     </Badge>
                     <Button
                       size="small"
@@ -287,7 +363,13 @@ export default function SupportInbox() {
                         })
                       }
                     >
-                      {request.contacted ? "Mark New" : "Mark Contacted"}
+                      {request.contacted
+                        ? isEs
+                          ? "Marcar como nueva"
+                          : "Mark New"
+                        : isEs
+                          ? "Marcar como contactada"
+                          : "Mark Contacted"}
                     </Button>
                   </span>
                 </li>

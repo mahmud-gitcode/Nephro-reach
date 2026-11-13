@@ -20,6 +20,7 @@ import {
   UsersSolid,
 } from "@/components/icons/solid";
 import { PageTitle } from "@/components/layout/PageTitle";
+import { useLanguageCode } from "@/context/LanguageContext";
 import { useCan } from "@/features/staff/useStaffAccounts";
 import {
   canRetry,
@@ -54,7 +55,16 @@ const EVENT_TEXT = {
   discharged: "was discharged",
 } as const;
 
+const EVENT_TEXT_ES: Record<keyof typeof EVENT_TEXT, string> = {
+  enrolled: "fue inscrito",
+  active: "avanzó en el curso",
+  "course-completed": "completó el curso",
+  discharged: "fue dado de alta",
+};
+
 export default function HospitalOverview() {
+  const isEs = useLanguageCode() === "ES";
+  const lang = isEs ? "es" : "en";
   const hospital = useHospital();
   const programs = useHospitalPrograms();
   const enroll = useEnrollPatient(programs.programs);
@@ -86,11 +96,14 @@ export default function HospitalOverview() {
     <div className="space-y-stack-xl">
       <PageTitle
         href={HREF}
-        title={hospital.hospitalName || "Hospital Overview"}
+        title={
+          hospital.hospitalName ||
+          (isEs ? "Resumen del hospital" : "Hospital Overview")
+        }
         action={
           canEnroll ? (
             <Button leadingIcon={<Plus />} onClick={() => setEnrolling(true)}>
-              Enroll patient
+              {isEs ? "Inscribir paciente" : "Enroll patient"}
             </Button>
           ) : null
         }
@@ -99,42 +112,60 @@ export default function HospitalOverview() {
       <AsyncSection
         pending={report.isPending}
         error={report.error}
-        errorTitle={errorTitleFor(report.error, "Figures did not load")}
-        errorMessage={errorMessageFor(report.error, undefined)}
+        errorTitle={errorTitleFor(
+          report.error,
+          isEs ? "Las cifras no se cargaron" : "Figures did not load",
+          lang,
+        )}
+        errorMessage={errorMessageFor(report.error, undefined, lang)}
         onRetry={canRetry(report.error) ? report.refetch : undefined}
         skeleton={<Skeleton height={140} />}
       >
         <section
-          aria-label="Education at a glance"
+          aria-label={
+            isEs ? "Educación de un vistazo" : "Education at a glance"
+          }
           className="grid grid-cols-2 gap-inset-sm sm:gap-inset-md xl:grid-cols-4"
         >
           <KeyCard
             icon={<UsersSolid />}
             tone="brand"
             value={s.enrolled}
-            label="Patients enrolled"
-            note={`${s.newlyDiagnosed} newly diagnosed · ${s.onDialysis} on dialysis`}
+            label={isEs ? "Pacientes inscritos" : "Patients enrolled"}
+            note={
+              isEs
+                ? `${s.newlyDiagnosed} recién diagnosticados · ${s.onDialysis} en diálisis`
+                : `${s.newlyDiagnosed} newly diagnosed · ${s.onDialysis} on dialysis`
+            }
           />
           <KeyCard
             icon={<ClockSolid />}
             tone="warning"
             value={s.inProgress}
-            label="In a course now"
-            note="Started, not finished"
+            label={isEs ? "En un curso ahora" : "In a course now"}
+            note={isEs ? "Comenzado, sin terminar" : "Started, not finished"}
           />
           <KeyCard
             icon={<CheckCircleSolid />}
             tone="success"
             value={s.completed}
-            label="Completed"
-            note={`${completionPct}% of enrolled`}
+            label={isEs ? "Completado" : "Completed"}
+            note={
+              isEs
+                ? `${completionPct}% de los inscritos`
+                : `${completionPct}% of enrolled`
+            }
           />
           <KeyCard
             icon={<NotStartedSolid />}
             tone="danger"
             value={s.incomplete}
-            label="Incomplete"
-            note={`${s.notStarted} not started yet`}
+            label={isEs ? "Incompleto" : "Incomplete"}
+            note={
+              isEs
+                ? `${s.notStarted} aún sin comenzar`
+                : `${s.notStarted} not started yet`
+            }
           />
         </section>
       </AsyncSection>
@@ -142,27 +173,38 @@ export default function HospitalOverview() {
       <section className="grid grid-cols-1 gap-inset-md xl:grid-cols-3">
         <Card as="section" className="space-y-stack-md xl:col-span-2">
           <div className="flex items-center justify-between gap-inline-md">
-            <h2 className="text-heading-4 text-fg">Recent activity</h2>
+            <h2 className="text-heading-4 text-fg">
+              {isEs ? "Actividad reciente" : "Recent activity"}
+            </h2>
             <Link
               href="/dashboard/hospital/patients"
               className="-my-2.5 inline-flex min-h-11 items-center gap-inline-xs text-label-md text-fg-brand hover:underline"
             >
-              All patients <ArrowRight aria-hidden="true" className="size-4" />
+              {isEs ? "Todos los pacientes" : "All patients"}{" "}
+              <ArrowRight aria-hidden="true" className="size-4" />
             </Link>
           </div>
           <AsyncSection
             pending={hospital.isPending}
             error={hospital.error}
-            errorTitle={errorTitleFor(hospital.error, "Activity did not load")}
-            errorMessage={errorMessageFor(hospital.error, undefined)}
+            errorTitle={errorTitleFor(
+              hospital.error,
+              isEs ? "La actividad no se cargó" : "Activity did not load",
+              lang,
+            )}
+            errorMessage={errorMessageFor(hospital.error, undefined, lang)}
             onRetry={canRetry(hospital.error) ? hospital.refetch : undefined}
             isEmpty={activity.length === 0}
             skeleton={<Skeleton height={160} />}
             empty={
               <EmptyState
                 variant="bare"
-                title="No activity yet"
-                description="Enroll a patient to get started."
+                title={isEs ? "Aún no hay actividad" : "No activity yet"}
+                description={
+                  isEs
+                    ? "Inscriba a un paciente para comenzar."
+                    : "Enroll a patient to get started."
+                }
               />
             }
           >
@@ -174,10 +216,10 @@ export default function HospitalOverview() {
                 >
                   <span className="text-body-md text-fg">
                     <span className="text-label-md">{event.patientName}</span>{" "}
-                    {EVENT_TEXT[event.kind]}
+                    {isEs ? EVENT_TEXT_ES[event.kind] : EVENT_TEXT[event.kind]}
                   </span>
                   <span className="text-caption text-fg-muted tabular-nums">
-                    {shortDay(event.at)}
+                    {shortDay(event.at, isEs)}
                   </span>
                 </li>
               ))}
@@ -186,35 +228,51 @@ export default function HospitalOverview() {
         </Card>
 
         <Card as="section" className="space-y-stack-md">
-          <h2 className="text-heading-4 text-fg">Course completion</h2>
+          <h2 className="text-heading-4 text-fg">
+            {isEs ? "Finalización del curso" : "Course completion"}
+          </h2>
           {report.error ? (
             <p className="text-body-sm text-fg-muted">
-              {errorTitleFor(report.error, "Figures did not load")}
+              {errorTitleFor(
+                report.error,
+                isEs ? "Las cifras no se cargaron" : "Figures did not load",
+                lang,
+              )}
             </p>
           ) : null}
           <div className="flex justify-center">
             <ProgressRing
               value={completionPct}
-              label="Course completion"
+              label={isEs ? "Finalización del curso" : "Course completion"}
               centerValue={`${completionPct}%`}
-              centerLabel={`${s.completed} of ${s.enrolled}`}
+              centerLabel={
+                isEs
+                  ? `${s.completed} de ${s.enrolled}`
+                  : `${s.completed} of ${s.enrolled}`
+              }
               tone="success"
             />
           </div>
           <DonutChart
             className="self-center"
-            label="Patients by kidney status"
+            label={
+              isEs ? "Pacientes por estado renal" : "Patients by kidney status"
+            }
             size={140}
             segments={[
               {
-                label: "Newly diagnosed",
+                label: isEs ? "Recién diagnosticados" : "Newly diagnosed",
                 value: s.newlyDiagnosed,
                 tone: "brand",
               },
-              { label: "On dialysis", value: s.onDialysis, tone: "accent" },
+              {
+                label: isEs ? "En diálisis" : "On dialysis",
+                value: s.onDialysis,
+                tone: "accent",
+              },
             ]}
             centerValue={s.enrolled}
-            centerLabel="patients"
+            centerLabel={isEs ? "pacientes" : "patients"}
           />
           <ul className="flex flex-wrap justify-center gap-inline-lg text-body-sm text-fg-secondary">
             <li className="inline-flex items-center gap-inline-xs">
@@ -222,19 +280,24 @@ export default function HospitalOverview() {
                 aria-hidden="true"
                 className="size-2.5 rounded-pill bg-[var(--chart-brand)]"
               />
-              Newly diagnosed · {s.newlyDiagnosed}
+              {isEs ? "Recién diagnosticados" : "Newly diagnosed"} ·{" "}
+              {s.newlyDiagnosed}
             </li>
             <li className="inline-flex items-center gap-inline-xs">
               <span
                 aria-hidden="true"
                 className="size-2.5 rounded-pill bg-[var(--color-accent-600)]"
               />
-              On dialysis · {s.onDialysis}
+              {isEs ? "En diálisis" : "On dialysis"} · {s.onDialysis}
             </li>
           </ul>
           {programs.programs.length > 0 ? (
             <p className="text-caption text-fg-muted">
-              Programs: {programs.programs.map((p) => p.nameEn).join(", ")}.
+              {isEs ? "Programas" : "Programs"}:{" "}
+              {programs.programs
+                .map((p) => (isEs ? p.nameEs : p.nameEn))
+                .join(", ")}
+              .
             </p>
           ) : null}
         </Card>

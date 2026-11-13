@@ -86,7 +86,7 @@ export function NutrientOverview({
   totals: Record<NutrientKey, number>;
   goals: Goals;
 }) {
-  const { dictionary } = useLanguage();
+  const { dictionary, language } = useLanguage();
   const n = dictionary?.nutrition;
 
   const statusStyles = {
@@ -175,7 +175,11 @@ export function NutrientOverview({
               <div className="mt-3">
                 <Progress
                   value={percent}
-                  label={`${name} against goal`}
+                  label={
+                    language === "ES"
+                      ? `${name} respecto a la meta`
+                      : `${name} against goal`
+                  }
                   tone={
                     status === "over"
                       ? "danger"
@@ -442,7 +446,7 @@ export function FluidTracker({
   goalMl: number;
   onAddWater: () => void;
 }) {
-  const { dictionary } = useLanguage();
+  const { dictionary, language } = useLanguage();
   const n = dictionary?.nutrition;
   const { unit } = useFluidUnit();
 
@@ -462,7 +466,7 @@ export function FluidTracker({
               {formatFluid(fluidMl, unit)}
             </p>
             <p className="mt-1 text-body-sm leading-5 font-medium text-fg-muted">
-              of {formatFluid(goalMl, unit)}
+              {language === "ES" ? "de" : "of"} {formatFluid(goalMl, unit)}
             </p>
           </div>
           <p
@@ -476,7 +480,11 @@ export function FluidTracker({
         <div className="mt-4">
           <Progress
             value={percent}
-            label="Fluid intake against goal"
+            label={
+              language === "ES"
+                ? "Consumo de líquidos frente a la meta"
+                : "Fluid intake against goal"
+            }
             tone={percent >= 100 ? "danger" : "primary"}
           />
         </div>

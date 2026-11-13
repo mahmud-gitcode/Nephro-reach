@@ -437,7 +437,9 @@ export function LineChart({
                 {series.map((s) => (
                   <td key={s.id}>
                     {s.points[i] === null || s.points[i] === undefined
-                      ? "No reading"
+                      ? isEs
+                        ? "Sin lectura"
+                        : "No reading"
                       : withUnit(s.points[i] as number, s)}
                   </td>
                 ))}

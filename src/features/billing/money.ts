@@ -12,10 +12,15 @@
 
 export const MAX_CENTS = 100_000_000;
 
-/** "$1,995.00" from 199500 (the currency the server sent, USD default). */
-export function formatCents(cents: number, currency = "USD"): string {
+/** "$1,995.00" from 199500 (the currency the server sent, USD default).
+ *  `isEs` formats for Spanish readers (es-US); English is the default. */
+export function formatCents(
+  cents: number,
+  currency = "USD",
+  isEs = false,
+): string {
   const safe = Number.isFinite(cents) ? Math.trunc(cents) : 0;
-  return (safe / 100).toLocaleString("en-US", {
+  return (safe / 100).toLocaleString(isEs ? "es-US" : "en-US", {
     style: "currency",
     currency,
     minimumFractionDigits: 2,
@@ -45,10 +50,14 @@ export function centsToInput(cents: number): string {
 
 /** A calendar day from the API (YYYY-MM-DD) as text, without a time-zone
  *  shift: "2026-12-31" is Dec 31 everywhere. */
-export function formatDay(day: string | null | undefined): string {
+export function formatDay(
+  day: string | null | undefined,
+  isEs = false,
+): string {
   if (!day || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return "—";
   const [y, m, d] = day.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US", {
+  const locale = isEs ? "es-US" : "en-US";
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString(locale, {
     timeZone: "UTC",
     month: "short",
     day: "numeric",
@@ -57,11 +66,14 @@ export function formatDay(day: string | null | undefined): string {
 }
 
 /** An instant from the API (ISO) as a local date, or "—". */
-export function formatInstant(iso: string | null | undefined): string {
+export function formatInstant(
+  iso: string | null | undefined,
+  isEs = false,
+): string {
   if (!iso) return "—";
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleDateString("en-US", {
+  return date.toLocaleDateString(isEs ? "es-US" : "en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",

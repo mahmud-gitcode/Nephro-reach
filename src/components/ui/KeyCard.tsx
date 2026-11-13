@@ -1,5 +1,8 @@
+"use client";
+
 import React from "react";
 import { cn } from "@/lib/utils/cn";
+import { useLanguageCode } from "@/context/LanguageContext";
 
 /* ==========================================================================
    KeyCard
@@ -92,6 +95,7 @@ function TrendTag({ trend }: { trend: KeyCardTrend }) {
   /* Unset means up is the good direction, which is true of most figures a
      card like this carries. */
   const good = trend.good ?? trend.direction === "up";
+  const isEs = useLanguageCode() === "ES";
   return (
     <span
       className={cn(
@@ -110,7 +114,13 @@ function TrendTag({ trend }: { trend: KeyCardTrend }) {
       </svg>
       {/* The triangle is decoration; the words say which way. */}
       <span className="sr-only">
-        {trend.direction === "up" ? "Up " : "Down "}
+        {trend.direction === "up"
+          ? isEs
+            ? "Sube "
+            : "Up "
+          : isEs
+            ? "Baja "
+            : "Down "}
       </span>
       {trend.value}
     </span>

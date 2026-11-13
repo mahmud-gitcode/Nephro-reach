@@ -16,9 +16,11 @@ import {
 import {
   CONDITION_GROUPS,
   conditionDraftError,
+  conditionText,
   type ConditionDraft,
   type ConditionGroup,
 } from "./ccmConditions";
+import { useLanguage } from "@/context/LanguageContext";
 import { actionErrorText } from "./officeContext";
 import { useConditionLibrary } from "./useConditionLibrary";
 
@@ -38,17 +40,20 @@ const EMPTY_DRAFT: ConditionDraft = {
 };
 
 export function ConditionLibraryModal({ onClose }: { onClose: () => void }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const store = useConditionLibrary();
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState<ConditionDraft>(EMPTY_DRAFT);
   const [tried, setTried] = useState(false);
-  const error = conditionDraftError(draft, store.library);
+  const error = conditionDraftError(draft, store.library, isEs);
   const q = query.trim().toLowerCase();
+  /* Searches what the reader sees (the Spanish names in Spanish). */
   const shown = store.library.filter(
     (c) =>
       q === "" ||
-      c.label.toLowerCase().includes(q) ||
-      c.short.toLowerCase().includes(q),
+      conditionText(c.label, isEs).toLowerCase().includes(q) ||
+      conditionText(c.short, isEs).toLowerCase().includes(q),
   );
   const activeCount = store.library.filter((c) => c.active).length;
 
@@ -57,29 +62,45 @@ export function ConditionLibraryModal({ onClose }: { onClose: () => void }) {
       open
       onClose={onClose}
       size="big"
-      title="Condition Library"
-      description={`${activeCount} of ${store.library.length} conditions offered when staff choose a patient's conditions.`}
-      footer={<Button onClick={onClose}>Done</Button>}
+      title={isEs ? "Biblioteca de afecciones" : "Condition Library"}
+      description={
+        isEs
+          ? `${activeCount} de ${store.library.length} afecciones disponibles cuando el personal elige las afecciones de un paciente.`
+          : `${activeCount} of ${store.library.length} conditions offered when staff choose a patient's conditions.`
+      }
+      footer={<Button onClick={onClose}>{isEs ? "Listo" : "Done"}</Button>}
     >
       <div className="space-y-stack-lg">
         {store.saveError ? (
-          <Alert tone="danger" title="That change was not saved">
-            {actionErrorText(store.saveError)}
+          <Alert
+            tone="danger"
+            title={
+              isEs ? "No se guardó ese cambio" : "That change was not saved"
+            }
+          >
+            {actionErrorText(store.saveError, isEs)}
           </Alert>
         ) : null}
         {store.error ? (
-          <Alert tone="danger" title="The library could not be loaded">
-            {actionErrorText(store.error)}
+          <Alert
+            tone="danger"
+            title={
+              isEs
+                ? "No se pudo cargar la biblioteca"
+                : "The library could not be loaded"
+            }
+          >
+            {actionErrorText(store.error, isEs)}
           </Alert>
         ) : null}
 
         <section className="rounded-card-nested border border-line p-inset-md">
           <h3 className="mb-stack-sm text-heading-5 text-fg">
-            Add a condition
+            {isEs ? "Agregar una afección" : "Add a condition"}
           </h3>
           <div className="grid gap-stack-md sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
             <FormField
-              label="Name"
+              label={isEs ? "Nombre" : "Name"}
               required
               error={tried && error ? error : undefined}
             >
@@ -87,7 +108,11 @@ export function ConditionLibraryModal({ onClose }: { onClose: () => void }) {
                 <Input
                   {...field}
                   value={draft.label}
-                  placeholder="e.g. Sickle Cell Disease"
+                  placeholder={
+                    isEs
+                      ? "p. ej., enfermedad de células falciformes"
+                      : "e.g. Sickle Cell Disease"
+                  }
                   onChange={(e) =>
                     setDraft({ ...draft, label: e.target.value })
                   }
@@ -95,8 +120,12 @@ export function ConditionLibraryModal({ onClose }: { onClose: () => void }) {
               )}
             </FormField>
             <FormField
-              label="Short name"
-              hint="Not saved yet: the worklist shows the full name"
+              label={isEs ? "Nombre corto" : "Short name"}
+              hint={
+                isEs
+                  ? "Aún no se guarda: la lista de trabajo muestra el nombre completo"
+                  : "Not saved yet: the worklist shows the full name"
+              }
             >
               {(field) => (
                 <Input
@@ -104,7 +133,7 @@ export function ConditionLibraryModal({ onClose }: { onClose: () => void }) {
                   value={draft.short}
                   maxLength={16}
                   disabled
-                  placeholder="e.g. SCD"
+                  placeholder={isEs ? "p. ej., SCD" : "e.g. SCD"}
                   onChange={(e) =>
                     setDraft({ ...draft, short: e.target.value })
                   }
@@ -114,8 +143,12 @@ export function ConditionLibraryModal({ onClose }: { onClose: () => void }) {
           </div>
           <div className="mt-stack-md flex flex-wrap items-end gap-inline-md">
             <FormField
-              label="Group"
-              hint="Not saved yet: added conditions are listed under Other"
+              label={isEs ? "Grupo" : "Group"}
+              hint={
+                isEs
+                  ? "Aún no se guarda: las afecciones agregadas aparecen en Otras"
+                  : "Not saved yet: added conditions are listed under Other"
+              }
               className="min-w-56 flex-1"
             >
               {(field) => (
@@ -131,7 +164,9 @@ export function ConditionLibraryModal({ onClose }: { onClose: () => void }) {
                   }
                 >
                   {CONDITION_GROUPS.map((group) => (
-                    <option key={group}>{group}</option>
+                    <option key={group} value={group}>
+                      {conditionText(group, isEs)}
+                    </option>
                   ))}
                 </Select>
               )}
@@ -147,15 +182,15 @@ export function ConditionLibraryModal({ onClose }: { onClose: () => void }) {
                 setTried(false);
               }}
             >
-              Add Condition
+              {isEs ? "Agregar afección" : "Add Condition"}
             </Button>
           </div>
         </section>
 
         <section>
           <SearchField
-            label="Search the library"
-            placeholder="Search conditions…"
+            label={isEs ? "Buscar en la biblioteca" : "Search the library"}
+            placeholder={isEs ? "Buscar afecciones…" : "Search conditions…"}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -166,7 +201,7 @@ export function ConditionLibraryModal({ onClose }: { onClose: () => void }) {
               return (
                 <div key={group}>
                   <h3 className="mb-stack-xs text-label-md text-fg-muted">
-                    {group}
+                    {conditionText(group, isEs)}
                   </h3>
                   <ul className="divide-y divide-line-subtle rounded-card-nested border border-line">
                     {items.map((condition) => (
@@ -182,22 +217,34 @@ export function ConditionLibraryModal({ onClose }: { onClose: () => void }) {
                                 : "text-body-sm text-fg-muted"
                             }
                           >
-                            {condition.label}
+                            {conditionText(condition.label, isEs)}
                           </span>
                           <span className="block text-caption text-fg-muted">
-                            {condition.short}
-                            {condition.secondary ? " · temporary" : ""}
+                            {conditionText(condition.short, isEs)}
+                            {condition.secondary
+                              ? isEs
+                                ? " · temporal"
+                                : " · temporary"
+                              : ""}
                           </span>
                         </span>
                         {condition.custom ? (
-                          <Badge tone="info">Added by clinic</Badge>
+                          <Badge tone="info">
+                            {isEs
+                              ? "Agregada por la clínica"
+                              : "Added by clinic"}
+                          </Badge>
                         ) : null}
                         <Switch
                           checked={condition.active}
                           onChange={(on: boolean) =>
                             store.setActive(condition, on)
                           }
-                          label={`Offer ${condition.label}`}
+                          label={
+                            isEs
+                              ? `Ofrecer ${conditionText(condition.label, true)}`
+                              : `Offer ${condition.label}`
+                          }
                         />
                         {condition.custom ? (
                           <Button
@@ -205,7 +252,11 @@ export function ConditionLibraryModal({ onClose }: { onClose: () => void }) {
                             variant="danger"
                             appearance="ghost"
                             iconOnly
-                            aria-label={`Delete ${condition.label}`}
+                            aria-label={
+                              isEs
+                                ? `Eliminar ${condition.label}`
+                                : `Delete ${condition.label}`
+                            }
                             onClick={() => store.remove(condition)}
                           >
                             <Trash2 aria-hidden="true" />

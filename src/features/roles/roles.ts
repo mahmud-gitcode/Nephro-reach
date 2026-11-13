@@ -28,6 +28,19 @@ export const LEVEL_NAMES: Record<Level, string> = {
   3: "Manage",
 };
 
+export const LEVEL_NAMES_ES: Record<Level, string> = {
+  0: "Ninguno",
+  1: "Ver",
+  2: "Editar",
+  3: "Administrar",
+};
+
+/** A level's name in the viewer's language (English by default). */
+export function levelName(level: number, isEs = false): string {
+  const names = isEs ? LEVEL_NAMES_ES : LEVEL_NAMES;
+  return names[level as Level] ?? String(level);
+}
+
 /** Plain names for the server's resources; an unknown key shows as sent. */
 export const RESOURCE_LABELS: Record<string, string> = {
   patients: "Patients and charts",
@@ -58,6 +71,36 @@ export const RESOURCE_LABELS: Record<string, string> = {
   campaigns: "Campaigns",
 };
 
+/** The Spanish names for the same resources. */
+export const RESOURCE_LABELS_ES: Record<string, string> = {
+  patients: "Pacientes y expedientes",
+  messages: "Mensajes de pacientes",
+  team_messages: "Mensajes del equipo",
+  labs: "Laboratorios",
+  ccm: "Gestión de atención crónica",
+  referrals: "Derivaciones",
+  vascular_access: "Acceso vascular",
+  check_ins: "Controles",
+  travel: "Viajes",
+  programs: "Programas y educación",
+  reports: "Informes",
+  billing: "Facturación",
+  activity: "Registro de actividad",
+  prescriptions: "Prescripciones de diálisis",
+  clinical_actions: "Acciones clínicas sensibles",
+  transport: "Transporte (traslados)",
+  settings: "Configuración del consultorio",
+  staff: "Administración del personal",
+  roles: "Roles y permisos",
+  organizations: "Organizaciones",
+  contracts: "Contratos",
+  plans: "Planes",
+  members: "Miembros",
+  support: "Soporte",
+  content: "Contenido",
+  campaigns: "Campañas",
+};
+
 /** Resources that carry the separate D4 permissions, called out in the
  *  editor so an administrator sees what they are granting. */
 export const SENSITIVE_RESOURCES: readonly string[] = [
@@ -67,8 +110,8 @@ export const SENSITIVE_RESOURCES: readonly string[] = [
   "roles",
 ];
 
-export function resourceLabel(resource: string): string {
-  return RESOURCE_LABELS[resource] ?? resource;
+export function resourceLabel(resource: string, isEs = false): string {
+  return (isEs ? RESOURCE_LABELS_ES : RESOURCE_LABELS)[resource] ?? resource;
 }
 
 /** A role map's level for a resource (absent = None). */

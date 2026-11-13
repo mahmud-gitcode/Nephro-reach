@@ -13,6 +13,7 @@ import {
   CourseClassKind,
 } from "@/features/education/courseLibrary";
 import { formatClock } from "@/features/education/vtt";
+import { useLanguage } from "@/context/LanguageContext";
 
 export const FIELD_CLASS =
   "w-full rounded-control border border-line bg-surface px-3.5 py-2.5 text-body-sm font-medium text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-primary-edge focus:ring-1 focus:ring-ring";
@@ -48,18 +49,26 @@ export function OverviewStep({
   draft: CourseClass;
   onChange: (patch: Partial<CourseClass>) => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   return (
     <>
-      <Field label="Class title (English)">
+      <Field
+        label={isEs ? "Título de la clase (inglés)" : "Class title (English)"}
+      >
         <input
           className={FIELD_CLASS}
           value={draft.titleEn}
           onChange={(event) => onChange({ titleEn: event.target.value })}
-          placeholder="e.g. Your Dialysis Access"
+          placeholder={
+            isEs ? "p. ej., Your Dialysis Access" : "e.g. Your Dialysis Access"
+          }
         />
       </Field>
 
-      <Field label="Class title (Spanish)">
+      <Field
+        label={isEs ? "Título de la clase (español)" : "Class title (Spanish)"}
+      >
         <input
           className={FIELD_CLASS}
           value={draft.titleEs}
@@ -67,17 +76,19 @@ export function OverviewStep({
         />
       </Field>
 
-      <Field label="Summary (English)">
+      <Field label={isEs ? "Resumen (inglés)" : "Summary (English)"}>
         <textarea
           rows={4}
           className={`${FIELD_CLASS} resize-none`}
           value={draft.summaryEn}
           onChange={(event) => onChange({ summaryEn: event.target.value })}
-          placeholder="What this class covers."
+          placeholder={
+            isEs ? "Qué cubre esta clase." : "What this class covers."
+          }
         />
       </Field>
 
-      <Field label="Summary (Spanish)">
+      <Field label={isEs ? "Resumen (español)" : "Summary (Spanish)"}>
         <textarea
           rows={4}
           className={`${FIELD_CLASS} resize-none`}
@@ -96,25 +107,33 @@ export function OverviewStep({
 const TYPE_OPTIONS: Array<{
   key: "media" | "reading" | "exam";
   label: string;
+  labelEs: string;
   detail: string;
+  detailEs: string;
   icon: React.ElementType;
 }> = [
   {
     key: "media",
     label: "Video / Audio",
+    labelEs: "Video / Audio",
     detail: "A recording with a transcript",
+    detailEs: "Una grabación con transcripción",
     icon: PlayCircle,
   },
   {
     key: "reading",
     label: "Reading",
+    labelEs: "Lectura",
     detail: "Written lesson, audio optional",
+    detailEs: "Lección escrita, audio opcional",
     icon: BookOpen,
   },
   {
     key: "exam",
     label: "Exam",
+    labelEs: "Examen",
     detail: "Scored questions, placed anywhere",
+    detailEs: "Preguntas calificadas, en cualquier posición",
     icon: ClipboardCheck,
   },
 ];
@@ -126,6 +145,8 @@ export function TypeStep({
   draft: CourseClass;
   onChange: (patch: Partial<CourseClass>) => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   return (
     <>
       <div className="grid gap-3 sm:grid-cols-3">
@@ -156,10 +177,10 @@ export function TypeStep({
               <span
                 className={`text-body-sm font-bold ${selected ? "text-fg-brand" : "text-fg-secondary"}`}
               >
-                {option.label}
+                {isEs ? option.labelEs : option.label}
               </span>
               <span className="text-caption leading-snug font-medium text-fg-muted">
-                {option.detail}
+                {isEs ? option.detailEs : option.detail}
               </span>
             </button>
           );
@@ -177,19 +198,27 @@ export function ReadingBody({
   draft: CourseClass;
   onChange: (patch: Partial<CourseClass>) => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   return (
     <>
-      <Field label="Reading text (English)">
+      <Field
+        label={isEs ? "Texto de lectura (inglés)" : "Reading text (English)"}
+      >
         <textarea
           rows={8}
           className={`${FIELD_CLASS} resize-y`}
           value={draft.bodyEn}
           onChange={(event) => onChange({ bodyEn: event.target.value })}
-          placeholder="Write the lesson here."
+          placeholder={
+            isEs ? "Escriba la lección aquí." : "Write the lesson here."
+          }
         />
       </Field>
 
-      <Field label="Reading text (Spanish)">
+      <Field
+        label={isEs ? "Texto de lectura (español)" : "Reading text (Spanish)"}
+      >
         <textarea
           rows={8}
           className={`${FIELD_CLASS} resize-y`}
@@ -215,6 +244,8 @@ export function MediaUpload({
   mediaSeconds: number | null;
   onPickFile: (file: File) => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const fileRef = useRef<HTMLInputElement>(null);
   const isReading = kind === "reading";
   const isVideo = kind === "video";
@@ -242,10 +273,14 @@ export function MediaUpload({
       >
         <Upload className="h-6 w-6 text-fg-subtle" />
         <span className="text-body-sm font-bold text-fg-secondary">
-          Upload {label} file
+          {isEs
+            ? `Subir archivo de ${isReading ? "audio" : "video o audio"}`
+            : `Upload ${label} file`}
         </span>
         <span className="text-caption font-medium text-fg-muted">
-          Reads the length and previews it here
+          {isEs
+            ? "Lee la duración y muestra una vista previa aquí"
+            : "Reads the length and previews it here"}
         </span>
       </button>
 

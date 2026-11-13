@@ -38,6 +38,7 @@ import {
   errorTitleFor,
 } from "@/lib/data/asyncState";
 import { downloadText, toCsv } from "@/lib/utils/download";
+import { useLanguage } from "@/context/LanguageContext";
 import { NewMessageModal } from "@/features/messaging/NewMessageModal";
 import {
   useOfficeMessaging,
@@ -49,7 +50,7 @@ import { useNow } from "@/lib/utils/useNow";
 import { dayKey, usDate } from "./ccm.data";
 import {
   nameOf,
-  noticeReasonLabel,
+  noticeReasonText,
   type CheckInNotice,
 } from "./checkInNotices.repository";
 import {
@@ -84,6 +85,14 @@ const NOTICES_PAGE = 10;
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
 export const NOT_AVAILABLE = "Not available yet";
+const NOT_AVAILABLE_ES = "Aún no disponible";
+
+function useIsEs() {
+  return useLanguage().language === "ES";
+}
+
+/** The error copy language for asyncState's helpers. */
+const lang = (isEs: boolean) => (isEs ? "es" : "en");
 
 function OverviewCard({
   label,
@@ -104,21 +113,27 @@ function OverviewCard({
 }
 
 function WeeklySummary({ today }: { today: string }) {
+  const isEs = useIsEs();
   const summary = useCheckInSummary(weekWindow(today));
   const rows = summary.data?.items ?? [];
   return (
     <Card as="section" padding="small">
       <div className="mb-stack-lg flex flex-col gap-inset-sm lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h2 className="text-heading-4 text-fg">Weekly Check-In Summary</h2>
+          <h2 className="text-heading-4 text-fg">
+            {isEs ? "Resumen semanal de registros" : "Weekly Check-In Summary"}
+          </h2>
           <p className="mt-stack-xs text-body-sm text-fg-muted">
-            Days with a check-in this week, for patients who share check-ins
-            with your office.
+            {isEs
+              ? "Días con un registro esta semana, de los pacientes que comparten sus registros con su consultorio."
+              : "Days with a check-in this week, for patients who share check-ins with your office."}
           </p>
         </div>
         <div className="flex flex-col gap-inline-md sm:flex-row">
           <p className="flex h-control-small items-center rounded-pill border border-line bg-surface-sunken px-control-x-small text-body-sm whitespace-nowrap text-fg">
-            This Week ({weekLabel(today)})
+            {isEs
+              ? `Esta semana (${weekLabel(today, isEs)})`
+              : `This Week (${weekLabel(today)})`}
           </p>
           {/* The server's summary has no program filter yet: the control
               stays, disabled, rather than filtering nothing. Its wrapper
@@ -127,13 +142,15 @@ function WeeklySummary({ today }: { today: string }) {
           <div className="shrink-0">
             <Select
               selectSize="small"
-              aria-label="Program"
+              aria-label={isEs ? "Programa" : "Program"}
               value="All Programs"
               disabled
-              title={NOT_AVAILABLE}
+              title={isEs ? NOT_AVAILABLE_ES : NOT_AVAILABLE}
               onChange={() => undefined}
             >
-              <option>All Programs</option>
+              <option value="All Programs">
+                {isEs ? "Todos los programas" : "All Programs"}
+              </option>
             </Select>
           </div>
         </div>
@@ -144,15 +161,22 @@ function WeeklySummary({ today }: { today: string }) {
         error={summary.error}
         errorTitle={errorTitleFor(
           summary.error,
-          "Check-ins could not be loaded",
+          isEs
+            ? "No se pudieron cargar los registros"
+            : "Check-ins could not be loaded",
+          lang(isEs),
         )}
-        errorMessage={errorMessageFor(summary.error, undefined)}
+        errorMessage={errorMessageFor(summary.error, undefined, lang(isEs))}
         onRetry={canRetry(summary.error) ? summary.refetch : undefined}
         isEmpty={rows.length === 0}
         empty={
           <EmptyState
             variant="bare"
-            title="No patient shares check-ins with your office yet"
+            title={
+              isEs
+                ? "Aún ningún paciente comparte sus registros con su consultorio"
+                : "No patient shares check-ins with your office yet"
+            }
           />
         }
         skeleton={<Skeleton height={160} />}
@@ -173,14 +197,21 @@ function WeeklySummary({ today }: { today: string }) {
                 </div>
                 <Progress
                   value={row.completionPercent}
-                  label={`${name}: check-in completion this week`}
+                  label={
+                    isEs
+                      ? `${name}: registros completados esta semana`
+                      : `${name}: check-in completion this week`
+                  }
                   size="small"
                   className="mt-stack-sm"
                 />
                 <p className="mt-stack-sm text-caption text-fg-muted tabular-nums">
-                  {row.checkInDays} / {row.daysInWindow} days
+                  {row.checkInDays} / {row.daysInWindow}{" "}
+                  {isEs ? "días" : "days"}
                   {row.lastCheckInDate
-                    ? ` · last ${usDate(row.lastCheckInDate)}`
+                    ? isEs
+                      ? ` · último ${usDate(row.lastCheckInDate)}`
+                      : ` · last ${usDate(row.lastCheckInDate)}`
                     : ""}
                 </p>
               </div>
@@ -202,6 +233,7 @@ function QuickActions({
 }) {
   /* Leaves NephroReach: ask first (client, 2026-10-07). */
   const share = useExternalShare();
+  const isEs = useIsEs();
   const actions: Array<{
     label: string;
     fullLabel: string;
@@ -210,14 +242,18 @@ function QuickActions({
     disabled?: boolean;
   }> = [
     {
-      label: "Send Reminder",
-      fullLabel: "Send a check-in reminder",
+      label: isEs ? "Enviar recordatorio" : "Send Reminder",
+      fullLabel: isEs
+        ? "Enviar un recordatorio de registro"
+        : "Send a check-in reminder",
       icon: BellRing,
       onClick: onRemind,
     },
     {
-      label: "Follow-Ups",
-      fullLabel: "View Members Needing Follow-Up",
+      label: isEs ? "Seguimientos" : "Follow-Ups",
+      fullLabel: isEs
+        ? "Ver miembros que necesitan seguimiento"
+        : "View Members Needing Follow-Up",
       icon: UserRoundSearch,
       onClick: () =>
         document
@@ -225,8 +261,10 @@ function QuickActions({
           ?.scrollIntoView({ behavior: "smooth", block: "start" }),
     },
     {
-      label: "Export Report",
-      fullLabel: "Export Check-In Report",
+      label: isEs ? "Exportar informe" : "Export Report",
+      fullLabel: isEs
+        ? "Exportar informe de registros"
+        : "Export Check-In Report",
       icon: Download,
       disabled: rows.length === 0,
       onClick: () =>
@@ -235,13 +273,23 @@ function QuickActions({
             downloadText(
               "check-in-notices.csv",
               toCsv([
-                ["Member", "MRN", "Reached the office", "Reasons", "Seen"],
+                isEs
+                  ? [
+                      "Miembro",
+                      "MRN",
+                      "Llegó al consultorio",
+                      "Motivos",
+                      "Visto",
+                    ]
+                  : ["Member", "MRN", "Reached the office", "Reasons", "Seen"],
                 ...rows.map((r) => [
                   nameOf(r),
                   r.mrn ?? "",
                   r.deliverOn,
-                  r.reasons.map(noticeReasonLabel).join("; "),
-                  r.seen ? "Yes" : "No",
+                  r.reasons
+                    .map((reason) => noticeReasonText(reason, isEs))
+                    .join("; "),
+                  r.seen ? (isEs ? "Sí" : "Yes") : "No",
                 ]),
               ]),
             ),
@@ -253,7 +301,9 @@ function QuickActions({
   return (
     <Card as="section" padding="small">
       {share.notice}
-      <h2 className="mb-stack-lg text-heading-4 text-fg">Quick Actions</h2>
+      <h2 className="mb-stack-lg text-heading-4 text-fg">
+        {isEs ? "Acciones rápidas" : "Quick Actions"}
+      </h2>
       <div className="grid grid-cols-1 gap-inline-md sm:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3">
         {actions.map((action) => (
           <Button
@@ -282,6 +332,8 @@ export function NoticeModal({
   notice: CheckInNotice;
   onClose: () => void;
 }) {
+  const isEs = useIsEs();
+  const yesNo = (value: boolean) => (value ? (isEs ? "Sí" : "Yes") : "No");
   const checkIn = useNoticeCheckIn(notice.id);
   const { mutate } = useMarkNoticeSeen();
   const loaded = checkIn.data !== undefined;
@@ -291,18 +343,27 @@ export function NoticeModal({
   const c = checkIn.data;
   const facts: Array<[string, string | null]> = c
     ? [
-        ["Check-in day", usDate(c.checkInDate)],
-        ["Feeling", c.feeling],
-        ["Treatment day", c.treatmentDay ? "Yes" : "No"],
-        ["Missed treatment", c.missedTreatment ? "Yes" : "No"],
-        ["Severity", c.severity],
-        ["Symptoms", c.symptoms.length ? c.symptoms.join(", ") : null],
-        ["Energy (1–5)", c.energyLevel === null ? null : String(c.energyLevel)],
-        ["Appetite", c.appetite],
-        ["Recovery", c.recoveryWindow],
-        ["Blood pressure", c.bloodPressure],
-        ["Weight", c.weight],
-        ["Urine output (ml)", c.urineOutputMl],
+        [isEs ? "Día del registro" : "Check-in day", usDate(c.checkInDate)],
+        [isEs ? "Cómo se siente" : "Feeling", c.feeling],
+        [isEs ? "Día de tratamiento" : "Treatment day", yesNo(c.treatmentDay)],
+        [
+          isEs ? "Tratamiento omitido" : "Missed treatment",
+          yesNo(c.missedTreatment),
+        ],
+        [isEs ? "Gravedad" : "Severity", c.severity],
+        [
+          isEs ? "Síntomas" : "Symptoms",
+          c.symptoms.length ? c.symptoms.join(", ") : null,
+        ],
+        [
+          isEs ? "Energía (1–5)" : "Energy (1–5)",
+          c.energyLevel === null ? null : String(c.energyLevel),
+        ],
+        [isEs ? "Apetito" : "Appetite", c.appetite],
+        [isEs ? "Recuperación" : "Recovery", c.recoveryWindow],
+        [isEs ? "Presión arterial" : "Blood pressure", c.bloodPressure],
+        [isEs ? "Peso" : "Weight", c.weight],
+        [isEs ? "Diuresis (ml)" : "Urine output (ml)", c.urineOutputMl],
       ]
     : [];
   return (
@@ -310,7 +371,7 @@ export function NoticeModal({
       open
       onClose={onClose}
       title={nameOf(notice)}
-      description={`${notice.reasons.map(noticeReasonLabel).join(" · ")} · ${usDate(notice.deliverOn)}`}
+      description={`${notice.reasons.map((reason) => noticeReasonText(reason, isEs)).join(" · ")} · ${usDate(notice.deliverOn)}`}
       size="small"
     >
       <AsyncSection
@@ -318,9 +379,12 @@ export function NoticeModal({
         error={checkIn.error}
         errorTitle={errorTitleFor(
           checkIn.error,
-          "The check-in could not be loaded",
+          isEs
+            ? "No se pudo cargar el registro"
+            : "The check-in could not be loaded",
+          lang(isEs),
         )}
-        errorMessage={errorMessageFor(checkIn.error, undefined)}
+        errorMessage={errorMessageFor(checkIn.error, undefined, lang(isEs))}
         onRetry={canRetry(checkIn.error) ? checkIn.refetch : undefined}
         skeleton={<Skeleton height={160} />}
       >
@@ -357,12 +421,17 @@ function RecentNotices({
   const lastPage =
     pagination && pagination.mode === "offset" ? pagination.totalPages : 1;
   const [open, setOpen] = useState<CheckInNotice | null>(null);
+  const isEs = useIsEs();
 
   return (
     <Card as="section" padding="small">
-      <h2 className="text-heading-4 text-fg">Check-In Notices</h2>
+      <h2 className="text-heading-4 text-fg">
+        {isEs ? "Avisos de registros" : "Check-In Notices"}
+      </h2>
       <p className="mt-stack-xs mb-stack-lg text-body-sm text-fg-muted">
-        Check-ins your members asked to reach your office, newest first.
+        {isEs
+          ? "Registros que sus miembros pidieron enviar a su consultorio, del más reciente al más antiguo."
+          : "Check-ins your members asked to reach your office, newest first."}
       </p>
 
       <AsyncSection
@@ -370,9 +439,12 @@ function RecentNotices({
         error={notices.error}
         errorTitle={errorTitleFor(
           notices.error,
-          "Check-in notices could not be loaded",
+          isEs
+            ? "No se pudieron cargar los avisos de registros"
+            : "Check-in notices could not be loaded",
+          lang(isEs),
         )}
-        errorMessage={errorMessageFor(notices.error, undefined)}
+        errorMessage={errorMessageFor(notices.error, undefined, lang(isEs))}
         onRetry={canRetry(notices.error) ? notices.refetch : undefined}
         skeleton={<Skeleton height={240} />}
       >
@@ -380,17 +452,25 @@ function RecentNotices({
           <Table minWidth={760}>
             <TableHead className="bg-surface-sunken">
               <TableRow>
-                <TableHeaderCell>Member</TableHeaderCell>
+                <TableHeaderCell>{isEs ? "Miembro" : "Member"}</TableHeaderCell>
                 <TableHeaderCell>MRN</TableHeaderCell>
-                <TableHeaderCell>Reached the Office</TableHeaderCell>
-                <TableHeaderCell>Reasons</TableHeaderCell>
-                <TableHeaderCell className="text-right">Action</TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Llegó al consultorio" : "Reached the Office"}
+                </TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Motivos" : "Reasons"}
+                </TableHeaderCell>
+                <TableHeaderCell className="text-right">
+                  {isEs ? "Acción" : "Action"}
+                </TableHeaderCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {rows.length === 0 ? (
                 <TableEmptyRow colSpan={5}>
-                  No check-in notices yet.
+                  {isEs
+                    ? "Aún no hay avisos de registros."
+                    : "No check-in notices yet."}
                 </TableEmptyRow>
               ) : (
                 rows.map((row) => {
@@ -406,7 +486,7 @@ function RecentNotices({
                         {name.text}
                         {row.seen ? null : (
                           <Badge tone="info" className="ml-inline-sm">
-                            New
+                            {isEs ? "Nuevo" : "New"}
                           </Badge>
                         )}
                       </TableCell>
@@ -420,7 +500,7 @@ function RecentNotices({
                         <span className="flex flex-wrap gap-inline-xs">
                           {row.reasons.map((reason) => (
                             <Badge key={reason} tone="warning">
-                              {noticeReasonLabel(reason)}
+                              {noticeReasonText(reason, isEs)}
                             </Badge>
                           ))}
                         </span>
@@ -432,8 +512,8 @@ function RecentNotices({
                           size="small"
                           iconOnly
                           className={tableIconButton}
-                          aria-label={`View — ${full}`}
-                          title="View check-in"
+                          aria-label={isEs ? `Ver — ${full}` : `View — ${full}`}
+                          title={isEs ? "Ver registro" : "View check-in"}
                           onClick={() => setOpen(row)}
                         >
                           <Eye aria-hidden="true" />
@@ -455,10 +535,12 @@ function RecentNotices({
               disabled={page <= 1}
               onClick={() => onPage(page - 1)}
             >
-              Previous
+              {isEs ? "Anterior" : "Previous"}
             </Button>
             <span className="text-caption text-fg-muted tabular-nums">
-              Page {page} of {lastPage}
+              {isEs
+                ? `Página ${page} de ${lastPage}`
+                : `Page ${page} of ${lastPage}`}
             </span>
             <Button
               size="small"
@@ -467,7 +549,7 @@ function RecentNotices({
               disabled={page >= lastPage}
               onClick={() => onPage(page + 1)}
             >
-              Next
+              {isEs ? "Siguiente" : "Next"}
             </Button>
           </div>
         ) : null}
@@ -491,28 +573,38 @@ function NotAvailablePanel({
   reason: string;
   id?: string;
 }) {
+  const isEs = useIsEs();
   return (
     <Card as="section" padding="small" id={id} className="scroll-mt-24">
       <h2 className="text-heading-4 text-fg">{title}</h2>
       <p className="mt-stack-xs mb-stack-lg text-body-sm text-fg-muted">
         {description}
       </p>
-      <EmptyState variant="bare" title={NOT_AVAILABLE} description={reason} />
+      <EmptyState
+        variant="bare"
+        title={isEs ? NOT_AVAILABLE_ES : NOT_AVAILABLE}
+        description={reason}
+      />
     </Card>
   );
 }
 
 function MemberFeedback() {
+  const isEs = useIsEs();
   return (
     <Card as="section" padding="small">
-      <h2 className="mb-stack-lg text-heading-4 text-fg">Member Feedback</h2>
+      <h2 className="mb-stack-lg text-heading-4 text-fg">
+        {isEs ? "Comentarios de los miembros" : "Member Feedback"}
+      </h2>
       <figure className="rounded-control bg-surface-sunken p-inset-md">
         <Quote
           aria-hidden="true"
           className="mb-stack-sm h-6 w-6 text-fg-subtle"
         />
         <p className="text-body-md text-fg-secondary">
-          Member feedback is not collected in NephroReach yet.
+          {isEs
+            ? "NephroReach aún no recopila comentarios de los miembros."
+            : "Member feedback is not collected in NephroReach yet."}
         </p>
       </figure>
     </Card>
@@ -520,6 +612,9 @@ function MemberFeedback() {
 }
 
 export default function ClinicCheckIns() {
+  const isEs = useIsEs();
+  const notAvailable = isEs ? NOT_AVAILABLE_ES : NOT_AVAILABLE;
+  const couldNotLoad = isEs ? "No se pudo cargar" : "Could not be loaded";
   const now = useNow();
   const today = dayKey(now);
   const [noticesPage, setNoticesPage] = useState(1);
@@ -549,41 +644,55 @@ export default function ClinicCheckIns() {
 
       <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2">
         <OverviewCard
-          label="Check-Ins This Week"
+          label={isEs ? "Registros esta semana" : "Check-Ins This Week"}
           value={shownValue(totals?.checkIns ?? null, summary)}
           note={
-            summary.error ? "Could not be loaded" : "Patients sharing check-ins"
+            summary.error
+              ? couldNotLoad
+              : isEs
+                ? "Pacientes que comparten registros"
+                : "Patients sharing check-ins"
           }
           icon={<ClipboardCheckSolid />}
           tone="brand"
         />
         <OverviewCard
-          label="Completion Rate"
+          label={isEs ? "Tasa de finalización" : "Completion Rate"}
           value={totals && !summary.error ? `${totals.percent}%` : "—"}
           note={
-            totals ? `${totals.checkIns} of ${totals.expected} days` : undefined
+            totals
+              ? isEs
+                ? `${totals.checkIns} de ${totals.expected} días`
+                : `${totals.checkIns} of ${totals.expected} days`
+              : undefined
           }
           icon={<CheckCircleSolid />}
           tone="success"
         />
         <OverviewCard
-          label="Missed Check-Ins"
+          label={isEs ? "Registros omitidos" : "Missed Check-Ins"}
           value="—"
-          note={NOT_AVAILABLE}
+          note={notAvailable}
           icon={<XCircleSolid />}
           tone="warning"
         />
         <OverviewCard
-          label="At Risk Members"
+          label={isEs ? "Miembros en riesgo" : "At Risk Members"}
           value="—"
-          note={NOT_AVAILABLE}
+          note={notAvailable}
           icon={<AlertTriangleSolid />}
           tone="danger"
         />
         <OverviewCard
-          label="New Check-In Notices"
+          label={isEs ? "Avisos de registros nuevos" : "New Check-In Notices"}
           value={shownValue(unseenTotal, unseen)}
-          note={unseen.error ? "Could not be loaded" : "Not yet opened"}
+          note={
+            unseen.error
+              ? couldNotLoad
+              : isEs
+                ? "Aún sin abrir"
+                : "Not yet opened"
+          }
           icon={<UsersSolid />}
           tone="accent"
         />
@@ -602,22 +711,50 @@ export default function ClinicCheckIns() {
             onRemind={() => setReminding(true)}
           />
           <NotAvailablePanel
-            title="Check-In Completion Trend"
-            description="Weekly completion rate over the last 8 weeks."
-            reason="A weekly trend is not provided by the server yet."
+            title={
+              isEs
+                ? "Tendencia de finalización de registros"
+                : "Check-In Completion Trend"
+            }
+            description={
+              isEs
+                ? "Tasa de finalización semanal de las últimas 8 semanas."
+                : "Weekly completion rate over the last 8 weeks."
+            }
+            reason={
+              isEs
+                ? "El servidor aún no proporciona una tendencia semanal."
+                : "A weekly trend is not provided by the server yet."
+            }
           />
           <NotAvailablePanel
             id="follow-ups"
-            title="Members Needing Follow-Up"
-            description="Members who missed a check-in or reported concerning symptoms."
-            reason="Follow-up rules are waiting on a decision. Open the check-in notices to see what members asked you to follow up."
+            title={
+              isEs
+                ? "Miembros que necesitan seguimiento"
+                : "Members Needing Follow-Up"
+            }
+            description={
+              isEs
+                ? "Miembros que omitieron un registro o informaron síntomas preocupantes."
+                : "Members who missed a check-in or reported concerning symptoms."
+            }
+            reason={
+              isEs
+                ? "Las reglas de seguimiento están pendientes de una decisión. Abra los avisos de registros para ver qué seguimiento le pidieron los miembros."
+                : "Follow-up rules are waiting on a decision. Open the check-in notices to see what members asked you to follow up."
+            }
           />
         </div>
       </section>
       {reminding ? (
         <NewMessageModal
-          title="Send a Check-In Reminder"
-          recipientLabel="Patient"
+          title={
+            isEs
+              ? "Enviar un recordatorio de registro"
+              : "Send a Check-In Reminder"
+          }
+          recipientLabel={isEs ? "Paciente" : "Patient"}
           recipients={recipients.patients.map((patient) => ({
             value: patient.patientId,
             label: patient.mrn
@@ -627,16 +764,22 @@ export default function ClinicCheckIns() {
           recipientsPending={recipients.isPending}
           recipientsError={
             recipients.error
-              ? saveErrorText(recipients.error, "en")
+              ? saveErrorText(recipients.error, lang(isEs))
               : recipients.isPending || recipients.patients.length > 0
                 ? undefined
-                : "No patients are on this office's roster yet."
+                : isEs
+                  ? "Aún no hay pacientes en la lista de este consultorio."
+                  : "No patients are on this office's roster yet."
           }
-          initialBody="Hi, this is your care team. We haven't seen your check-in this week. Please take a minute to complete it in NephroReach, or reply here if anything is wrong."
+          initialBody={
+            isEs
+              ? "Hola, le escribe su equipo de atención. No hemos visto su registro de esta semana. Tómese un minuto para completarlo en NephroReach, o responda aquí si algo no está bien."
+              : "Hi, this is your care team. We haven't seen your check-in this week. Please take a minute to complete it in NephroReach, or reply here if anything is wrong."
+          }
           sending={messaging.start.isPending}
           sendError={
             messaging.start.error
-              ? saveErrorText(messaging.start.error, "en")
+              ? saveErrorText(messaging.start.error, lang(isEs))
               : undefined
           }
           onSend={(patientId, body) =>

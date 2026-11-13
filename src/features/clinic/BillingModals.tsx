@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Printer } from "lucide-react";
 import { Alert, Button, Modal, Select } from "@/components/ui";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   CHANGE_DETAIL,
   CHANGE_TOPICS,
@@ -10,7 +11,13 @@ import {
   renewalLabel,
   type ChangeTopic,
 } from "./billing.actions";
-import { formatCents, formatDay, type Contract } from "./billing.data";
+import {
+  billingCycleText,
+  contractStatusText,
+  formatCents,
+  formatDay,
+  type Contract,
+} from "./billing.data";
 import { actionErrorText } from "./officeContext";
 
 /* ==========================================================================
@@ -42,19 +49,36 @@ export function ContractDocumentModal({
   clinicName: string;
   contract: Contract;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const terms: [string, string][] = [
-    ["Contract number", contract.number],
+    [isEs ? "Número de contrato" : "Contract number", contract.number],
     ["Plan", contract.type],
-    ["Status", contract.status],
-    ["Office", clinicName || "—"],
-    ["Primary contact", contract.primaryContact],
-    ["Term start", formatDay(contract.start)],
-    ["Term end", formatDay(contract.end)],
-    ["Patient slots", String(contract.patientsAllowed)],
-    ["Billing cycle", contract.billingCycle],
-    ["Monthly fee", formatCents(contract.monthlyFeeCents)],
-    ["Auto-renew", contract.autoRenew ? "Yes" : "No"],
-    ["Renewal choice", renewalLabel(contract.renewalChoice)],
+    [isEs ? "Estado" : "Status", contractStatusText(contract.status, isEs)],
+    [isEs ? "Consultorio" : "Office", clinicName || "—"],
+    [isEs ? "Contacto principal" : "Primary contact", contract.primaryContact],
+    [isEs ? "Inicio del plazo" : "Term start", formatDay(contract.start, isEs)],
+    [isEs ? "Fin del plazo" : "Term end", formatDay(contract.end, isEs)],
+    [
+      isEs ? "Cupos de pacientes" : "Patient slots",
+      String(contract.patientsAllowed),
+    ],
+    [
+      isEs ? "Ciclo de facturación" : "Billing cycle",
+      billingCycleText(contract.billingCycle, isEs),
+    ],
+    [
+      isEs ? "Tarifa mensual" : "Monthly fee",
+      formatCents(contract.monthlyFeeCents),
+    ],
+    [
+      isEs ? "Renovación automática" : "Auto-renew",
+      contract.autoRenew ? (isEs ? "Sí" : "Yes") : "No",
+    ],
+    [
+      isEs ? "Opción de renovación" : "Renewal choice",
+      renewalLabel(contract.renewalChoice, isEs),
+    ],
   ];
 
   return (
@@ -62,17 +86,17 @@ export function ContractDocumentModal({
       open={open}
       onClose={onClose}
       size="wide"
-      title="Contract Document"
+      title={isEs ? "Documento del contrato" : "Contract Document"}
       description={`${contract.number} — ${contract.type}`}
       footer={
         <>
           <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
-            Close
+            {isEs ? "Cerrar" : "Close"}
           </Button>
           {/* Printing is the browser's own. */}
           <Button onClick={() => window.print()}>
             <Printer aria-hidden="true" />
-            <span>Print</span>
+            <span>{isEs ? "Imprimir" : "Print"}</span>
           </Button>
         </>
       }
@@ -90,8 +114,9 @@ export function ContractDocumentModal({
       </dl>
 
       <p className="mt-stack-lg text-body-sm text-fg-muted">
-        This is the summary of record held by NephroReach. The signed agreement
-        is held by your partner success manager.
+        {isEs
+          ? "Este es el resumen oficial que conserva NephroReach. El acuerdo firmado lo conserva su gerente de éxito de socios."
+          : "This is the summary of record held by NephroReach. The signed agreement is held by your partner success manager."}
       </p>
     </Modal>
   );
@@ -115,10 +140,12 @@ export function RequestChangeModal({
   saving?: boolean;
   error?: unknown;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const [topic, setTopic] = useState<ChangeTopic>("seats");
   const [detail, setDetail] = useState("");
 
-  const invalid = changeRequestError(detail);
+  const invalid = changeRequestError(detail, isEs);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -130,19 +157,23 @@ export function RequestChangeModal({
     <Modal
       open={open}
       onClose={onClose}
-      title="Request a Change"
-      description="An office cannot edit its own contract. This goes to NephroReach."
+      title={isEs ? "Solicitar un cambio" : "Request a Change"}
+      description={
+        isEs
+          ? "Un consultorio no puede editar su propio contrato. Esta solicitud se envía a NephroReach."
+          : "An office cannot edit its own contract. This goes to NephroReach."
+      }
       footer={
         <>
           <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
-            Cancel
+            {isEs ? "Cancelar" : "Cancel"}
           </Button>
           <Button
             type="submit"
             form="change-request-form"
             disabled={!!invalid || saving}
           >
-            Send Request
+            {isEs ? "Enviar solicitud" : "Send Request"}
           </Button>
         </>
       }
@@ -152,13 +183,15 @@ export function RequestChangeModal({
         onSubmit={handleSubmit}
         className="space-y-stack-md"
       >
-        {error ? <Alert tone="danger">{actionErrorText(error)}</Alert> : null}
+        {error ? (
+          <Alert tone="danger">{actionErrorText(error, isEs)}</Alert>
+        ) : null}
         <div className="space-y-1.5">
           <label
             htmlFor="change-topic"
             className="block text-label-md text-fg-secondary"
           >
-            What should change
+            {isEs ? "Qué debe cambiar" : "What should change"}
           </label>
           <Select
             id="change-topic"
@@ -168,7 +201,7 @@ export function RequestChangeModal({
           >
             {CHANGE_TOPICS.map((option) => (
               <option key={option.value} value={option.value}>
-                {option.label}
+                {isEs ? option.labelEs : option.label}
               </option>
             ))}
           </Select>
@@ -179,7 +212,7 @@ export function RequestChangeModal({
             htmlFor="change-detail"
             className="block text-label-md text-fg-secondary"
           >
-            Details
+            {isEs ? "Detalles" : "Details"}
           </label>
           <textarea
             id="change-detail"
@@ -187,7 +220,11 @@ export function RequestChangeModal({
             maxLength={CHANGE_DETAIL.max}
             value={detail}
             onChange={(event) => setDetail(event.target.value)}
-            placeholder="We need 20 more patient slots from November."
+            placeholder={
+              isEs
+                ? "Necesitamos 20 cupos de pacientes más a partir de noviembre."
+                : "We need 20 more patient slots from November."
+            }
             className={`${field} resize-none`}
           />
         </div>

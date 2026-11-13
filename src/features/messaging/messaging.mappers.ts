@@ -50,7 +50,7 @@ const ORGANIZATION_ROLE: Record<string, { en: string; es: string }> = {
 export function organizationRole(type: string, isEs = false): string {
   const role = ORGANIZATION_ROLE[type];
   if (role) return isEs ? role.es : role.en;
-  return isEs ? "Tu equipo de atención" : "Your Care Team";
+  return isEs ? "Su equipo de atención" : "Your Care Team";
 }
 
 export function officeContact(
@@ -68,7 +68,11 @@ export function officeContact(
 const asCategory = (value: string): MessageCategory =>
   value === "appointments" ? "appointments" : "care-team";
 
-export function fromApiMessage(message: ApiMessage): Message {
+export function fromApiMessage(
+  message: ApiMessage,
+  /** The member inbox in Spanish; the office's is English only. */
+  isEs = false,
+): Message {
   return {
     id: message.id,
     author: message.side === "MEMBER" ? "member" : "clinic",
@@ -80,7 +84,9 @@ export function fromApiMessage(message: ApiMessage): Message {
       ? {
           attachment: {
             id: message.attachment.id,
-            name: message.attachment.name ?? "Attachment",
+            name:
+              message.attachment.name ??
+              (isEs ? "Archivo adjunto" : "Attachment"),
             sizeLabel:
               message.attachment.size === null
                 ? ""
@@ -106,7 +112,7 @@ export function fromMemberConversation(
     flagged: false,
     archived: row.archived,
     messages: [],
-    last: row.lastMessage ? fromApiMessage(row.lastMessage) : null,
+    last: row.lastMessage ? fromApiMessage(row.lastMessage, isEs) : null,
     patientId: row.patientId,
     organizationId: row.organizationId,
     subject: row.subject,
@@ -117,6 +123,7 @@ export function fromMemberConversation(
 export function fromOfficeConversation(
   row: ApiOfficeConversation,
   office: CareTeamContact,
+  isEs = false,
 ): Conversation {
   return {
     id: row.id,
@@ -128,7 +135,7 @@ export function fromOfficeConversation(
     archived: row.archived,
     patient: row.mrn ? { mrn: row.mrn } : {},
     messages: [],
-    last: row.lastMessage ? fromApiMessage(row.lastMessage) : null,
+    last: row.lastMessage ? fromApiMessage(row.lastMessage, isEs) : null,
     patientId: row.patientId,
     subject: row.subject,
   };

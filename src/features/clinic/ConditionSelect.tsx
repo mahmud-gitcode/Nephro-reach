@@ -4,8 +4,10 @@ import React, { useId, useMemo, useState } from "react";
 import { Check, ChevronDown, Plus } from "lucide-react";
 import { Button, Chip, Input } from "@/components/ui";
 import { cn } from "@/lib/utils/cn";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   CONDITION_GROUPS,
+  conditionText,
   resolveCondition,
   sortedConditions,
   type CcmCondition,
@@ -39,13 +41,15 @@ export function ConditionSelect({
   invalid?: boolean;
   describedBy?: string;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const panelId = useId();
   const [open, setOpen] = useState(false);
   const [other, setOther] = useState("");
 
   const selected = useMemo(
-    () => sortedConditions(value, library),
-    [value, library],
+    () => sortedConditions(value, library, isEs),
+    [value, library, isEs],
   );
   const chosenIds = new Set(
     selected.filter((c) => !c.other).map((c) => library[c.rank]?.id),
@@ -97,8 +101,12 @@ export function ConditionSelect({
       >
         <span className={selected.length > 0 ? "text-fg" : "text-fg-muted"}>
           {selected.length > 0
-            ? `${selected.length} condition${selected.length === 1 ? "" : "s"} selected`
-            : "Select conditions"}
+            ? isEs
+              ? `${selected.length} ${selected.length === 1 ? "afección seleccionada" : "afecciones seleccionadas"}`
+              : `${selected.length} condition${selected.length === 1 ? "" : "s"} selected`
+            : isEs
+              ? "Seleccione las afecciones"
+              : "Select conditions"}
         </span>
         <ChevronDown
           aria-hidden="true"
@@ -111,7 +119,7 @@ export function ConditionSelect({
 
       {selected.length > 0 ? (
         <ul
-          aria-label="Selected conditions"
+          aria-label={isEs ? "Afecciones seleccionadas" : "Selected conditions"}
           className="flex flex-wrap gap-inline-sm"
         >
           {selected.map((condition) => (
@@ -125,7 +133,7 @@ export function ConditionSelect({
                 aria-label={condition.label}
               >
                 {condition.short}
-                {condition.other ? " (Other)" : ""}
+                {condition.other ? (isEs ? " (Otra)" : " (Other)") : ""}
               </Chip>
             </li>
           ))}
@@ -144,7 +152,7 @@ export function ConditionSelect({
               return (
                 <fieldset key={group}>
                   <legend className="mb-stack-xs text-label-sm text-fg-muted">
-                    {group}
+                    {conditionText(group, isEs)}
                   </legend>
                   <ul className="space-y-0.5">
                     {items.map((condition) => {
@@ -165,16 +173,17 @@ export function ConditionSelect({
                               className="size-4 shrink-0 cursor-pointer accent-brand-600"
                             />
                             <span className="min-w-0 flex-1">
-                              {condition.label}
+                              {conditionText(condition.label, isEs)}
                               {condition.secondary ? (
                                 <span className="block text-caption text-fg-muted">
-                                  Temporary — does not count toward CCM
-                                  eligibility
+                                  {isEs
+                                    ? "Temporal — no cuenta para la elegibilidad de CCM"
+                                    : "Temporary — does not count toward CCM eligibility"}
                                 </span>
                               ) : null}
                             </span>
                             <span className="shrink-0 text-caption text-fg-muted">
-                              {condition.short}
+                              {conditionText(condition.short, isEs)}
                             </span>
                           </label>
                         </li>
@@ -188,12 +197,16 @@ export function ConditionSelect({
 
           {/* "Other": anything the library does not hold, kept as typed. */}
           <div className="mt-stack-md border-t border-line pt-stack-md">
-            <p className="mb-stack-xs text-label-sm text-fg-muted">Other</p>
+            <p className="mb-stack-xs text-label-sm text-fg-muted">
+              {isEs ? "Otra" : "Other"}
+            </p>
             <div className="flex gap-inline-sm">
               <Input
                 inputSize="small"
-                aria-label="Other condition"
-                placeholder="Type a diagnosis"
+                aria-label={isEs ? "Otra afección" : "Other condition"}
+                placeholder={
+                  isEs ? "Escriba un diagnóstico" : "Type a diagnosis"
+                }
                 value={other}
                 onChange={(e) => setOther(e.target.value)}
                 onKeyDown={(e) => {
@@ -212,7 +225,7 @@ export function ConditionSelect({
                 onClick={() => addOther(other)}
                 leadingIcon={<Plus aria-hidden="true" />}
               >
-                Add
+                {isEs ? "Agregar" : "Add"}
               </Button>
             </div>
           </div>
@@ -223,7 +236,7 @@ export function ConditionSelect({
               onClick={() => setOpen(false)}
               leadingIcon={<Check aria-hidden="true" />}
             >
-              Done
+              {isEs ? "Listo" : "Done"}
             </Button>
           </div>
         </div>

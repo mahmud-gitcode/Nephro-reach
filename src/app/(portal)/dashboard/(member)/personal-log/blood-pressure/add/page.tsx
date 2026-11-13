@@ -48,7 +48,7 @@ import {
 
 /** Why a save failed, when the server or the upload said why. */
 function uploadErrorOrServer(error: unknown, isEs: boolean): string | null {
-  if (error instanceof UploadError) return uploadErrorMessage(error);
+  if (error instanceof UploadError) return uploadErrorMessage(error, isEs);
   if (isApiError(error) && error.status === 403)
     return String(errorMessageFor(error, "", isEs ? "es" : "en"));
   if (isApiError(error) && error.status === 400 && error.messages.length > 0)
@@ -68,8 +68,8 @@ const ERROR_EN: Record<BpError, string> = {
 };
 
 const ERROR_ES: Record<BpError, string> = {
-  date: "Elige una fecha de hoy o antes",
-  time: "Escribe la hora de la lectura",
+  date: "Elija una fecha de hoy o anterior",
+  time: "Escriba la hora de la lectura",
   systolic: "Sistólica entre 60 y 260",
   diastolic: "Diastólica entre 30 y 160",
   pulse: "Pulso entre 30 y 220",
@@ -422,6 +422,9 @@ function ReadingForm({ reading }: { reading?: BpReading }) {
 function AddOrEdit() {
   const id = useSearchParams().get("id");
   const bp = useBloodPressure();
+  const { language } = useLanguage();
+  const isEs = language === "ES";
+  const lang = isEs ? "es" : "en";
   if (id && bp.isPending)
     return <Skeleton height={640} className="rounded-card" />;
   /* Editing needs the reading; a failed read is an error, never a blank
@@ -435,9 +438,12 @@ function AddOrEdit() {
         onRetry={canRetry(bp.error) ? bp.refetch : undefined}
         errorTitle={errorTitleFor(
           bp.error,
-          "Your readings could not be loaded",
+          isEs
+            ? "No se pudieron cargar sus lecturas"
+            : "Your readings could not be loaded",
+          lang,
         )}
-        errorMessage={errorMessageFor(bp.error, undefined)}
+        errorMessage={errorMessageFor(bp.error, undefined, lang)}
       >
         {null}
       </AsyncSection>
@@ -448,7 +454,9 @@ function AddOrEdit() {
   if (id && !reading)
     return (
       <Alert tone="warning">
-        That reading was not found in your recent log.
+        {isEs
+          ? "Esa lectura no se encontró en su registro reciente."
+          : "That reading was not found in your recent log."}
       </Alert>
     );
   return <ReadingForm key={reading?.id ?? "new"} reading={reading} />;

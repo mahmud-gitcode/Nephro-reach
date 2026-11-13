@@ -237,12 +237,18 @@ export default function MyRidesPage() {
             {deleteError ? (
               <Alert
                 tone="danger"
-                title="That contact was not removed"
+                title={
+                  lang === "es"
+                    ? "No se eliminó ese contacto"
+                    : "That contact was not removed"
+                }
                 onDismiss={() => remove.reset()}
               >
                 {deleteError instanceof Error
                   ? deleteError.message
-                  : "Please try again."}
+                  : lang === "es"
+                    ? "Inténtelo de nuevo."
+                    : "Please try again."}
               </Alert>
             ) : null}
 
@@ -253,7 +259,9 @@ export default function MyRidesPage() {
               onRetry={canRetry(error) ? refetch : undefined}
               errorTitle={errorTitleFor(
                 error,
-                "Your saved rides did not load",
+                lang === "es"
+                  ? "No se cargaron sus traslados guardados"
+                  : "Your saved rides did not load",
                 lang,
               )}
               errorMessage={errorMessageFor(error, undefined, lang)}
@@ -262,7 +270,11 @@ export default function MyRidesPage() {
                 <EmptyState
                   icon={<Car />}
                   title={t("myRides.noRides")}
-                  description="Save phone numbers for your primary driver, family member, or medical transit service for fast, one-tap calling."
+                  description={
+                    language === "ES"
+                      ? "Guarde los números de teléfono de su conductor principal, un familiar o un servicio de transporte médico para llamar rápidamente con un solo toque."
+                      : "Save phone numbers for your primary driver, family member, or medical transit service for fast, one-tap calling."
+                  }
                   action={
                     <Button onClick={openAdd} leadingIcon={<Plus />}>
                       {t("myRides.addFirstRide")}
@@ -321,10 +333,15 @@ export default function MyRidesPage() {
             className="space-y-stack-lg"
           >
             {saveError ? (
-              <Alert tone="danger" title="Not saved">
+              <Alert
+                tone="danger"
+                title={lang === "es" ? "No se guardó" : "Not saved"}
+              >
                 {saveError instanceof Error
                   ? saveError.message
-                  : "Please try again."}
+                  : lang === "es"
+                    ? "Inténtelo de nuevo."
+                    : "Please try again."}
               </Alert>
             ) : null}
 
@@ -359,7 +376,7 @@ export default function MyRidesPage() {
 
             <FormField
               label={t("myRides.relationshipLabel")}
-              optionalLabel="optional"
+              optionalLabel={language === "ES" ? "opcional" : "optional"}
             >
               {(props) => (
                 <Input

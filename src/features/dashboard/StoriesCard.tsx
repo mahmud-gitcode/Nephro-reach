@@ -13,6 +13,7 @@ import {
 import VideoPlayerModal from "@/features/testimonials/VideoPlayerModal";
 import SubmitTestimonialModal from "@/features/testimonials/SubmitTestimonialModal";
 import { collabText } from "@/features/community/collabText";
+import { memberRoleLabel } from "@/features/testimonials/testimonials.rules";
 
 /* ==========================================================================
    From Fear to Hope — a small card, not a section
@@ -34,9 +35,11 @@ const PREVIEW = 2;
 function StoryTile({
   story,
   onPlay,
+  isEs = false,
 }: {
   story: Testimonial;
   onPlay: () => void;
+  isEs?: boolean;
 }) {
   return (
     <button
@@ -67,7 +70,7 @@ function StoryTile({
           {story.title}
         </span>
         <span className="block text-caption text-fg-muted">
-          {story.memberName} · {story.role}
+          {story.memberName} · {memberRoleLabel(story.role, isEs)}
           {story.duration ? ` · ${story.duration}` : ""}
         </span>
       </span>
@@ -221,6 +224,7 @@ export function StoriesCard({ isEs }: { isEs: boolean }) {
                 key={story.id}
                 story={story}
                 onPlay={() => setPlaying(story)}
+                isEs={isEs}
               />
             ))}
           </div>

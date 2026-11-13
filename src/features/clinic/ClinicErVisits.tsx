@@ -9,6 +9,7 @@ import {
   errorTitleFor,
 } from "@/lib/data/asyncState";
 import { useNow } from "@/lib/utils/useNow";
+import { useLanguage } from "@/context/LanguageContext";
 import { erVisitSummary, nameOf } from "./checkInNotices.repository";
 import {
   last90Days,
@@ -30,20 +31,23 @@ import { checkInKeys, useErSummary } from "./useOfficeCheckIns";
    ========================================================================== */
 
 const MONTHS = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(" ");
+const MONTHS_ES = "ene feb mar abr may jun jul ago sep oct nov dic".split(" ");
 
-function monthName(month: string) {
-  return MONTHS[Number(month.slice(5, 7)) - 1] ?? month;
+function monthName(month: string, isEs = false) {
+  return (isEs ? MONTHS_ES : MONTHS)[Number(month.slice(5, 7)) - 1] ?? month;
 }
 
-function weekOf(day: string) {
+function weekOf(day: string, isEs = false) {
   const [y, m, d] = day.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("en-US", {
+  return new Date(y, m - 1, d).toLocaleDateString(isEs ? "es-US" : "en-US", {
     month: "short",
     day: "numeric",
   });
 }
 
 export function ClinicErVisits() {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const now = useNow();
   const { orgId } = useOfficeOrg();
   const windows = monthWindows(now, 6);
@@ -80,8 +84,14 @@ export function ClinicErVisits() {
     <AsyncSection
       pending={pending}
       error={error}
-      errorTitle={errorTitleFor(error, "ER visits could not be loaded")}
-      errorMessage={errorMessageFor(error, undefined)}
+      errorTitle={errorTitleFor(
+        error,
+        isEs
+          ? "No se pudieron cargar las visitas a urgencias"
+          : "ER visits could not be loaded",
+        isEs ? "es" : "en",
+      )}
+      errorMessage={errorMessageFor(error, undefined, isEs ? "es" : "en")}
       onRetry={canRetry(error) ? retry : undefined}
       skeleton={<Skeleton height={260} className="rounded-card" />}
     >
@@ -90,23 +100,29 @@ export function ClinicErVisits() {
           <div className="mb-stack-md flex flex-wrap items-start justify-between gap-inline-md">
             <div>
               <h2 className="text-heading-4 text-fg">
-                Self-Reported ER Visits
+                {isEs
+                  ? "Visitas a urgencias informadas por los pacientes"
+                  : "Self-Reported ER Visits"}
               </h2>
               <p className="mt-stack-xs text-body-sm text-fg-muted">
-                Weeks your patients answered yes in their weekly check-in
-                question. Only patients who share ER visits with your office are
-                counted.
+                {isEs
+                  ? "Semanas en que sus pacientes respondieron que sí en la pregunta de su registro semanal. Solo se cuentan los pacientes que comparten sus visitas a urgencias con su consultorio."
+                  : "Weeks your patients answered yes in their weekly check-in question. Only patients who share ER visits with your office are counted."}
               </p>
             </div>
             <dl className="flex gap-inline-lg">
               <div>
-                <dt className="text-caption text-fg-muted">This month</dt>
+                <dt className="text-caption text-fg-muted">
+                  {isEs ? "Este mes" : "This month"}
+                </dt>
                 <dd className="text-metric-sm text-fg tabular-nums">
                   {thisMonth ?? "—"}
                 </dd>
               </div>
               <div>
-                <dt className="text-caption text-fg-muted">Last month</dt>
+                <dt className="text-caption text-fg-muted">
+                  {isEs ? "Mes pasado" : "Last month"}
+                </dt>
                 <dd className="text-metric-sm text-fg tabular-nums">
                   {lastMonth ?? "—"}
                 </dd>
@@ -122,7 +138,9 @@ export function ClinicErVisits() {
                       ? `▲ ${change}`
                       : change < 0
                         ? `▼ ${-change}`
-                        : "No change"}
+                        : isEs
+                          ? "Sin cambios"
+                          : "No change"}
                   </Badge>
                 </div>
               ) : null}
@@ -130,34 +148,43 @@ export function ClinicErVisits() {
           </div>
           {!partial ? (
             <BarChart
-              label="Weeks with a self-reported ER visit per month, all sharing patients"
+              label={
+                isEs
+                  ? "Semanas con una visita a urgencias informada por mes, todos los pacientes que comparten"
+                  : "Weeks with a self-reported ER visit per month, all sharing patients"
+              }
               bars={windows.map((w, i) => ({
-                label: monthName(w.month),
+                label: monthName(w.month, isEs),
                 value: totals[i] ?? 0,
               }))}
               yMax={Math.max(4, ...totals.map((t) => t ?? 0))}
               yTicks={3}
-              unit="visits"
+              unit={isEs ? "visitas" : "visits"}
               height={200}
             />
           ) : (
             <p className="text-body-sm text-fg-muted">
-              Monthly totals are shown for up to 150 sharing patients. Your
-              office has more, so totals are not shown here.
+              {isEs
+                ? "Los totales mensuales se muestran para un máximo de 150 pacientes que comparten. Su consultorio tiene más, por lo que aquí no se muestran totales."
+                : "Monthly totals are shown for up to 150 sharing patients. Your office has more, so totals are not shown here."}
             </p>
           )}
         </Card>
 
         <Card as="section" padding="small" className="h-full">
           <h2 className="text-heading-4 text-fg">
-            Patients With Self-Reported ER Visits
+            {isEs
+              ? "Pacientes con visitas a urgencias informadas"
+              : "Patients With Self-Reported ER Visits"}
           </h2>
           <p className="mt-stack-xs mb-stack-md text-body-sm text-fg-muted">
-            Last 90 days
+            {isEs ? "Últimos 90 días" : "Last 90 days"}
           </p>
           {recent.length === 0 ? (
             <p className="text-body-sm text-fg-muted">
-              No self-reported ER visits.
+              {isEs
+                ? "No hay visitas a urgencias informadas."
+                : "No self-reported ER visits."}
             </p>
           ) : (
             <ul className="divide-y divide-line-subtle">
@@ -173,12 +200,14 @@ export function ClinicErVisits() {
                     <span className="block text-caption text-fg-muted">
                       {patient.mrn ? `MRN ${patient.mrn} · ` : ""}
                       {patient.lastErVisitWeekOf
-                        ? `last week of ${weekOf(patient.lastErVisitWeekOf)}`
+                        ? isEs
+                          ? `última: semana del ${weekOf(patient.lastErVisitWeekOf, true)}`
+                          : `last week of ${weekOf(patient.lastErVisitWeekOf)}`
                         : ""}
                     </span>
                   </span>
                   <Badge tone="warning">
-                    {patient.erVisitWeeks} visit
+                    {patient.erVisitWeeks} {isEs ? "visita" : "visit"}
                     {patient.erVisitWeeks === 1 ? "" : "s"}
                   </Badge>
                 </li>

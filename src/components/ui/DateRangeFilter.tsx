@@ -3,6 +3,7 @@
 import React from "react";
 import { Calendar, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { useLanguageCode } from "@/context/LanguageContext";
 
 /* ==========================================================================
    DateRangeFilter
@@ -43,9 +44,11 @@ export function DateRangeFilter({
   periods,
   onPeriodChange,
   onRangeClick,
-  periodLabel = "Period",
+  periodLabel: periodLabelProp,
   className,
 }: DateRangeFilterProps) {
+  const isEs = useLanguageCode() === "ES";
+  const periodLabel = periodLabelProp ?? (isEs ? "Período" : "Period");
   const range = (
     <>
       <Calendar

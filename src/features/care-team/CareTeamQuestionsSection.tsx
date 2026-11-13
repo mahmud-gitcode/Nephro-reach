@@ -311,10 +311,10 @@ export default function CareTeamQuestionsSection({
           }
           onDismiss={dismissSaveError}
         >
-          {saveError instanceof Error
-            ? saveError.message
-            : language === "ES"
-              ? "Inténtelo de nuevo."
+          {language === "ES"
+            ? saveErrorText(saveError, "es")
+            : saveError instanceof Error
+              ? saveError.message
               : "Please try again."}
         </Alert>
       ) : null}
@@ -431,7 +431,7 @@ export default function CareTeamQuestionsSection({
                 {/* Answer Row */}
                 <div className="flex items-start gap-2.5 border-t border-line-subtle pt-3">
                   <span className="shrink-0 text-body-sm font-bold text-fg-secondary select-none">
-                    Ans:
+                    {language === "ES" ? "Resp.:" : "Ans:"}
                   </span>
                   {q.answer && q.answer.trim().length > 0 ? (
                     <p className="flex-1 text-body-sm leading-relaxed font-normal text-fg-muted">

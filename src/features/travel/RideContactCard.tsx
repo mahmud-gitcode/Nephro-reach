@@ -70,7 +70,7 @@ export function RideContactCard({
                 size="small"
                 iconOnly
                 onClick={onDelete}
-                aria-label={`Remove ${ride.name}`}
+                aria-label={`${language === "ES" ? "Quitar" : "Remove"} ${ride.name}`}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>

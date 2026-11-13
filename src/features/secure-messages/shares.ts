@@ -115,10 +115,23 @@ export const SHARE_LOG_LABEL: Record<ShareEvent, string> = {
   revoked: "Sharing stopped",
 };
 
+export const SHARE_LOG_LABEL_ES: Record<ShareEvent, string> = {
+  shared: "Compartido",
+  notified: "Enlace seguro enviado al destinatario (sin contenido en el aviso)",
+  opened: "Enlace abierto",
+  verified: "El destinatario se verificó y lo vio",
+  downloaded: "Archivo adjunto descargado",
+  "info-requested": "Solicitó información sobre NephroReach",
+  replied: "El destinatario respondió",
+  revoked: "Se dejó de compartir",
+};
+
 /** The event's label, or the server's word for one this build does not
  *  know yet. */
-export function eventLabel(event: string): string {
-  return SHARE_LOG_LABEL[event as ShareEvent] ?? event;
+export function eventLabel(event: string, isEs = false): string {
+  return (
+    (isEs ? SHARE_LOG_LABEL_ES : SHARE_LOG_LABEL)[event as ShareEvent] ?? event
+  );
 }
 
 /** The file to upload for an attachment: the picked File, or one decoded

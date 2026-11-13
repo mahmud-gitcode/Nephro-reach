@@ -22,13 +22,14 @@ import {
   TableRow,
 } from "@/components/ui";
 import { canRetry, isNotShared } from "@/lib/data/asyncState";
+import { useLanguage } from "@/context/LanguageContext";
 import { useCanLevel } from "@/features/staff/useStaffAccounts";
 import {
-  SUBSCRIPTION_LABEL,
   SkeletonTable,
   SubscriptionStatusBadge,
   actionErrorText,
   readErrorCopy,
+  subscriptionLabel,
 } from "@/features/billing/consoleUi";
 import { formatCents, formatInstant } from "@/features/billing/money";
 import type {
@@ -90,6 +91,8 @@ function SummaryCard({
 }
 
 function SummaryCards() {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const overview = usePlatformOverview();
   const count = (key: string) =>
     overview.data?.memberSubscriptionsByStatus.find((row) => row.key === key)
@@ -99,40 +102,46 @@ function SummaryCards() {
       <Skeleton height={28} width={64} />
     ) : overview.error ? (
       <span className="text-body-sm text-fg-muted">
-        {isNotShared(overview.error) ? "No access" : "Not loaded"}
+        {isNotShared(overview.error)
+          ? isEs
+            ? "Sin acceso"
+            : "No access"
+          : isEs
+            ? "No se cargó"
+            : "Not loaded"}
       </span>
     ) : (
-      n().toLocaleString()
+      n().toLocaleString(isEs ? "es-US" : undefined)
     );
 
   return (
     <section
-      aria-label="Member totals"
+      aria-label={isEs ? "Totales de miembros" : "Member totals"}
       className="grid grid-cols-1 gap-inset-lg sm:grid-cols-2 xl:grid-cols-4"
     >
       <SummaryCard
-        title="Total Members"
+        title={isEs ? "Total de miembros" : "Total Members"}
         value={value(() => overview.data!.members)}
         icon={Users}
         tone="bg-cat-6-soft"
         iconTone="text-cat-6"
       />
       <SummaryCard
-        title="Active"
+        title={isEs ? "Activos" : "Active"}
         value={value(() => count("ACTIVE"))}
         icon={Radar}
         tone="bg-cat-4-soft"
         iconTone="text-cat-4"
       />
       <SummaryCard
-        title="Trial"
+        title={isEs ? "En prueba" : "Trial"}
         value={value(() => count("TRIALING"))}
         icon={Bell}
         tone="bg-cat-3-soft"
         iconTone="text-cat-3"
       />
       <SummaryCard
-        title="Past Due or Cancelled"
+        title={isEs ? "Vencidos o cancelados" : "Past Due or Cancelled"}
         value={value(() => count("PAST_DUE") + count("CANCELLED"))}
         icon={Radar}
         tone="bg-cat-1-soft"
@@ -148,6 +157,8 @@ const initialsOf = (row: ApiMemberSubscription) =>
   `${row.patient.firstName.charAt(0)}${row.patient.lastName.charAt(0)}`.toUpperCase();
 
 function MembersTable() {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [viewing, setViewing] = useState<ApiMemberSubscription | null>(null);
@@ -165,15 +176,23 @@ function MembersTable() {
       ),
     );
   }, [query, subs.rows]);
-  const copy = readErrorCopy(subs.error, "The members did not load");
+  const copy = readErrorCopy(
+    subs.error,
+    isEs ? "Los miembros no se cargaron" : "The members did not load",
+    isEs,
+  );
 
   return (
     <Card as="section" padding="small">
       <div className="mb-stack-md flex flex-col gap-inline-lg sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-heading-4 text-fg">Members</h1>
+        <h1 className="text-heading-4 text-fg">
+          {isEs ? "Miembros" : "Members"}
+        </h1>
         <div className="relative w-full sm:w-[277px]">
           <label htmlFor="member-search" className="sr-only">
-            Search members on this page
+            {isEs
+              ? "Buscar miembros en esta página"
+              : "Search members on this page"}
           </label>
           <Search
             aria-hidden="true"
@@ -184,7 +203,9 @@ function MembersTable() {
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search this page..."
+            placeholder={
+              isEs ? "Buscar en esta página..." : "Search this page..."
+            }
             className="pl-10"
           />
         </div>
@@ -201,13 +222,14 @@ function MembersTable() {
           <Table minWidth={900}>
             <TableHead className="bg-surface-sunken">
               <TableRow>
-                {["Member", "Subscriptions", "Status", "Joined"].map(
-                  (header) => (
-                    <TableHeaderCell key={header}>{header}</TableHeaderCell>
-                  ),
-                )}
+                {(isEs
+                  ? ["Miembro", "Suscripciones", "Estado", "Fecha de ingreso"]
+                  : ["Member", "Subscriptions", "Status", "Joined"]
+                ).map((header) => (
+                  <TableHeaderCell key={header}>{header}</TableHeaderCell>
+                ))}
                 <TableHeaderCell className="text-center">
-                  Actions
+                  {isEs ? "Acciones" : "Actions"}
                 </TableHeaderCell>
               </TableRow>
             </TableHead>
@@ -216,8 +238,12 @@ function MembersTable() {
                 <TableEmptyRow colSpan={5}>
                   <p className="text-body-sm text-fg-muted">
                     {subs.rows.length === 0
-                      ? "No member subscriptions yet."
-                      : "No member on this page matches this search."}
+                      ? isEs
+                        ? "Aún no hay suscripciones de miembros."
+                        : "No member subscriptions yet."
+                      : isEs
+                        ? "Ningún miembro de esta página coincide con esta búsqueda."
+                        : "No member on this page matches this search."}
                   </p>
                 </TableEmptyRow>
               ) : null}
@@ -239,13 +265,13 @@ function MembersTable() {
                   <TableCell>
                     {planName(row.plan.id, row.plan.code)}
                     <span className="block text-caption text-fg-muted">
-                      {formatCents(row.plan.priceCents)}
+                      {formatCents(row.plan.priceCents, undefined, isEs)}
                     </span>
                   </TableCell>
                   <TableCell>
                     <SubscriptionStatusBadge status={row.status} />
                   </TableCell>
-                  <TableCell>{formatInstant(row.startedAt)}</TableCell>
+                  <TableCell>{formatInstant(row.startedAt, isEs)}</TableCell>
                   <TableCell className="text-center">
                     <Button
                       onClick={() => setViewing(row)}
@@ -253,7 +279,9 @@ function MembersTable() {
                       appearance="stroke"
                       size="small"
                       className="px-inset-xs"
-                      aria-label={`View ${nameOf(row)}`}
+                      aria-label={
+                        isEs ? `Ver ${nameOf(row)}` : `View ${nameOf(row)}`
+                      }
                     >
                       <Eye aria-hidden="true" />
                     </Button>
@@ -274,7 +302,9 @@ function MembersTable() {
           summary={
             subs.total === null
               ? undefined
-              : `Page ${page} · ${subs.total} member subscription${subs.total === 1 ? "" : "s"}${query.trim() ? " · search covers this page only" : ""}`
+              : isEs
+                ? `Página ${page} · ${subs.total} ${subs.total === 1 ? "suscripción de miembro" : "suscripciones de miembros"}${query.trim() ? " · la búsqueda cubre solo esta página" : ""}`
+                : `Page ${page} · ${subs.total} member subscription${subs.total === 1 ? "" : "s"}${query.trim() ? " · search covers this page only" : ""}`
           }
         />
       </AsyncSection>
@@ -321,6 +351,8 @@ function MemberModal({
   onSave: (planId: string, status: MemberSubscriptionStatus) => void;
   onClose: () => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const canWrite = useCanLevel("members", 2);
   const [planId, setPlanId] = useState(row.plan.id);
   const [status, setStatus] = useState<MemberSubscriptionStatus>(row.status);
@@ -331,7 +363,7 @@ function MemberModal({
       open
       onClose={onClose}
       title={nameOf(row)}
-      description="Member subscription"
+      description={isEs ? "Suscripción del miembro" : "Member subscription"}
       footer={
         canWrite ? (
           <>
@@ -341,14 +373,14 @@ function MemberModal({
               onClick={onClose}
               disabled={saving}
             >
-              Close
+              {isEs ? "Cerrar" : "Close"}
             </Button>
             <Button
               loading={saving}
               disabled={!changed}
               onClick={() => onSave(planId, status)}
             >
-              Save Subscription
+              {isEs ? "Guardar suscripción" : "Save Subscription"}
             </Button>
           </>
         ) : undefined
@@ -356,17 +388,36 @@ function MemberModal({
     >
       <div className="space-y-stack-lg">
         {error ? (
-          <Alert tone="danger" title="The subscription was not changed">
-            {actionErrorText(error)}
+          <Alert
+            tone="danger"
+            title={
+              isEs
+                ? "La suscripción no se cambió"
+                : "The subscription was not changed"
+            }
+          >
+            {actionErrorText(error, isEs)}
           </Alert>
         ) : null}
         <dl className="grid grid-cols-1 gap-stack-md sm:grid-cols-2">
           {[
-            ["Subscription", planName],
-            ["Price", formatCents(row.plan.priceCents)],
-            ["Joined", formatInstant(row.startedAt)],
-            ["Trial ends", formatInstant(row.trialEndsAt)],
-            ["Current period ends", formatInstant(row.currentPeriodEnd)],
+            [isEs ? "Suscripción" : "Subscription", planName],
+            [
+              isEs ? "Precio" : "Price",
+              formatCents(row.plan.priceCents, undefined, isEs),
+            ],
+            [
+              isEs ? "Fecha de ingreso" : "Joined",
+              formatInstant(row.startedAt, isEs),
+            ],
+            [
+              isEs ? "Fin de la prueba" : "Trial ends",
+              formatInstant(row.trialEndsAt, isEs),
+            ],
+            [
+              isEs ? "Fin del período actual" : "Current period ends",
+              formatInstant(row.currentPeriodEnd, isEs),
+            ],
           ].map(([label, value]) => (
             <div key={label}>
               <dt className="text-caption text-fg-muted">{label}</dt>
@@ -374,7 +425,9 @@ function MemberModal({
             </div>
           ))}
           <div>
-            <dt className="text-caption text-fg-muted">Status</dt>
+            <dt className="text-caption text-fg-muted">
+              {isEs ? "Estado" : "Status"}
+            </dt>
             <dd>
               <SubscriptionStatusBadge status={row.status} />
             </dd>
@@ -400,7 +453,7 @@ function MemberModal({
                 </Select>
               )}
             </FormField>
-            <FormField label="Status">
+            <FormField label={isEs ? "Estado" : "Status"}>
               {(field) => (
                 <Select
                   {...field}
@@ -411,7 +464,7 @@ function MemberModal({
                 >
                   {STATUSES.map((s) => (
                     <option key={s} value={s}>
-                      {SUBSCRIPTION_LABEL[s]}
+                      {subscriptionLabel(s, isEs)}
                     </option>
                   ))}
                 </Select>

@@ -368,15 +368,18 @@ function MyClassroomDetailsContent() {
   );
 }
 
+function LoadingFallback() {
+  const { language } = useLanguage();
+  return (
+    <div className="p-inset-xl text-center text-body-md text-fg-muted">
+      {language === "ES" ? "Cargando clases..." : "Loading classes..."}
+    </div>
+  );
+}
+
 export default function MyClassroomDetailsPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="p-inset-xl text-center text-body-md text-fg-muted">
-          Loading classes...
-        </div>
-      }
-    >
+    <Suspense fallback={<LoadingFallback />}>
       <MyClassroomDetailsContent />
     </Suspense>
   );

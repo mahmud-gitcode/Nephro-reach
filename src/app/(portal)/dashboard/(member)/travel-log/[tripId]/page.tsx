@@ -221,7 +221,7 @@ export default function TripDetailPage() {
                   }
                 >
                   {isEs
-                    ? `Pidió a su centro de diálisis que cancele este viaje el ${new Date(trip.cancelRequestedAt).toLocaleString("es-ES")}. Su centro lo gestionará con el otro centro, o le dirá si debe llamar usted.`
+                    ? `Pidió a su centro de diálisis que cancele este viaje el ${new Date(trip.cancelRequestedAt).toLocaleString("es-US")}. Su centro lo gestionará con el otro centro, o le dirá si debe llamar usted.`
                     : `You asked your dialysis center to cancel this trip on ${new Date(trip.cancelRequestedAt).toLocaleString("en-US")}. They will handle it with the other unit, or tell you if you need to call yourself.`}
                 </Alert>
               ) : null}

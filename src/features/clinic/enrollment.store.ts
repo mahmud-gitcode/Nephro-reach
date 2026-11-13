@@ -61,15 +61,26 @@ export type EnrollmentErrors = Partial<Record<keyof EnrollmentDraft, string>>;
 export function validateEnrollment(
   draft: EnrollmentDraft,
   programs: readonly string[] = ENROLL_PROGRAMS,
+  isEs = false,
 ): EnrollmentErrors {
   const errors: EnrollmentErrors = {};
-  if (!draft.name.trim()) errors.name = "Enter the patient's full name.";
-  else if (!splitName(draft.name)) errors.name = "Enter first and last name.";
+  if (!draft.name.trim())
+    errors.name = isEs
+      ? "Ingrese el nombre completo del paciente."
+      : "Enter the patient's full name.";
+  else if (!splitName(draft.name))
+    errors.name = isEs
+      ? "Ingrese el nombre y el apellido."
+      : "Enter first and last name.";
   const mrn = draft.mrn.trim();
-  if (!/^\d{6}$/.test(mrn)) errors.mrn = "An MRN is 6 digits.";
-  if (!programs.includes(draft.program)) errors.program = "Choose a program.";
+  if (!/^\d{6}$/.test(mrn))
+    errors.mrn = isEs ? "El MRN tiene 6 dígitos." : "An MRN is 6 digits.";
+  if (!programs.includes(draft.program))
+    errors.program = isEs ? "Elija un programa." : "Choose a program.";
   if (!ENROLL_SOURCES.includes(draft.source as EnrollmentSource))
-    errors.source = "Choose how they were referred.";
+    errors.source = isEs
+      ? "Elija cómo fue derivado el paciente."
+      : "Choose how they were referred.";
   return errors;
 }
 
@@ -80,17 +91,33 @@ export function formatUsDate(date: Date): string {
 }
 
 /** The copy for a server refusal, by its code (spec 019 §4). */
-export function enrollErrorText(code: string | null, fallback: string): string {
+export function enrollErrorText(
+  code: string | null,
+  fallback: string,
+  isEs = false,
+): string {
   switch (code) {
     case "patients.mrn_taken":
-      return "A patient with this MRN is already enrolled.";
+      return isEs
+        ? "Ya hay un paciente inscrito con este MRN."
+        : "A patient with this MRN is already enrolled.";
     case "patients.seats_full":
-      return "All contract seats are filled.";
+      return isEs
+        ? "Todos los cupos del contrato están ocupados."
+        : "All contract seats are filled.";
     case "patients.patient_already_enrolled":
     case "education.enrollment_exists":
-      return "This patient is already enrolled.";
+      return isEs
+        ? "Este paciente ya está inscrito."
+        : "This patient is already enrolled.";
     case "patients.concurrent_change":
-      return "Someone else changed this at the same time. Try again.";
+      return isEs
+        ? "Otra persona cambió esto al mismo tiempo. Inténtelo de nuevo."
+        : "Someone else changed this at the same time. Try again.";
+    case "client.first_and_last_name":
+      return isEs ? "Ingrese el nombre y el apellido." : fallback;
+    case "client.program_unknown":
+      return isEs ? "Elija un programa." : fallback;
     default:
       return fallback;
   }

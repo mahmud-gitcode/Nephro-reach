@@ -662,7 +662,7 @@ export function MessageLog({
                           ? `${copy.caregiver} · `
                           : ""}
                         {message.automated ? copy.automated : ""}
-                        {rules.timeLabel(message.sentAt)}
+                        {rules.timeLabel(message.sentAt, isEs)}
                       </p>
                     </div>
                   </li>

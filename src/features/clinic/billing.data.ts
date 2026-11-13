@@ -92,6 +92,21 @@ const CONTRACT_STATUS: Record<string, ContractStatus> = {
   ENDED: "Ended",
 };
 
+const CONTRACT_STATUS_ES: Record<ContractStatus, string> = {
+  Active: "Activo",
+  Pending: "Pendiente",
+  "Expiring Soon": "Vence pronto",
+  Ended: "Finalizado",
+};
+
+/** A contract status as shown on screen. */
+export function contractStatusText(
+  status: ContractStatus,
+  isEs = false,
+): string {
+  return isEs ? CONTRACT_STATUS_ES[status] : status;
+}
+
 /** An unknown status shows as "Ended" (never as active). */
 export function contractStatusLabel(status: string): ContractStatus {
   return CONTRACT_STATUS[status] ?? "Ended";
@@ -110,6 +125,17 @@ const INVOICE_STATUS: Record<string, InvoiceStatus> = {
   DUE: "Due",
   OVERDUE: "Overdue",
 };
+
+const INVOICE_STATUS_ES: Record<InvoiceStatus, string> = {
+  Paid: "Pagada",
+  Due: "Por pagar",
+  Overdue: "Vencida",
+};
+
+/** An invoice status as shown on screen. */
+export function invoiceStatusText(status: InvoiceStatus, isEs = false): string {
+  return isEs ? INVOICE_STATUS_ES[status] : status;
+}
 
 /** An unknown status shows as "Due" (never as paid). */
 export function invoiceStatusLabel(status: string): InvoiceStatus {
@@ -176,6 +202,21 @@ function cycleLabel(cycle: string): string {
   return cycle ? cycle.charAt(0).toUpperCase() + cycle.slice(1) : "—";
 }
 
+const CYCLE_ES: Record<string, string> = {
+  monthly: "Mensual",
+  quarterly: "Trimestral",
+  annual: "Anual",
+  annually: "Anual",
+  yearly: "Anual",
+};
+
+/** A contract's billing cycle label ("Monthly") as shown on screen; an
+ *  unknown cycle shows as given. */
+export function billingCycleText(label: string, isEs = false): string {
+  if (!isEs) return label;
+  return CYCLE_ES[label.toLowerCase()] ?? label;
+}
+
 /* -------------------------------------------------------------- formatting */
 
 /** `new Date("2026-01-01")` is UTC midnight — Dec 31 in the Americas. */
@@ -184,8 +225,8 @@ export function localDate(iso: string): Date {
   return new Date(year, month - 1, day);
 }
 
-export function formatDate(date: Date): string {
-  return date.toLocaleDateString("en-US", {
+export function formatDate(date: Date, isEs = false): string {
+  return date.toLocaleDateString(isEs ? "es-US" : "en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -193,8 +234,11 @@ export function formatDate(date: Date): string {
 }
 
 /** "2026-01-01" -> "Jan 1, 2026"; "—" for none. */
-export function formatDay(day: string | null | undefined): string {
-  return day ? formatDate(localDate(day)) : "—";
+export function formatDay(
+  day: string | null | undefined,
+  isEs = false,
+): string {
+  return day ? formatDate(localDate(day), isEs) : "—";
 }
 
 /** Cents in, money out with the cents: 199500 -> "$1,995.00". */

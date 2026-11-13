@@ -39,7 +39,7 @@ const OTHER = { icon: FileText, en: "Lesson", es: "Lección" };
 
 function longDay(iso: string, isEs: boolean): string {
   const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString(isEs ? "es-ES" : "en-US", {
+  return new Date(y, m - 1, d).toLocaleDateString(isEs ? "es-US" : "en-US", {
     month: "long",
     day: "numeric",
   });

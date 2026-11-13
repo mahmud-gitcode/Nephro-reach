@@ -48,6 +48,7 @@ export default function SubmitTestimonialModal({
   onSubmitted,
 }: SubmitTestimonialModalProps) {
   const language = useLanguageCode();
+  const isEs = language === "ES";
   const memberName = user?.name ?? "";
   /* A role outside the four is "Other", typed in (client, 2026-10-12). */
   const [role, setRole] = useState("Dialysis Member");
@@ -101,7 +102,7 @@ export default function SubmitTestimonialModal({
     probe.preload = "metadata";
     probe.onloadedmetadata = () => {
       const seconds = probe.duration;
-      const tooLong = videoLengthError(seconds);
+      const tooLong = videoLengthError(seconds, isEs);
 
       /* The check lands after the file is already showing, because reading
          metadata is asynchronous. Clearing it here is what stops a member
@@ -125,11 +126,20 @@ export default function SubmitTestimonialModal({
   const saveError = submit.error;
 
   const roles = [
-    { key: "Dialysis Member", label: "Dialysis Member" },
-    { key: "Family Caregiver", label: "Family Caregiver" },
-    { key: "CKD Learner", label: "CKD Learner" },
-    { key: "Transplant Warrior", label: "Transplant Warrior" },
-    { key: "Other", label: "Other" },
+    {
+      key: "Dialysis Member",
+      label: isEs ? "Miembro en Diálisis" : "Dialysis Member",
+    },
+    {
+      key: "Family Caregiver",
+      label: isEs ? "Cuidador Familiar" : "Family Caregiver",
+    },
+    { key: "CKD Learner", label: isEs ? "Estudiante de ERC" : "CKD Learner" },
+    {
+      key: "Transplant Warrior",
+      label: isEs ? "Guerrero del Trasplante" : "Transplant Warrior",
+    },
+    { key: "Other", label: isEs ? "Otro" : "Other" },
   ];
 
   /* "Thank You for Sharing!" is shown only once the submission is stored.
@@ -165,12 +175,20 @@ export default function SubmitTestimonialModal({
       open={open}
       onClose={onClose}
       size="wide"
-      title="Submit 'From Fear to Hope' Testimonial"
-      description="Share your video journey to inspire others. Admin will review and approve your submission before publishing."
+      title={
+        isEs
+          ? "Enviar testimonio 'Del Miedo a la Esperanza'"
+          : "Submit 'From Fear to Hope' Testimonial"
+      }
+      description={
+        isEs
+          ? "Comparta su experiencia en video para inspirar a otros. El administrador revisará y aprobará su envío antes de publicarlo."
+          : "Share your video journey to inspire others. Admin will review and approve your submission before publishing."
+      }
       footer={
         <>
           <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
-            Cancel
+            {isEs ? "Cancelar" : "Cancel"}
           </Button>
           <Button
             onClick={handleSubmit}
@@ -178,13 +196,24 @@ export default function SubmitTestimonialModal({
             loading={isSaving}
             leadingIcon={<Video className="size-4" />}
           >
-            {submitted ? "Submitted" : "Submit for Admin Review"}
+            {submitted
+              ? isEs
+                ? "Enviado"
+                : "Submitted"
+              : isEs
+                ? "Enviar para revisión del administrador"
+                : "Submit for Admin Review"}
           </Button>
         </>
       }
     >
       {saveError ? (
-        <Alert tone="danger" title="Your testimonial was not sent">
+        <Alert
+          tone="danger"
+          title={
+            isEs ? "Su testimonio no se envió" : "Your testimonial was not sent"
+          }
+        >
           {uploadErrorMessage(saveError)}
         </Alert>
       ) : null}
@@ -194,38 +223,53 @@ export default function SubmitTestimonialModal({
           <div className="bg-success-soft text-success-fg mx-auto flex size-14 items-center justify-center rounded-full">
             <CheckCircle2 className="size-8" />
           </div>
-          <h3 className="text-heading-4 text-fg">Thank You for Sharing!</h3>
-          <p className="mx-auto max-w-md text-body-md text-fg-muted">
-            Your video testimonial has been submitted to the admin team for
-            review. Once approved, it will be published in the &ldquo;From Fear
-            to Hope&rdquo; community section.
-          </p>
+          <h3 className="text-heading-4 text-fg">
+            {isEs ? "¡Gracias por compartir!" : "Thank You for Sharing!"}
+          </h3>
+          {isEs ? (
+            <p className="mx-auto max-w-md text-body-md text-fg-muted">
+              Su testimonio en video se envió al equipo de administración para
+              su revisión. Una vez aprobado, se publicará en la sección
+              comunitaria &ldquo;Del Miedo a la Esperanza&rdquo;.
+            </p>
+          ) : (
+            <p className="mx-auto max-w-md text-body-md text-fg-muted">
+              Your video testimonial has been submitted to the admin team for
+              review. Once approved, it will be published in the &ldquo;From
+              Fear to Hope&rdquo; community section.
+            </p>
+          )}
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Alert draws its own icon; the second one inside it was a
               duplicate. */}
           <Alert tone="info" className="text-body-sm">
-            Video testimonials are reviewed by the NephroReach team before they
-            are published, to protect community privacy and keep the quality up.
+            {isEs
+              ? "El equipo de NephroReach revisa los testimonios en video antes de publicarlos, para proteger la privacidad de la comunidad y mantener la calidad."
+              : "Video testimonials are reviewed by the NephroReach team before they are published, to protect community privacy and keep the quality up."}
           </Alert>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField
-              label="Your Name"
+              label={isEs ? "Su nombre" : "Your Name"}
               hint={collabText(language, "testimonials.nameHint")}
             >
               {(props) => <Input {...props} value={memberName} readOnly />}
             </FormField>
 
-            <FormField label="Story Title">
+            <FormField label={isEs ? "Título de la historia" : "Story Title"}>
               {(props) => (
                 <Input
                   {...props}
                   maxLength={120}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="From Fear to Hope: My Journey"
+                  placeholder={
+                    isEs
+                      ? "Del Miedo a la Esperanza: Mi camino"
+                      : "From Fear to Hope: My Journey"
+                  }
                   required
                 />
               )}
@@ -234,9 +278,11 @@ export default function SubmitTestimonialModal({
 
           <div>
             <p className="mb-1.5 block text-label-md font-medium text-fg">
-              Your Perspective / Role
+              {isEs ? "Su perspectiva / función" : "Your Perspective / Role"}
             </p>
-            <ChipGroup label="Select your role">
+            <ChipGroup
+              label={isEs ? "Seleccione su función" : "Select your role"}
+            >
               {roles.map((r) => (
                 <Chip
                   key={r.key}
@@ -248,13 +294,20 @@ export default function SubmitTestimonialModal({
               ))}
             </ChipGroup>
             {role === "Other" ? (
-              <FormField label="Your role" className="mt-stack-sm">
+              <FormField
+                label={isEs ? "Su función" : "Your role"}
+                className="mt-stack-sm"
+              >
                 {(field) => (
                   <Input
                     {...field}
                     value={otherRole}
                     onChange={(e) => setOtherRole(e.target.value)}
-                    placeholder="e.g. Kidney donor, nurse, friend"
+                    placeholder={
+                      isEs
+                        ? "p. ej., donante de riñón, enfermero, amigo"
+                        : "e.g. Kidney donor, nurse, friend"
+                    }
                     maxLength={40}
                   />
                 )}
@@ -263,11 +316,17 @@ export default function SubmitTestimonialModal({
           </div>
 
           <FormField
-            label="Your video"
+            label={isEs ? "Su video" : "Your video"}
             required
-            hint={`An MP4 or MOV from your phone or computer. Up to ${formatClock(
-              MAX_TESTIMONIAL_SECONDS,
-            )} long and ${MAX_TESTIMONIAL_MB} MB.`}
+            hint={
+              isEs
+                ? `Un MP4 o MOV de su teléfono o computadora. Hasta ${formatClock(
+                    MAX_TESTIMONIAL_SECONDS,
+                  )} de duración y ${MAX_TESTIMONIAL_MB} MB.`
+                : `An MP4 or MOV from your phone or computer. Up to ${formatClock(
+                    MAX_TESTIMONIAL_SECONDS,
+                  )} long and ${MAX_TESTIMONIAL_MB} MB.`
+            }
             error={videoError ?? undefined}
           >
             {() => (
@@ -296,14 +355,20 @@ export default function SubmitTestimonialModal({
                   />
                   <span className="text-label-md text-fg-secondary">
                     {videoName
-                      ? "Choose a different video"
-                      : "Upload your video"}
+                      ? isEs
+                        ? "Elegir otro video"
+                        : "Choose a different video"
+                      : isEs
+                        ? "Subir su video"
+                        : "Upload your video"}
                   </span>
                   {/* Said before recording, not after. A member who learns
                     the limit from an error has already made a video they
                     now have to make again. */}
                   <span className="text-body-sm text-fg-muted">
-                    {`Up to ${formatClock(MAX_TESTIMONIAL_SECONDS)} — we read the length from the file`}
+                    {isEs
+                      ? `Hasta ${formatClock(MAX_TESTIMONIAL_SECONDS)}; tomamos la duración del archivo`
+                      : `Up to ${formatClock(MAX_TESTIMONIAL_SECONDS)} — we read the length from the file`}
                   </span>
                 </button>
 
@@ -332,7 +397,13 @@ export default function SubmitTestimonialModal({
             )}
           </FormField>
 
-          <FormField label="Describe Your Journey (From Fear to Hope)">
+          <FormField
+            label={
+              isEs
+                ? "Describa su camino (Del Miedo a la Esperanza)"
+                : "Describe Your Journey (From Fear to Hope)"
+            }
+          >
             {(props) => (
               <Textarea
                 {...props}
@@ -340,7 +411,11 @@ export default function SubmitTestimonialModal({
                 maxLength={2000}
                 value={summary}
                 onChange={(e) => setSummary(e.target.value)}
-                placeholder="What challenges did you face? How did you find hope, strength, and confidence on your journey?"
+                placeholder={
+                  isEs
+                    ? "¿Qué desafíos enfrentó? ¿Cómo encontró esperanza, fuerza y confianza en su camino?"
+                    : "What challenges did you face? How did you find hope, strength, and confidence on your journey?"
+                }
                 required
               />
             )}

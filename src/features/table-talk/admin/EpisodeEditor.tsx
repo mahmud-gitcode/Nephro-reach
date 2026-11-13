@@ -5,6 +5,7 @@ import React, { useRef, useState } from "react";
 import { CheckCircle2, Plus, Trash2, Upload } from "lucide-react";
 import { parseCaptions } from "@/features/education/vtt";
 import { useCollabText } from "@/features/community/collabText";
+import { useLanguageCode } from "@/context/LanguageContext";
 import {
   AUDIENCES,
   canSaveEpisode,
@@ -118,6 +119,7 @@ export function EpisodeEditor({
   saving?: boolean;
 }) {
   const t = useCollabText();
+  const isEs = useLanguageCode() === "ES";
   const [draft, setDraft] = useState<TableTalkEpisode>(
     () => episode ?? emptyEpisode(nextOrder),
   );
@@ -132,7 +134,9 @@ export function EpisodeEditor({
   );
   const youTubeError =
     youTube.trim() && !youTubeEmbed(youTube)
-      ? "That is not a YouTube video link."
+      ? isEs
+        ? "Ese no es un enlace de video de YouTube."
+        : "That is not a YouTube video link."
       : undefined;
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [captionNote, setCaptionNote] = useState<string | null>(null);
@@ -155,12 +159,18 @@ export function EpisodeEditor({
     const cues = parseCaptions(text);
 
     if (cues.length === 0) {
-      setCaptionNote("No caption lines found. Expecting a .vtt or .srt file.");
+      setCaptionNote(
+        isEs
+          ? "No se encontraron líneas de subtítulos. Se espera un archivo .vtt o .srt."
+          : "No caption lines found. Expecting a .vtt or .srt file.",
+      );
       return;
     }
 
     setCaptionNote(
-      `${file.name} — ${cues.length} caption lines read for ${lang.toUpperCase()}.`,
+      isEs
+        ? `${file.name} — ${cues.length} líneas de subtítulos leídas para ${lang.toUpperCase()}.`
+        : `${file.name} — ${cues.length} caption lines read for ${lang.toUpperCase()}.`,
     );
     set({ captions: { ...draft.captions, [lang]: text } });
   };
@@ -183,15 +193,37 @@ export function EpisodeEditor({
       open
       size="wide"
       onClose={onClose}
-      title={episode ? "Edit episode" : "Add an episode"}
-      description="Members find episodes by searching and filtering, so the description and categories matter as much as the video."
+      title={
+        episode
+          ? isEs
+            ? "Editar episodio"
+            : "Edit episode"
+          : isEs
+            ? "Agregar un episodio"
+            : "Add an episode"
+      }
+      description={
+        isEs
+          ? "Los miembros encuentran los episodios buscando y filtrando, así que la descripción y las categorías importan tanto como el video."
+          : "Members find episodes by searching and filtering, so the description and categories matter as much as the video."
+      }
       footer={
         <div className="flex flex-wrap items-center justify-end gap-inline-md">
           <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
-            Cancel
+            {isEs ? "Cancelar" : "Cancel"}
           </Button>
           <Button onClick={submit} disabled={saving}>
-            {saving ? "Saving…" : episode ? "Save changes" : "Add episode"}
+            {saving
+              ? isEs
+                ? "Guardando…"
+                : "Saving…"
+              : episode
+                ? isEs
+                  ? "Guardar cambios"
+                  : "Save changes"
+                : isEs
+                  ? "Agregar episodio"
+                  : "Add episode"}
           </Button>
         </div>
       }
@@ -203,14 +235,22 @@ export function EpisodeEditor({
 
           <div className="flex flex-wrap items-center gap-inline-md">
             <FileButton
-              label={videoName ? "Replace video" : "Upload video"}
+              label={
+                videoName
+                  ? isEs
+                    ? "Reemplazar video"
+                    : "Replace video"
+                  : isEs
+                    ? "Subir video"
+                    : "Upload video"
+              }
               accept="video/*"
               onPick={noUpload}
               disabled
               describedBy="episode-media-note"
             />
             <FileButton
-              label="Upload thumbnail"
+              label={isEs ? "Subir miniatura" : "Upload thumbnail"}
               accept="image/*"
               onPick={noUpload}
               disabled
@@ -218,7 +258,8 @@ export function EpisodeEditor({
             />
             {draft.durationSeconds ? (
               <span className="text-body-sm text-fg-muted">
-                Runtime {formatDuration(draft.durationSeconds)}
+                {isEs ? "Duración" : "Runtime"}{" "}
+                {formatDuration(draft.durationSeconds)}
               </span>
             ) : null}
           </div>
@@ -228,8 +269,14 @@ export function EpisodeEditor({
           </p>
 
           <FormField
-            label="Or paste a YouTube link"
-            hint="The video plays inside NephroReach; members don't leave the site."
+            label={
+              isEs ? "O pegue un enlace de YouTube" : "Or paste a YouTube link"
+            }
+            hint={
+              isEs
+                ? "El video se reproduce dentro de NephroReach; los miembros no salen del sitio."
+                : "The video plays inside NephroReach; members don't leave the site."
+            }
             error={youTubeError}
           >
             {(field) => (
@@ -255,7 +302,7 @@ export function EpisodeEditor({
           {youTubeEmbed(youTube) ? (
             <iframe
               src={youTubeEmbed(youTube)!}
-              title="YouTube preview"
+              title={isEs ? "Vista previa de YouTube" : "YouTube preview"}
               allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
               className="aspect-video w-full rounded-control bg-surface-inverse"
@@ -277,24 +324,33 @@ export function EpisodeEditor({
               than let them wonder why Publish did nothing. */}
           {!draft.videoSrc ? (
             <Alert tone="info">
-              An episode needs a video file before it can reach members. You can
-              save it as a draft without one.
+              {isEs
+                ? "Un episodio necesita un archivo de video antes de llegar a los miembros. Puede guardarlo como borrador sin él."
+                : "An episode needs a video file before it can reach members. You can save it as a draft without one."}
             </Alert>
           ) : null}
         </section>
 
         {/* ---------------------------------------------------- the words */}
         <section className="space-y-stack-md border-t border-line pt-inset-md">
-          <h3 className="text-heading-4 text-fg">Title and description</h3>
+          <h3 className="text-heading-4 text-fg">
+            {isEs ? "Título y descripción" : "Title and description"}
+          </h3>
 
           <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2">
             <FormField
-              label="Title (English)"
+              label={isEs ? "Título (inglés)" : "Title (English)"}
               required
-              hint="Also becomes the page address."
+              hint={
+                isEs
+                  ? "También se convierte en la dirección de la página."
+                  : "Also becomes the page address."
+              }
               error={
                 touched && error === "title"
-                  ? "A title is required."
+                  ? isEs
+                    ? "El título es obligatorio."
+                    : "A title is required."
                   : undefined
               }
             >
@@ -307,7 +363,10 @@ export function EpisodeEditor({
               )}
             </FormField>
 
-            <FormField label="Title (Spanish)" optionalLabel="optional">
+            <FormField
+              label={isEs ? "Título (español)" : "Title (Spanish)"}
+              optionalLabel={isEs ? "opcional" : "optional"}
+            >
               {(props) => (
                 <Input
                   {...props}
@@ -317,7 +376,9 @@ export function EpisodeEditor({
               )}
             </FormField>
 
-            <FormField label="Description (English)">
+            <FormField
+              label={isEs ? "Descripción (inglés)" : "Description (English)"}
+            >
               {(props) => (
                 <Textarea
                   {...props}
@@ -330,7 +391,10 @@ export function EpisodeEditor({
               )}
             </FormField>
 
-            <FormField label="Description (Spanish)" optionalLabel="optional">
+            <FormField
+              label={isEs ? "Descripción (español)" : "Description (Spanish)"}
+              optionalLabel={isEs ? "opcional" : "optional"}
+            >
               {(props) => (
                 <Textarea
                   {...props}
@@ -348,7 +412,9 @@ export function EpisodeEditor({
         {/* -------------------------------------------------- the speakers */}
         <section className="space-y-stack-md border-t border-line pt-inset-md">
           <div className="flex flex-wrap items-center justify-between gap-inline-md">
-            <h3 className="text-heading-4 text-fg">Speakers</h3>
+            <h3 className="text-heading-4 text-fg">
+              {isEs ? "Presentadores" : "Speakers"}
+            </h3>
             <Button
               size="small"
               variant="neutral"
@@ -363,13 +429,15 @@ export function EpisodeEditor({
               }
             >
               <Plus aria-hidden="true" className="size-4 shrink-0" />
-              Add speaker
+              {isEs ? "Agregar presentador" : "Add speaker"}
             </Button>
           </div>
 
           {draft.speakers.length === 0 ? (
             <p className="text-body-sm text-fg-muted">
-              Add the host and any guests. Their role shows under the title.
+              {isEs
+                ? "Agregue al anfitrión y a los invitados. Su función aparece debajo del título."
+                : "Add the host and any guests. Their role shows under the title."}
             </p>
           ) : (
             <div className="space-y-stack-sm">
@@ -378,7 +446,10 @@ export function EpisodeEditor({
                   key={speaker.id}
                   className="flex flex-wrap items-end gap-inline-md"
                 >
-                  <FormField label={`Name ${index + 1}`} className="flex-1">
+                  <FormField
+                    label={isEs ? `Nombre ${index + 1}` : `Name ${index + 1}`}
+                    className="flex-1"
+                  >
                     {(props) => (
                       <Input
                         {...props}
@@ -395,7 +466,12 @@ export function EpisodeEditor({
                       />
                     )}
                   </FormField>
-                  <FormField label="Role or credentials" className="flex-1">
+                  <FormField
+                    label={
+                      isEs ? "Función o credenciales" : "Role or credentials"
+                    }
+                    className="flex-1"
+                  >
                     {(props) => (
                       <Input
                         {...props}
@@ -409,7 +485,7 @@ export function EpisodeEditor({
                             ),
                           })
                         }
-                        placeholder="Nephrologist"
+                        placeholder={isEs ? "Nefrólogo" : "Nephrologist"}
                       />
                     )}
                   </FormField>
@@ -423,7 +499,11 @@ export function EpisodeEditor({
                         ),
                       })
                     }
-                    aria-label={`Remove speaker ${index + 1}`}
+                    aria-label={
+                      isEs
+                        ? `Quitar presentador ${index + 1}`
+                        : `Remove speaker ${index + 1}`
+                    }
                   >
                     <Trash2 aria-hidden="true" className="size-4 shrink-0" />
                   </Button>
@@ -435,21 +515,29 @@ export function EpisodeEditor({
 
         {/* ------------------------------------------------- categorising */}
         <section className="space-y-stack-md border-t border-line pt-inset-md">
-          <h3 className="text-heading-4 text-fg">Topics and audience</h3>
+          <h3 className="text-heading-4 text-fg">
+            {isEs ? "Temas y público" : "Topics and audience"}
+          </h3>
 
           <FormField
-            label="Topics"
-            hint="Pick as many as fit. These are the filters members browse by."
+            label={isEs ? "Temas" : "Topics"}
+            hint={
+              isEs
+                ? "Elija todos los que correspondan. Son los filtros que usan los miembros para explorar."
+                : "Pick as many as fit. These are the filters members browse by."
+            }
           >
             {() => (
-              <ChipGroup label="Topics" selection="multiple">
+              <ChipGroup label={isEs ? "Temas" : "Topics"} selection="multiple">
                 {categories.map((category) => (
                   <Chip
                     key={category.id}
                     selected={draft.categoryIds.includes(category.id)}
                     onClick={() => toggleCategory(category.id)}
                   >
-                    {category.labelEn}
+                    {isEs
+                      ? category.labelEs || category.labelEn
+                      : category.labelEn}
                   </Chip>
                 ))}
               </ChipGroup>
@@ -457,7 +545,7 @@ export function EpisodeEditor({
           </FormField>
 
           <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2">
-            <FormField label="Who it is for">
+            <FormField label={isEs ? "Para quién es" : "Who it is for"}>
               {(props) => (
                 <Select
                   {...props}
@@ -468,7 +556,7 @@ export function EpisodeEditor({
                 >
                   {AUDIENCES.map((option) => (
                     <option key={option.value} value={option.value}>
-                      {option.labelEn}
+                      {isEs ? option.labelEs : option.labelEn}
                     </option>
                   ))}
                 </Select>
@@ -479,27 +567,41 @@ export function EpisodeEditor({
           <SwitchRow
             checked={draft.isLiveEvent}
             onChange={(checked) => set({ isLiveEvent: checked })}
-            title="This is a live event"
-            description="Shows under the Live Events filter."
+            title={isEs ? "Este es un evento en vivo" : "This is a live event"}
+            description={
+              isEs
+                ? "Aparece en el filtro Eventos en vivo."
+                : "Shows under the Live Events filter."
+            }
           />
           <SwitchRow
             checked={draft.isShort}
             onChange={(checked) => set({ isShort: checked })}
-            title="Short video"
-            description="Set automatically for anything under three minutes."
+            title={isEs ? "Video corto" : "Short video"}
+            description={
+              isEs
+                ? "Se activa automáticamente para todo lo que dure menos de tres minutos."
+                : "Set automatically for anything under three minutes."
+            }
           />
         </section>
 
         {/* ----------------------------------- captions and the transcript */}
         <section className="space-y-stack-md border-t border-line pt-inset-md">
-          <h3 className="text-heading-4 text-fg">Captions and transcript</h3>
+          <h3 className="text-heading-4 text-fg">
+            {isEs ? "Subtítulos y transcripción" : "Captions and transcript"}
+          </h3>
 
           <div className="flex flex-wrap items-center gap-inline-md">
             <FileButton
               label={
                 draft.captions.en
-                  ? "Replace English captions"
-                  : "English captions"
+                  ? isEs
+                    ? "Reemplazar subtítulos en inglés"
+                    : "Replace English captions"
+                  : isEs
+                    ? "Subtítulos en inglés"
+                    : "English captions"
               }
               accept=".vtt,.srt,text/vtt"
               onPick={(file) => void pickCaptions(file, "en")}
@@ -507,8 +609,12 @@ export function EpisodeEditor({
             <FileButton
               label={
                 draft.captions.es
-                  ? "Replace Spanish captions"
-                  : "Spanish captions"
+                  ? isEs
+                    ? "Reemplazar subtítulos en español"
+                    : "Replace Spanish captions"
+                  : isEs
+                    ? "Subtítulos en español"
+                    : "Spanish captions"
               }
               accept=".vtt,.srt,text/vtt"
               onPick={(file) => void pickCaptions(file, "es")}
@@ -520,7 +626,10 @@ export function EpisodeEditor({
           ) : null}
 
           <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2">
-            <FormField label="Transcript (English)" optionalLabel="optional">
+            <FormField
+              label={isEs ? "Transcripción (inglés)" : "Transcript (English)"}
+              optionalLabel={isEs ? "opcional" : "optional"}
+            >
               {(props) => (
                 <Textarea
                   {...props}
@@ -529,11 +638,18 @@ export function EpisodeEditor({
                   onChange={(event) =>
                     set({ transcriptEn: event.target.value || undefined })
                   }
-                  placeholder="Paste the transcript. Leave a blank line between paragraphs."
+                  placeholder={
+                    isEs
+                      ? "Pegue la transcripción. Deje una línea en blanco entre párrafos."
+                      : "Paste the transcript. Leave a blank line between paragraphs."
+                  }
                 />
               )}
             </FormField>
-            <FormField label="Transcript (Spanish)" optionalLabel="optional">
+            <FormField
+              label={isEs ? "Transcripción (español)" : "Transcript (Spanish)"}
+              optionalLabel={isEs ? "opcional" : "optional"}
+            >
               {(props) => (
                 <Textarea
                   {...props}
@@ -550,10 +666,12 @@ export function EpisodeEditor({
 
         {/* ------------------------------------------------- when it goes live */}
         <section className="space-y-stack-md border-t border-line pt-inset-md">
-          <h3 className="text-heading-4 text-fg">Publishing</h3>
+          <h3 className="text-heading-4 text-fg">
+            {isEs ? "Publicación" : "Publishing"}
+          </h3>
 
           <div className="grid grid-cols-1 gap-inset-md sm:grid-cols-2">
-            <FormField label="Status">
+            <FormField label={isEs ? "Estado" : "Status"}>
               {(props) => (
                 <Select
                   {...props}
@@ -562,23 +680,37 @@ export function EpisodeEditor({
                     set({ status: event.target.value as EpisodeStatus })
                   }
                 >
-                  <option value="draft">Draft — admins only</option>
-                  <option value="scheduled">
-                    Scheduled — goes live on a date
+                  <option value="draft">
+                    {isEs
+                      ? "Borrador — solo administradores"
+                      : "Draft — admins only"}
                   </option>
-                  <option value="published">Published — live now</option>
-                  <option value="archived">Archived — hidden</option>
+                  <option value="scheduled">
+                    {isEs
+                      ? "Programado — se publica en una fecha"
+                      : "Scheduled — goes live on a date"}
+                  </option>
+                  <option value="published">
+                    {isEs
+                      ? "Publicado — visible ahora"
+                      : "Published — live now"}
+                  </option>
+                  <option value="archived">
+                    {isEs ? "Archivado — oculto" : "Archived — hidden"}
+                  </option>
                 </Select>
               )}
             </FormField>
 
             {draft.status === "scheduled" ? (
               <FormField
-                label="Goes live on"
+                label={isEs ? "Se publica el" : "Goes live on"}
                 required
                 error={
                   touched && error === "publish-at"
-                    ? "Pick the date it should appear."
+                    ? isEs
+                      ? "Elija la fecha en que debe aparecer."
+                      : "Pick the date it should appear."
                     : undefined
                 }
               >
@@ -600,8 +732,12 @@ export function EpisodeEditor({
           <SwitchRow
             checked={draft.featured}
             onChange={(checked) => set({ featured: checked })}
-            title="Feature this episode"
-            description="Puts it at the top of Table Talk. Only one episode can be featured, so this replaces the current one."
+            title={isEs ? "Destacar este episodio" : "Feature this episode"}
+            description={
+              isEs
+                ? "Lo coloca al principio de Table Talk. Solo un episodio puede estar destacado, así que este reemplaza al actual."
+                : "Puts it at the top of Table Talk. Only one episode can be featured, so this replaces the current one."
+            }
           />
         </section>
       </div>

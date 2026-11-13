@@ -3,6 +3,7 @@
 import React from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { useLanguageCode } from "@/context/LanguageContext";
 
 /* ==========================================================================
    Chip · ChipGroup
@@ -40,6 +41,7 @@ export function Chip({
   type = "button",
   ...rest
 }: ChipProps) {
+  const isEs = useLanguageCode() === "ES";
   return (
     <span className="inline-flex items-center">
       <button
@@ -68,7 +70,7 @@ export function Chip({
         <button
           type="button"
           onClick={onRemove}
-          aria-label="Remove"
+          aria-label={isEs ? "Quitar" : "Remove"}
           className={cn(
             "inline-flex h-control-small cursor-pointer items-center rounded-r-control border px-inset-xs",
             "transition-colors duration-150 ease-standard",

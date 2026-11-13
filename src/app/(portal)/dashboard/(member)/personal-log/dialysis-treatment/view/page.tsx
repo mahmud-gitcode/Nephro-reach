@@ -25,6 +25,7 @@ import {
 } from "@/lib/data/asyncState";
 import {
   attendanceOf,
+  displayDate,
   fluidRemovedKg,
 } from "@/features/personal-log/dialysis/treatmentLog";
 import { useLanguage } from "@/context/LanguageContext";
@@ -143,7 +144,9 @@ function TreatmentDetailContent() {
     return (
       <div className="mx-auto w-full max-w-5xl space-y-stack-md py-12 text-center">
         <p className="text-body-md text-fg-muted">
-          That treatment is not in your log.
+          {lang === "es"
+            ? "Ese tratamiento no está en su registro."
+            : "That treatment is not in your log."}
         </p>
         <Link
           href="/dashboard/personal-log/dialysis-treatment"
@@ -160,6 +163,7 @@ function TreatmentDetailContent() {
 function TreatmentDetail({ entry }: { entry: DialysisLogEntry }) {
   const { dictionary, language } = useLanguage();
   const lang = language === "ES" ? "es" : "en";
+  const isEs = lang === "es";
   const dt = dictionary.dialysisTreatment;
   const isHome = entry.modality === "home-hd";
   const removed = fluidRemovedKg(entry.preWeight, entry.postWeight);
@@ -219,7 +223,7 @@ function TreatmentDetail({ entry }: { entry: DialysisLogEntry }) {
               {dt?.detail?.title || "Dialysis Day Log"}
             </h1>
             <p className="mt-stack-xs text-caption text-fg-muted">
-              {entry.displayDate}
+              {isEs ? displayDate(entry.date, true) : entry.displayDate}
             </p>
           </div>
 
@@ -244,10 +248,13 @@ function TreatmentDetail({ entry }: { entry: DialysisLogEntry }) {
               entry.startTime,
             ],
             [dt?.detail?.summaryBar?.endTime || "End Time", entry.endTime],
-            ["Time on treatment", entry.duration],
+            [
+              isEs ? "Tiempo en tratamiento" : "Time on treatment",
+              entry.duration,
+            ],
             [dt?.detail?.summaryBar?.careTeam || "Care Team", entry.careTeam],
             [
-              "Fluid removed",
+              isEs ? "Líquido extraído" : "Fluid removed",
               removed === null ? "" : `${removed} kg ≈ ${removed} L`,
             ],
           ].map(([label, value]) => (
@@ -269,7 +276,17 @@ function TreatmentDetail({ entry }: { entry: DialysisLogEntry }) {
             {dt?.detail?.attendanceSchedule?.title || "Attendance & Schedule"}
           </h2>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <DetailRow label="Status" value={attendanceOf(entry)} />
+            <DetailRow
+              label={isEs ? "Estado" : "Status"}
+              value={
+                {
+                  Attended: dt?.table?.statusAttended || "Attended",
+                  "Arrived Late": dt?.table?.statusLate || "Arrived Late",
+                  "Ended Early": dt?.table?.statusEarly || "Ended Early",
+                  Missed: dt?.table?.statusMissed || "Missed",
+                }[attendanceOf(entry)] || attendanceOf(entry)
+              }
+            />
             {!isHome ? (
               <DetailRow
                 label={
@@ -285,7 +302,9 @@ function TreatmentDetail({ entry }: { entry: DialysisLogEntry }) {
               value={formatYesNo(entry.endedEarly)}
             />
             <DetailRow
-              label="Extra recovery time"
+              label={
+                isEs ? "Tiempo de recuperación extra" : "Extra recovery time"
+              }
               value={
                 entry.extraRecovery === "Yes"
                   ? `${entry.extraRecoveryMinutes ?? 0} min`
@@ -295,11 +314,15 @@ function TreatmentDetail({ entry }: { entry: DialysisLogEntry }) {
             {entry.status === "rescheduled" ? (
               <div className="md:col-span-2">
                 <DetailRow
-                  label="Make-up session"
+                  label={isEs ? "Sesión de reposición" : "Make-up session"}
                   value={
                     entry.makeupFor
-                      ? `For the treatment missed on ${entry.makeupFor}`
-                      : "Extra session"
+                      ? isEs
+                        ? `Por el tratamiento perdido el ${entry.makeupFor}`
+                        : `For the treatment missed on ${entry.makeupFor}`
+                      : isEs
+                        ? "Sesión extra"
+                        : "Extra session"
                   }
                 />
               </div>
@@ -402,15 +425,15 @@ function TreatmentDetail({ entry }: { entry: DialysisLogEntry }) {
               value={formatYesNo(entry.cramping)}
             />
             <DetailRow
-              label="Dizziness"
+              label={isEs ? "Mareo" : "Dizziness"}
               value={formatYesNo(entry.dizziness || "No")}
             />
             <DetailRow
-              label="Swelling"
+              label={isEs ? "Hinchazón" : "Swelling"}
               value={formatYesNo(entry.swelling || "No")}
             />
             <DetailRow
-              label="Shortness of breath"
+              label={isEs ? "Falta de aire" : "Shortness of breath"}
               value={formatYesNo(entry.shortnessOfBreath || "No")}
             />
             <DetailRow
@@ -515,21 +538,33 @@ function TreatmentDetail({ entry }: { entry: DialysisLogEntry }) {
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableHeaderCell>Measurement</TableHeaderCell>
-                    <TableHeaderCell>Pre-treatment</TableHeaderCell>
-                    <TableHeaderCell>Post-treatment</TableHeaderCell>
+                    <TableHeaderCell>
+                      {isEs ? "Medición" : "Measurement"}
+                    </TableHeaderCell>
+                    <TableHeaderCell>
+                      {isEs ? "Antes del tratamiento" : "Pre-treatment"}
+                    </TableHeaderCell>
+                    <TableHeaderCell>
+                      {isEs ? "Después del tratamiento" : "Post-treatment"}
+                    </TableHeaderCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {[
-                    ["Weight (kg)", entry.preWeight, entry.postWeight],
                     [
-                      "Blood pressure (mmHg)",
+                      isEs ? "Peso (kg)" : "Weight (kg)",
+                      entry.preWeight,
+                      entry.postWeight,
+                    ],
+                    [
+                      isEs
+                        ? "Presión arterial (mmHg)"
+                        : "Blood pressure (mmHg)",
                       entry.preBloodPressure,
                       entry.bloodPressurePost,
                     ],
                     [
-                      "Heart rate (bpm)",
+                      isEs ? "Frecuencia cardíaca (lpm)" : "Heart rate (bpm)",
                       entry.preHeartRate,
                       entry.heartRatePost,
                     ],

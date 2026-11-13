@@ -16,17 +16,25 @@ export const SHARING_OPTIONS = [
   {
     id: "analytics",
     label: "Usage analytics",
+    labelEs: "Análisis de uso",
     note: "Anonymous counts of which pages your office uses.",
+    noteEs: "Recuentos anónimos de las páginas que usa su consultorio.",
   },
   {
     id: "outcomes",
     label: "Aggregate outcomes",
+    labelEs: "Resultados agregados",
     note: "De-identified education outcomes, pooled across clinics.",
+    noteEs:
+      "Resultados educativos desidentificados, combinados entre clínicas.",
   },
   {
     id: "research",
     label: "Research partnerships",
+    labelEs: "Colaboraciones de investigación",
     note: "De-identified data shared with named research partners.",
+    noteEs:
+      "Datos desidentificados compartidos con socios de investigación designados.",
   },
 ] as const;
 

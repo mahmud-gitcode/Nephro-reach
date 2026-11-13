@@ -39,6 +39,7 @@ import {
   Skeleton,
 } from "@/components/ui";
 import { useCollabText } from "@/features/community/collabText";
+import { useLanguageCode } from "@/context/LanguageContext";
 import {
   canRetry,
   errorMessageFor,
@@ -98,29 +99,37 @@ function SummaryCard({
   );
 }
 
-function kindLabel(kind: LibraryKind): string {
-  if (kind === "document") return "Document";
-  if (kind === "article") return "Article";
-  if (kind === "image") return "Image";
+function kindLabel(kind: LibraryKind, isEs: boolean): string {
+  if (kind === "document") return isEs ? "Documento" : "Document";
+  if (kind === "article") return isEs ? "Artículo" : "Article";
+  if (kind === "image") return isEs ? "Imagen" : "Image";
   return "Video";
 }
 
-function categoryLabel(category: string): string {
-  return (
-    LIBRARY_CATEGORIES.find((entry) => entry.key === category)?.labelEn ??
-    category
-  );
+function categoryLabel(category: string, isEs: boolean): string {
+  const entry = LIBRARY_CATEGORIES.find((item) => item.key === category);
+  return (isEs ? entry?.labelEs : entry?.labelEn) ?? category;
 }
 
 /** Runtime, file size or read time — whichever this kind actually has. */
-function metaLabel(resource: LibraryResource): string {
+function metaLabel(resource: LibraryResource, isEs: boolean): string {
+  const noFile = isEs ? "Aún sin archivo" : "No file yet";
   if (resource.kind === "video")
     return resource.durationSeconds
       ? formatDuration(resource.durationSeconds)
-      : "No file yet";
-  if (resource.kind === "document") return resource.fileMetaEn || "No file yet";
-  if (resource.kind === "image") return "Image";
-  return resource.readMinutes ? `${resource.readMinutes} min read` : "Empty";
+      : noFile;
+  if (resource.kind === "document")
+    return (
+      (isEs
+        ? resource.fileMetaEs || resource.fileMetaEn
+        : resource.fileMetaEn) || noFile
+    );
+  if (resource.kind === "image") return isEs ? "Imagen" : "Image";
+  if (resource.readMinutes)
+    return isEs
+      ? `${resource.readMinutes} min de lectura`
+      : `${resource.readMinutes} min read`;
+  return isEs ? "Vacío" : "Empty";
 }
 
 function ResourceRow({
@@ -135,6 +144,7 @@ function ResourceRow({
   onTogglePublished: () => void;
 }) {
   const KindIcon = KIND_ICON[resource.kind];
+  const isEs = useLanguageCode() === "ES";
 
   return (
     <li className="flex flex-col gap-inset-sm rounded-card border border-line bg-surface p-inset-md sm:flex-row sm:items-center">
@@ -151,31 +161,38 @@ function ResourceRow({
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-inline-md">
           <p className="text-label-md text-fg">
-            {resource.titleEn || "Untitled"}
+            {resource.titleEn || (isEs ? "Sin título" : "Untitled")}
           </p>
           <Badge tone={resource.published ? "success" : "neutral"}>
-            {resource.published ? "Published" : "Hidden"}
+            {resource.published
+              ? isEs
+                ? "Publicado"
+                : "Published"
+              : isEs
+                ? "Oculto"
+                : "Hidden"}
           </Badge>
           {/* A Spanish-less resource still renders for a Spanish member, it
               just renders in English — worth flagging, not worth blocking. */}
           {!resource.titleEs.trim() ? (
-            <Badge tone="warning">No Spanish</Badge>
+            <Badge tone="warning">{isEs ? "Sin español" : "No Spanish"}</Badge>
           ) : null}
         </div>
         <p className="mt-stack-xs line-clamp-1 text-body-sm text-fg-muted">
-          {resource.summaryEn || "No summary yet."}
+          {resource.summaryEn ||
+            (isEs ? "Aún no hay resumen." : "No summary yet.")}
         </p>
         <p className="mt-stack-xs flex flex-wrap items-center gap-inline-md text-body-sm text-fg-muted">
           <span className="flex items-center gap-inline-sm">
             <KindIcon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
-            {kindLabel(resource.kind)}
+            {kindLabel(resource.kind, isEs)}
           </span>
           <span aria-hidden="true">·</span>
-          <span>{categoryLabel(resource.category)}</span>
+          <span>{categoryLabel(resource.category, isEs)}</span>
           <span aria-hidden="true">·</span>
-          <span>{metaLabel(resource)}</span>
+          <span>{metaLabel(resource, isEs)}</span>
           <span aria-hidden="true">·</span>
-          <span>{formatPublished(resource.publishedAt, false)}</span>
+          <span>{formatPublished(resource.publishedAt, isEs)}</span>
         </p>
       </div>
 
@@ -189,12 +206,12 @@ function ResourceRow({
           {resource.published ? (
             <>
               <EyeOff aria-hidden="true" className="size-4 shrink-0" />
-              Unpublish
+              {isEs ? "Despublicar" : "Unpublish"}
             </>
           ) : (
             <>
               <Eye aria-hidden="true" className="size-4 shrink-0" />
-              Publish
+              {isEs ? "Publicar" : "Publish"}
             </>
           )}
         </Button>
@@ -205,14 +222,18 @@ function ResourceRow({
           onClick={onEdit}
         >
           <Pencil aria-hidden="true" className="size-4 shrink-0" />
-          Edit
+          {isEs ? "Editar" : "Edit"}
         </Button>
         <Button
           size="small"
           variant="danger"
           appearance="stroke"
           onClick={onDelete}
-          aria-label={`Delete ${resource.titleEn || "resource"}`}
+          aria-label={
+            isEs
+              ? `Eliminar ${resource.titleEn || "recurso"}`
+              : `Delete ${resource.titleEn || "resource"}`
+          }
         >
           <Trash2 aria-hidden="true" className="size-4 shrink-0" />
         </Button>
@@ -224,6 +245,7 @@ function ResourceRow({
 export default function ManageLibraryPage() {
   const { user } = useAuth();
   const t = useCollabText();
+  const isEs = useLanguageCode() === "ES";
   const {
     resources,
     totals,
@@ -268,26 +290,37 @@ export default function ManageLibraryPage() {
   return (
     <>
       <div className="mb-stack-lg">
-        <h1 className="text-heading-1 text-fg">Library Management</h1>
+        <h1 className="text-heading-1 text-fg">
+          {isEs ? "Gestión de la Biblioteca" : "Library Management"}
+        </h1>
         <p className="mt-stack-xs text-body-md text-fg-muted">
-          Post short videos, handouts and written tips for members to browse on
-          their own. Separate from the 21-day course in Class Management.
+          {isEs
+            ? "Publique videos cortos, folletos y consejos escritos para que los miembros los exploren por su cuenta. Es independiente del curso de 21 días de Gestión de Clases."
+            : "Post short videos, handouts and written tips for members to browse on their own. Separate from the 21-day course in Class Management."}
         </p>
       </div>
 
       <section className="grid grid-cols-1 gap-inset-md sm:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
-          label="Posts"
+          label={isEs ? "Publicaciones" : "Posts"}
           value={totals.total}
-          detail={`${totals.drafts} hidden from members`}
+          detail={
+            isEs
+              ? `${totals.drafts} ocultas para los miembros`
+              : `${totals.drafts} hidden from members`
+          }
           icon={Library}
           tone="bg-brand-100"
           iconTone="text-fg-brand"
         />
         <SummaryCard
-          label="Published"
+          label={isEs ? "Publicadas" : "Published"}
           value={totals.published}
-          detail="Live on the member shelf"
+          detail={
+            isEs
+              ? "Visibles en el estante de los miembros"
+              : "Live on the member shelf"
+          }
           icon={Eye}
           tone="bg-success-100"
           iconTone="text-success"
@@ -295,15 +328,21 @@ export default function ManageLibraryPage() {
         <SummaryCard
           label="Videos"
           value={totals.videos}
-          detail={`${totals.documents} documents`}
+          detail={
+            isEs
+              ? `${totals.documents} documentos`
+              : `${totals.documents} documents`
+          }
           icon={PlayCircle}
           tone="bg-warning-100"
           iconTone="text-warning"
         />
         <SummaryCard
-          label="Articles"
+          label={isEs ? "Artículos" : "Articles"}
           value={totals.articles}
-          detail="Written in both languages"
+          detail={
+            isEs ? "Escritos en ambos idiomas" : "Written in both languages"
+          }
           icon={BookOpen}
           tone="bg-accent-100"
           iconTone="text-accent-fg"
@@ -313,7 +352,7 @@ export default function ManageLibraryPage() {
       {saveError ? (
         <Alert
           tone="danger"
-          title="That change did not save"
+          title={isEs ? "Ese cambio no se guardó" : "That change did not save"}
           onDismiss={dismissSaveError}
           className="mt-stack-lg"
         >
@@ -326,9 +365,13 @@ export default function ManageLibraryPage() {
       <Card as="section" className="mt-stack-lg">
         <div className="flex flex-col gap-inset-sm lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-heading-4 text-fg">Posts</h2>
+            <h2 className="text-heading-4 text-fg">
+              {isEs ? "Publicaciones" : "Posts"}
+            </h2>
             <p className="mt-0.5 text-body-md text-fg-muted">
-              Newest first. Hidden posts stay off the member shelf.
+              {isEs
+                ? "Las más recientes primero. Las publicaciones ocultas no aparecen en el estante de los miembros."
+                : "Newest first. Hidden posts stay off the member shelf."}
             </p>
           </div>
 
@@ -337,14 +380,14 @@ export default function ManageLibraryPage() {
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search posts..."
-              aria-label="Search resources"
+              placeholder={isEs ? "Buscar publicaciones..." : "Search posts..."}
+              aria-label={isEs ? "Buscar recursos" : "Search resources"}
               leadingIcon={<Search aria-hidden="true" className="h-4 w-4" />}
               className="sm:w-[277px]"
             />
             <Button onClick={() => setCreating(true)}>
               <Plus aria-hidden="true" className="size-4 shrink-0" />
-              Create post
+              {isEs ? "Crear publicación" : "Create post"}
             </Button>
           </div>
         </div>
@@ -354,8 +397,12 @@ export default function ManageLibraryPage() {
           error={error}
           onRetry={canRetry(error) ? refetch : undefined}
           isEmpty={visible.length === 0}
-          errorTitle={errorTitleFor(error, "The library did not load")}
-          errorMessage={errorMessageFor(error, undefined)}
+          errorTitle={errorTitleFor(
+            error,
+            isEs ? "La biblioteca no se cargó" : "The library did not load",
+            isEs ? "es" : "en",
+          )}
+          errorMessage={errorMessageFor(error, undefined, isEs ? "es" : "en")}
           skeleton={
             <div className="mt-stack-lg space-y-stack-sm">
               {Array.from({ length: 4 }).map((_, index) => (
@@ -368,18 +415,28 @@ export default function ManageLibraryPage() {
               className="mt-stack-lg"
               icon={<Library aria-hidden="true" />}
               title={
-                query.trim() ? "Nothing matches that search" : "No posts yet"
+                query.trim()
+                  ? isEs
+                    ? "Nada coincide con esa búsqueda"
+                    : "Nothing matches that search"
+                  : isEs
+                    ? "Aún no hay publicaciones"
+                    : "No posts yet"
               }
               description={
                 query.trim()
-                  ? "Try a different word, or clear the search."
-                  : "Write something, attach a video or handout, and post it for members to look up."
+                  ? isEs
+                    ? "Pruebe con otra palabra o borre la búsqueda."
+                    : "Try a different word, or clear the search."
+                  : isEs
+                    ? "Escriba algo, adjunte un video o folleto y publíquelo para que los miembros lo consulten."
+                    : "Write something, attach a video or handout, and post it for members to look up."
               }
               action={
                 query.trim() ? undefined : (
                   <Button onClick={() => setCreating(true)}>
                     <Plus aria-hidden="true" className="size-4 shrink-0" />
-                    Create post
+                    {isEs ? "Crear publicación" : "Create post"}
                   </Button>
                 )
               }
@@ -419,8 +476,12 @@ export default function ManageLibraryPage() {
           size="small"
           closeOnBackdrop={false}
           onClose={() => setPendingDelete(null)}
-          title="Delete this resource?"
-          description={`"${pendingDelete.titleEn || "Untitled"}" will be removed from the library for everyone. This cannot be undone.`}
+          title={isEs ? "¿Eliminar este recurso?" : "Delete this resource?"}
+          description={
+            isEs
+              ? `"${pendingDelete.titleEn || "Sin título"}" se quitará de la biblioteca para todos. Esta acción no se puede deshacer.`
+              : `"${pendingDelete.titleEn || "Untitled"}" will be removed from the library for everyone. This cannot be undone.`
+          }
           footer={
             <div className="flex flex-wrap items-center justify-end gap-inline-md">
               <Button
@@ -428,7 +489,7 @@ export default function ManageLibraryPage() {
                 appearance="fill-stroke"
                 onClick={() => setPendingDelete(null)}
               >
-                Cancel
+                {isEs ? "Cancelar" : "Cancel"}
               </Button>
               <Button
                 variant="danger"
@@ -437,7 +498,7 @@ export default function ManageLibraryPage() {
                   setPendingDelete(null);
                 }}
               >
-                Delete
+                {isEs ? "Eliminar" : "Delete"}
               </Button>
             </div>
           }

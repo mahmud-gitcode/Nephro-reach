@@ -176,7 +176,7 @@ export function formatAddress(address: TripAddress): string {
 }
 
 export function formatTripDates(trip: TripRequest, isEs: boolean): string {
-  const locale = isEs ? "es-ES" : "en-US";
+  const locale = isEs ? "es-US" : "en-US";
   const parse = (iso: string) => {
     const [year, month, day] = iso.split("-").map(Number);
     return new Date(year, (month ?? 1) - 1, day ?? 1);
@@ -468,7 +468,7 @@ export function formatEventTime(iso: string, isEs: boolean): string {
   const when = new Date(iso);
   if (Number.isNaN(when.getTime())) return "";
 
-  return when.toLocaleString(isEs ? "es-ES" : "en-US", {
+  return when.toLocaleString(isEs ? "es-US" : "en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -953,7 +953,7 @@ export function formatDateLabel(iso: string, isEs: boolean): string {
   const [year, month, day] = iso.split("-").map(Number);
   const date = new Date(year, (month ?? 1) - 1, day ?? 1);
   if (Number.isNaN(date.getTime())) return iso;
-  return date.toLocaleDateString(isEs ? "es-ES" : "en-US", {
+  return date.toLocaleDateString(isEs ? "es-US" : "en-US", {
     weekday: "short",
     month: "short",
     day: "numeric",

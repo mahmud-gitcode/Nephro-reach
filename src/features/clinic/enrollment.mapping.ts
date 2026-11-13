@@ -191,19 +191,36 @@ export function relativeActivity(
   return `${weeks} weeks ago`;
 }
 
+/** `relativeActivity`'s English text, drawn in Spanish. The English text
+ *  stays the value (other code reads the day count from it). */
+export function localizeActivity(text: string, isEs = false): string {
+  if (!isEs) return text;
+  if (text === "No activity yet") return "Sin actividad aún";
+  if (text === "Today") return "Hoy";
+  const days = /^(\d+) days? ago$/.exec(text);
+  if (days) return `Hace ${days[1]} día${days[1] === "1" ? "" : "s"}`;
+  const weeks = /^(\d+) weeks ago$/.exec(text);
+  if (weeks) return `Hace ${weeks[1]} semanas`;
+  return text;
+}
+
 /** "Sep 19 at 6:10 PM" for the details panel. */
-export function preciseActivity(iso: string | null | undefined): string {
-  if (!iso) return "No activity yet";
+export function preciseActivity(
+  iso: string | null | undefined,
+  isEs = false,
+): string {
+  if (!iso) return isEs ? "Sin actividad aún" : "No activity yet";
   const date = new Date(iso);
-  const day = date.toLocaleDateString("en-US", {
+  const locale = isEs ? "es-US" : "en-US";
+  const day = date.toLocaleDateString(locale, {
     month: "short",
     day: "numeric",
   });
-  const time = date.toLocaleTimeString("en-US", {
+  const time = date.toLocaleTimeString(locale, {
     hour: "numeric",
     minute: "2-digit",
   });
-  return `${day} at ${time}`;
+  return isEs ? `${day} a las ${time}` : `${day} at ${time}`;
 }
 
 /* -------------------------------------------------------------- the join */

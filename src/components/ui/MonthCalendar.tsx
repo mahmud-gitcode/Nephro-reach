@@ -3,6 +3,7 @@
 import React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { useLanguageCode } from "@/context/LanguageContext";
 
 /* ==========================================================================
    MonthCalendar
@@ -64,10 +65,15 @@ export function MonthCalendar({
   weekdayLabels,
   formatDayLabel,
   isMarked,
-  previousMonthLabel = "Previous month",
-  nextMonthLabel = "Next month",
+  previousMonthLabel: previousMonthLabelProp,
+  nextMonthLabel: nextMonthLabelProp,
   className,
 }: MonthCalendarProps) {
+  const isEs = useLanguageCode() === "ES";
+  const previousMonthLabel =
+    previousMonthLabelProp ?? (isEs ? "Mes anterior" : "Previous month");
+  const nextMonthLabel =
+    nextMonthLabelProp ?? (isEs ? "Mes siguiente" : "Next month");
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDayIndex = new Date(year, month, 1).getDay();
 

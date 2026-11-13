@@ -41,6 +41,7 @@ import {
   Skeleton,
 } from "@/components/ui";
 import { useCollabText } from "@/features/community/collabText";
+import { useLanguageCode } from "@/context/LanguageContext";
 import {
   canRetry,
   errorMessageFor,
@@ -64,13 +65,28 @@ const STATUS_TONE: Record<EpisodeStatus, "success" | "info" | "neutral"> = {
   archived: "neutral",
 };
 
-const QUESTION_STATUSES: { value: QuestionStatus; label: string }[] = [
-  { value: "new", label: "New" },
-  { value: "reviewed", label: "Reviewed" },
-  { value: "planned", label: "Planned for an episode" },
-  { value: "answered", label: "Answered" },
-  { value: "declined", label: "Not suitable" },
+const QUESTION_STATUSES: {
+  value: QuestionStatus;
+  label: string;
+  labelEs: string;
+}[] = [
+  { value: "new", label: "New", labelEs: "Nueva" },
+  { value: "reviewed", label: "Reviewed", labelEs: "Revisada" },
+  {
+    value: "planned",
+    label: "Planned for an episode",
+    labelEs: "Planeada para un episodio",
+  },
+  { value: "answered", label: "Answered", labelEs: "Respondida" },
+  { value: "declined", label: "Not suitable", labelEs: "No adecuada" },
 ];
+
+const EPISODE_STATUS_ES: Record<EpisodeStatus, string> = {
+  draft: "Borrador",
+  scheduled: "Programado",
+  published: "Publicado",
+  archived: "Archivado",
+};
 
 function SummaryCard({
   label,
@@ -124,6 +140,7 @@ function EpisodeRow({
   onMove: (direction: -1 | 1) => void;
 }) {
   const live = isLive(episode);
+  const isEs = useLanguageCode() === "ES";
 
   return (
     <li className="flex flex-col gap-inset-sm rounded-card border border-line bg-surface p-inset-md lg:flex-row lg:items-start">
@@ -140,43 +157,64 @@ function EpisodeRow({
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-inline-md">
           <p className="text-label-md text-fg">
-            {episode.titleEn || "Untitled episode"}
+            {episode.titleEn ||
+              (isEs ? "Episodio sin título" : "Untitled episode")}
           </p>
           <Badge tone={STATUS_TONE[episode.status]}>
             {episode.status === "scheduled" && episode.publishAt
-              ? `Scheduled · ${episode.publishAt}`
-              : episode.status.charAt(0).toUpperCase() +
-                episode.status.slice(1)}
+              ? isEs
+                ? `Programado · ${episode.publishAt}`
+                : `Scheduled · ${episode.publishAt}`
+              : isEs
+                ? EPISODE_STATUS_ES[episode.status]
+                : episode.status.charAt(0).toUpperCase() +
+                  episode.status.slice(1)}
           </Badge>
-          {episode.featured ? <Badge tone="accent">Featured</Badge> : null}
+          {episode.featured ? (
+            <Badge tone="accent">{isEs ? "Destacado" : "Featured"}</Badge>
+          ) : null}
           {/* The two reasons an episode a member expects to see is not there. */}
           {!episode.videoSrc ? (
-            <Badge tone="warning">No video file</Badge>
+            <Badge tone="warning">
+              {isEs ? "Sin archivo de video" : "No video file"}
+            </Badge>
           ) : null}
           {!episode.titleEs.trim() ? (
-            <Badge tone="warning">No Spanish</Badge>
+            <Badge tone="warning">{isEs ? "Sin español" : "No Spanish"}</Badge>
           ) : null}
         </div>
 
         <p className="mt-stack-xs line-clamp-1 text-body-sm text-fg-muted">
-          {episode.descriptionEn || "No description yet."}
+          {episode.descriptionEn ||
+            (isEs ? "Aún no hay descripción." : "No description yet.")}
         </p>
 
         <p className="mt-stack-xs flex flex-wrap items-center gap-inline-md text-body-sm text-fg-muted">
-          <span>{episode.speakers[0]?.name || "No speaker"}</span>
+          <span>
+            {episode.speakers[0]?.name ||
+              (isEs ? "Sin presentador" : "No speaker")}
+          </span>
           <span aria-hidden="true">·</span>
-          <span>{categoryNames || "No topic"}</span>
+          <span>{categoryNames || (isEs ? "Sin tema" : "No topic")}</span>
           <span aria-hidden="true">·</span>
           <span>
             {episode.durationSeconds
               ? formatDuration(episode.durationSeconds)
-              : "No runtime"}
+              : isEs
+                ? "Sin duración"
+                : "No runtime"}
           </span>
           <span aria-hidden="true">·</span>
-          <span>{formatDate(episode.publishedAt, false)}</span>
+          <span>{formatDate(episode.publishedAt, isEs)}</span>
           <span aria-hidden="true">·</span>
           <span className={live ? "text-success" : undefined}>
-            {live ? "Visible to members" : "Not visible"}
+            {live
+              ? isEs
+                ? "Visible para los miembros"
+                : "Visible to members"
+              : isEs
+                ? "No visible"
+                : "Not visible"}
           </span>
         </p>
       </div>
@@ -188,7 +226,9 @@ function EpisodeRow({
             variant="neutral"
             appearance="fill-stroke"
             onClick={() => onMove(-1)}
-            aria-label={`Move ${episode.titleEn} up`}
+            aria-label={
+              isEs ? `Subir ${episode.titleEn}` : `Move ${episode.titleEn} up`
+            }
           >
             <ChevronUp aria-hidden="true" className="size-4 shrink-0" />
           </Button>
@@ -197,7 +237,9 @@ function EpisodeRow({
             variant="neutral"
             appearance="fill-stroke"
             onClick={() => onMove(1)}
-            aria-label={`Move ${episode.titleEn} down`}
+            aria-label={
+              isEs ? `Bajar ${episode.titleEn}` : `Move ${episode.titleEn} down`
+            }
           >
             <ChevronDown aria-hidden="true" className="size-4 shrink-0" />
           </Button>
@@ -206,14 +248,18 @@ function EpisodeRow({
         <Select
           selectSize="small"
           value={episode.status}
-          aria-label={`Status for ${episode.titleEn}`}
+          aria-label={
+            isEs
+              ? `Estado de ${episode.titleEn}`
+              : `Status for ${episode.titleEn}`
+          }
           onChange={(event) => onStatus(event.target.value as EpisodeStatus)}
           className="w-[128px]"
         >
-          <option value="draft">Draft</option>
-          <option value="scheduled">Scheduled</option>
-          <option value="published">Published</option>
-          <option value="archived">Archived</option>
+          <option value="draft">{isEs ? "Borrador" : "Draft"}</option>
+          <option value="scheduled">{isEs ? "Programado" : "Scheduled"}</option>
+          <option value="published">{isEs ? "Publicado" : "Published"}</option>
+          <option value="archived">{isEs ? "Archivado" : "Archived"}</option>
         </Select>
 
         <Button
@@ -221,7 +267,9 @@ function EpisodeRow({
           variant="neutral"
           appearance={episode.featured ? "fill" : "fill-stroke"}
           onClick={onFeature}
-          aria-label={`Feature ${episode.titleEn}`}
+          aria-label={
+            isEs ? `Destacar ${episode.titleEn}` : `Feature ${episode.titleEn}`
+          }
         >
           <Star
             aria-hidden="true"
@@ -240,7 +288,7 @@ function EpisodeRow({
           onClick={onEdit}
         >
           <Pencil aria-hidden="true" className="size-4 shrink-0" />
-          Edit
+          {isEs ? "Editar" : "Edit"}
         </Button>
 
         <Button
@@ -248,7 +296,9 @@ function EpisodeRow({
           variant="danger"
           appearance="stroke"
           onClick={onDelete}
-          aria-label={`Delete ${episode.titleEn}`}
+          aria-label={
+            isEs ? `Eliminar ${episode.titleEn}` : `Delete ${episode.titleEn}`
+          }
         >
           <Trash2 aria-hidden="true" className="size-4 shrink-0" />
         </Button>
@@ -264,29 +314,34 @@ function QuestionRow({
   question: TableTalkQuestion;
   onStatus: (status: QuestionStatus) => void;
 }) {
+  const isEs = useLanguageCode() === "ES";
   return (
     <li className="flex flex-col gap-inset-sm rounded-card border border-line bg-surface p-inset-md sm:flex-row sm:items-start">
       <div className="min-w-0 flex-1">
         <p className="text-body-md text-fg">{question.body}</p>
         <p className="mt-stack-xs text-body-sm text-fg-muted">
-          {question.askedByName || "A member"}
+          {question.askedByName || (isEs ? "Un miembro" : "A member")}
           {" · "}
-          {new Date(question.submittedAt).toLocaleDateString()}
+          {new Date(question.submittedAt).toLocaleDateString(
+            isEs ? "es-US" : undefined,
+          )}
         </p>
       </div>
 
       <div className="flex shrink-0 items-center gap-inline-md">
-        {question.status === "new" ? <Badge tone="info">New</Badge> : null}
+        {question.status === "new" ? (
+          <Badge tone="info">{isEs ? "Nueva" : "New"}</Badge>
+        ) : null}
         <Select
           selectSize="small"
           value={question.status}
-          aria-label="Question status"
+          aria-label={isEs ? "Estado de la pregunta" : "Question status"}
           onChange={(event) => onStatus(event.target.value as QuestionStatus)}
           className="w-[190px]"
         >
           {QUESTION_STATUSES.map((entry) => (
             <option key={entry.value} value={entry.value}>
-              {entry.label}
+              {isEs ? entry.labelEs : entry.label}
             </option>
           ))}
         </Select>
@@ -297,6 +352,7 @@ function QuestionRow({
 
 export default function ManageTableTalkPage() {
   const t = useCollabText();
+  const isEs = useLanguageCode() === "ES";
   const {
     episodes,
     categories,
@@ -342,10 +398,13 @@ export default function ManageTableTalkPage() {
     <>
       <div className="mb-stack-lg flex flex-wrap items-start justify-between gap-inline-md">
         <div>
-          <h1 className="text-heading-1 text-fg">Table Talk Management</h1>
+          <h1 className="text-heading-1 text-fg">
+            {isEs ? "Gestión de Table Talk" : "Table Talk Management"}
+          </h1>
           <p className="mt-stack-xs measure text-body-md text-fg-muted">
-            Publish episodes, manage the topics members browse by, and read the
-            questions they send in.
+            {isEs
+              ? "Publique episodios, administre los temas que exploran los miembros y lea las preguntas que envían."
+              : "Publish episodes, manage the topics members browse by, and read the questions they send in."}
           </p>
         </div>
 
@@ -363,9 +422,15 @@ export default function ManageTableTalkPage() {
               aria-hidden="true"
               className="size-4 shrink-0"
             />
-            Suggested questions
+            {isEs ? "Preguntas sugeridas" : "Suggested questions"}
             {newQuestionCount > 0 ? (
-              <Badge tone="warning">{newQuestionCount} new</Badge>
+              <Badge tone="warning">
+                {isEs ? (
+                  `${newQuestionCount} nuevas`
+                ) : (
+                  <>{newQuestionCount} new</>
+                )}
+              </Badge>
             ) : null}
           </a>
           <Button
@@ -374,44 +439,54 @@ export default function ManageTableTalkPage() {
             onClick={() => setManagingTopics(true)}
           >
             <Tag aria-hidden="true" className="size-4 shrink-0" />
-            Topics
+            {isEs ? "Temas" : "Topics"}
           </Button>
           <Button onClick={() => setCreating(true)}>
             <Plus aria-hidden="true" className="size-4 shrink-0" />
-            Add episode
+            {isEs ? "Agregar episodio" : "Add episode"}
           </Button>
         </div>
       </div>
 
       <section className="grid grid-cols-1 gap-inset-md sm:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
-          label="Episodes"
+          label={isEs ? "Episodios" : "Episodes"}
           value={episodes.length}
-          detail={`${episodes.length - liveCount} not visible`}
+          detail={
+            isEs
+              ? `${episodes.length - liveCount} no visibles`
+              : `${episodes.length - liveCount} not visible`
+          }
           icon={Mic}
           tone="bg-brand-100"
           iconTone="text-fg-brand"
         />
         <SummaryCard
-          label="Live now"
+          label={isEs ? "Visibles ahora" : "Live now"}
           value={liveCount}
-          detail="Members can watch these"
+          detail={
+            isEs ? "Los miembros pueden verlos" : "Members can watch these"
+          }
           icon={Star}
           tone="bg-success-100"
           iconTone="text-success"
         />
         <SummaryCard
-          label="Topics"
+          label={isEs ? "Temas" : "Topics"}
           value={categories.filter((entry) => !entry.archived).length}
-          detail="Browsable filters"
+          detail={isEs ? "Filtros para explorar" : "Browsable filters"}
           icon={Tag}
           tone="bg-accent-100"
           iconTone="text-accent-fg"
         />
         <SummaryCard
-          label="Questions"
+          label={isEs ? "Preguntas" : "Questions"}
           value={questions.length}
-          detail={`${newQuestionCount} not read yet`}
+          detail={
+            isEs
+              ? `${newQuestionCount} sin leer`
+              : `${newQuestionCount} not read yet`
+          }
           icon={MessageCircleQuestion}
           tone="bg-warning-100"
           iconTone="text-warning"
@@ -421,7 +496,7 @@ export default function ManageTableTalkPage() {
       {saveError ? (
         <Alert
           tone="danger"
-          title="That change did not save"
+          title={isEs ? "Ese cambio no se guardó" : "That change did not save"}
           onDismiss={dismissSaveError}
           className="mt-stack-lg"
         >
@@ -445,10 +520,13 @@ export default function ManageTableTalkPage() {
       ) : null}
 
       <Card as="section" className="mt-stack-lg">
-        <h2 className="text-heading-4 text-fg">Episodes</h2>
+        <h2 className="text-heading-4 text-fg">
+          {isEs ? "Episodios" : "Episodes"}
+        </h2>
         <p className="mt-0.5 text-body-md text-fg-muted">
-          Drafts and scheduled episodes sit at the top. Only an episode with a
-          video file can reach members.
+          {isEs
+            ? "Los borradores y los episodios programados aparecen arriba. Solo un episodio con archivo de video puede llegar a los miembros."
+            : "Drafts and scheduled episodes sit at the top. Only an episode with a video file can reach members."}
         </p>
 
         <AsyncSection
@@ -456,8 +534,12 @@ export default function ManageTableTalkPage() {
           error={error}
           onRetry={canRetry(error) ? refetch : undefined}
           isEmpty={episodes.length === 0}
-          errorTitle={errorTitleFor(error, "Table Talk did not load")}
-          errorMessage={errorMessageFor(error, undefined)}
+          errorTitle={errorTitleFor(
+            error,
+            isEs ? "Table Talk no se cargó" : "Table Talk did not load",
+            isEs ? "es" : "en",
+          )}
+          errorMessage={errorMessageFor(error, undefined, isEs ? "es" : "en")}
           skeleton={
             <div className="mt-6 space-y-stack-sm">
               {Array.from({ length: 3 }).map((_, index) => (
@@ -469,12 +551,16 @@ export default function ManageTableTalkPage() {
             <EmptyState
               className="mt-stack-lg"
               icon={<Mic aria-hidden="true" />}
-              title="No episodes yet"
-              description="Upload the first conversation — a video, a title, who is speaking, and the topics it covers."
+              title={isEs ? "Aún no hay episodios" : "No episodes yet"}
+              description={
+                isEs
+                  ? "Suba la primera conversación: un video, un título, quién habla y los temas que trata."
+                  : "Upload the first conversation — a video, a title, who is speaking, and the topics it covers."
+              }
               action={
                 <Button onClick={() => setCreating(true)}>
                   <Plus aria-hidden="true" className="size-4 shrink-0" />
-                  Add episode
+                  {isEs ? "Agregar episodio" : "Add episode"}
                 </Button>
               }
             />
@@ -486,7 +572,7 @@ export default function ManageTableTalkPage() {
                 key={episode.id}
                 episode={episode}
                 categoryNames={episode.categoryIds
-                  .map((id) => categoryLabel(categories, id, false))
+                  .map((id) => categoryLabel(categories, id, isEs))
                   .filter(Boolean)
                   .join(", ")}
                 onEdit={() =>
@@ -511,10 +597,13 @@ export default function ManageTableTalkPage() {
         id="suggested-questions"
         className="mt-stack-lg scroll-mt-24"
       >
-        <h2 className="text-heading-4 text-fg">Suggested questions</h2>
+        <h2 className="text-heading-4 text-fg">
+          {isEs ? "Preguntas sugeridas" : "Suggested questions"}
+        </h2>
         <p className="mt-0.5 text-body-md text-fg-muted">
-          Topic suggestions from members. Nothing here is published, and no
-          question ever appears with a member&rsquo;s name on it.
+          {isEs
+            ? "Sugerencias de temas de los miembros. Nada de esto se publica, y ninguna pregunta aparece jamás con el nombre de un miembro."
+            : "Topic suggestions from members. Nothing here is published, and no question ever appears with a member’s name on it."}
         </p>
 
         {questions.length === 0 ? (
@@ -522,8 +611,12 @@ export default function ManageTableTalkPage() {
             className="mt-stack-lg"
             variant="bare"
             icon={<MessageCircleQuestion aria-hidden="true" />}
-            title="No questions yet"
-            description="When members suggest a topic for a future episode, it lands here."
+            title={isEs ? "Aún no hay preguntas" : "No questions yet"}
+            description={
+              isEs
+                ? "Cuando los miembros sugieran un tema para un futuro episodio, aparecerá aquí."
+                : "When members suggest a topic for a future episode, it lands here."
+            }
           />
         ) : (
           <ul className="mt-stack-lg space-y-stack-sm">
@@ -570,8 +663,12 @@ export default function ManageTableTalkPage() {
           size="small"
           closeOnBackdrop={false}
           onClose={() => setPendingDelete(null)}
-          title="Delete this episode?"
-          description={`"${pendingDelete.titleEn || "Untitled episode"}" will be removed for everyone. This cannot be undone — archive it instead if you only want it hidden.`}
+          title={isEs ? "¿Eliminar este episodio?" : "Delete this episode?"}
+          description={
+            isEs
+              ? `"${pendingDelete.titleEn || "Episodio sin título"}" se eliminará para todos. Esta acción no se puede deshacer; archívelo si solo quiere ocultarlo.`
+              : `"${pendingDelete.titleEn || "Untitled episode"}" will be removed for everyone. This cannot be undone — archive it instead if you only want it hidden.`
+          }
           footer={
             <div className="flex flex-wrap items-center justify-end gap-inline-md">
               <Button
@@ -579,7 +676,7 @@ export default function ManageTableTalkPage() {
                 appearance="fill-stroke"
                 onClick={() => setPendingDelete(null)}
               >
-                Cancel
+                {isEs ? "Cancelar" : "Cancel"}
               </Button>
               <Button
                 variant="danger"
@@ -588,7 +685,7 @@ export default function ManageTableTalkPage() {
                   setPendingDelete(null);
                 }}
               >
-                Delete
+                {isEs ? "Eliminar" : "Delete"}
               </Button>
             </div>
           }

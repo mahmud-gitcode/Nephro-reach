@@ -146,7 +146,11 @@ export default function UserReviewsPage() {
                     onClick={() => setRating(star)}
                     onMouseEnter={() => setHoverRating(star)}
                     onMouseLeave={() => setHoverRating(0)}
-                    aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
+                    aria-label={
+                      isEs
+                        ? `Calificar con ${star} estrella${star > 1 ? "s" : ""}`
+                        : `Rate ${star} star${star > 1 ? "s" : ""}`
+                    }
                     aria-pressed={rating >= star}
                     className="cursor-pointer rounded-control-small p-1 transition-transform duration-150 ease-standard hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                   >

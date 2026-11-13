@@ -16,6 +16,11 @@ import {
   PROGRAMS,
   SETTING_FIELDS,
   classError,
+  classStatusLabel,
+  fieldLabel,
+  fieldNote,
+  programLabel,
+  settingOptionLabel,
   emptyClassDraft,
   isFull,
   recordingLinkError,
@@ -34,6 +39,13 @@ import type { RecentClass } from "./liveClass.data";
 import type { BadgeTone } from "@/components/ui";
 import { toStartsAt, zoneLabel } from "./liveClass.mappers";
 import { isSafeLinkUrl } from "@/lib/utils/safeUrl";
+import { useLanguageCode } from "@/context/LanguageContext";
+
+/* These dialogs also render outside a LanguageProvider (their tests), so
+   they read the language with the hook that falls back to English. */
+function useIsEs() {
+  return useLanguageCode() === "ES";
+}
 
 /* ==========================================================================
    The dialogs behind Live Class's actions
@@ -68,11 +80,12 @@ export function ScheduleClassModal({
   today: string;
   onSave: (draft: ClassDraft, editingId?: string) => void;
 }) {
+  const isEs = useIsEs();
   const [draft, setDraft] = useState<ClassDraft>(() =>
     editing ? toDraft(editing) : emptyClassDraft(today),
   );
 
-  const error = classError(draft, classes, editing?.id);
+  const error = classError(draft, classes, editing?.id, isEs);
   const set = (patch: Partial<ClassDraft>) =>
     setDraft((current) => ({ ...current, ...patch }));
 
@@ -88,17 +101,35 @@ export function ScheduleClassModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={editing ? "Edit Class" : "Schedule New Class"}
+      title={
+        editing
+          ? isEs
+            ? "Editar clase"
+            : "Edit Class"
+          : isEs
+            ? "Programar nueva clase"
+            : "Schedule New Class"
+      }
       description={
-        editing ? editing.topic : "It opens closed until you open registration."
+        editing
+          ? editing.topic
+          : isEs
+            ? "Se crea cerrada hasta que usted abra la inscripción."
+            : "It opens closed until you open registration."
       }
       footer={
         <>
           <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
-            Cancel
+            {isEs ? "Cancelar" : "Cancel"}
           </Button>
           <Button type="submit" form="class-form" disabled={!!error}>
-            {editing ? "Save Changes" : "Schedule Class"}
+            {editing
+              ? isEs
+                ? "Guardar cambios"
+                : "Save Changes"
+              : isEs
+                ? "Programar clase"
+                : "Schedule Class"}
           </Button>
         </>
       }
@@ -114,7 +145,7 @@ export function ScheduleClassModal({
               htmlFor="class-date"
               className="block text-label-md text-fg-secondary"
             >
-              Date
+              {isEs ? "Fecha" : "Date"}
             </label>
             <Input
               id="class-date"
@@ -130,7 +161,7 @@ export function ScheduleClassModal({
               htmlFor="class-time"
               className="block text-label-md text-fg-secondary"
             >
-              Time
+              {isEs ? "Hora" : "Time"}
             </label>
             <Input
               id="class-time"
@@ -143,7 +174,7 @@ export function ScheduleClassModal({
               {zoneLabel(
                 toStartsAt(draft.date, draft.time) ?? new Date().toISOString(),
               )}{" "}
-              (your time zone)
+              {isEs ? "(su zona horaria)" : "(your time zone)"}
             </p>
           </div>
         </div>
@@ -153,14 +184,16 @@ export function ScheduleClassModal({
             htmlFor="class-topic"
             className="block text-label-md text-fg-secondary"
           >
-            Topic
+            {isEs ? "Tema" : "Topic"}
           </label>
           <Input
             id="class-topic"
             inputSize="small"
             value={draft.topic}
             onChange={(event) => set({ topic: event.target.value })}
-            placeholder="Renal Diet Basics"
+            placeholder={
+              isEs ? "Conceptos básicos de la dieta renal" : "Renal Diet Basics"
+            }
           />
         </div>
 
@@ -170,14 +203,14 @@ export function ScheduleClassModal({
               htmlFor="class-educator"
               className="block text-label-md text-fg-secondary"
             >
-              Educator
+              {isEs ? "Educador" : "Educator"}
             </label>
             <Input
               id="class-educator"
               inputSize="small"
               value={draft.educator}
               onChange={(event) => set({ educator: event.target.value })}
-              placeholder="Renal Dietitian"
+              placeholder={isEs ? "Dietista renal" : "Renal Dietitian"}
             />
           </div>
 
@@ -186,7 +219,7 @@ export function ScheduleClassModal({
               htmlFor="class-program"
               className="block text-label-md text-fg-secondary"
             >
-              Program
+              {isEs ? "Programa" : "Program"}
             </label>
             <Select
               id="class-program"
@@ -196,7 +229,7 @@ export function ScheduleClassModal({
             >
               {PROGRAMS.map((program) => (
                 <option key={program} value={program}>
-                  {program}
+                  {programLabel(program, isEs)}
                 </option>
               ))}
             </Select>
@@ -207,7 +240,7 @@ export function ScheduleClassModal({
               htmlFor="class-capacity"
               className="block text-label-md text-fg-secondary"
             >
-              Capacity
+              {isEs ? "Cupo" : "Capacity"}
             </label>
             <Input
               id="class-capacity"
@@ -226,7 +259,7 @@ export function ScheduleClassModal({
               htmlFor="class-status"
               className="block text-label-md text-fg-secondary"
             >
-              Registration
+              {isEs ? "Inscripción" : "Registration"}
             </label>
             <Select
               id="class-status"
@@ -238,7 +271,7 @@ export function ScheduleClassModal({
             >
               {CLASS_STATUSES.map((status) => (
                 <option key={status} value={status}>
-                  {status}
+                  {classStatusLabel(status, isEs)}
                 </option>
               ))}
             </Select>
@@ -250,7 +283,9 @@ export function ScheduleClassModal({
             htmlFor="class-link"
             className="block text-label-md text-fg-secondary"
           >
-            Meeting Link (optional)
+            {isEs
+              ? "Enlace de la reunión (opcional)"
+              : "Meeting Link (optional)"}
           </label>
           <Input
             id="class-link"
@@ -261,14 +296,22 @@ export function ScheduleClassModal({
             placeholder="https://zoom.us/j/…"
           />
           <p className="text-caption text-fg-muted">
-            Members get a Join button on their dashboard once this is set.
+            {isEs
+              ? "Los miembros verán un botón Unirse en su panel cuando se configure."
+              : "Members get a Join button on their dashboard once this is set."}
           </p>
         </div>
 
         {editing && draft.capacity < editing.registered ? (
           <Alert tone="warning">
-            {editing.registered} people are already registered. Their places are
-            kept; the class is simply over capacity.
+            {isEs ? (
+              `${editing.registered} personas ya están inscritas. Conservan su lugar; la clase simplemente supera el cupo.`
+            ) : (
+              <>
+                {editing.registered} people are already registered. Their places
+                are kept; the class is simply over capacity.
+              </>
+            )}
           </Alert>
         ) : null}
 
@@ -297,6 +340,7 @@ export function ClassActionsModal({
   onDuplicate: () => void;
   onRemove: () => void;
 }) {
+  const isEs = useIsEs();
   if (!item) return null;
 
   const act = (run: () => void) => () => {
@@ -309,18 +353,24 @@ export function ClassActionsModal({
       open
       onClose={onClose}
       title={item.topic}
-      description={`${formatClassDate(item.date)} · ${item.time} · ${
-        item.registered
-      } of ${item.capacity} registered`}
+      description={
+        isEs
+          ? `${formatClassDate(item.date, true)} · ${item.time} · ${
+              item.registered
+            } de ${item.capacity} inscritos`
+          : `${formatClassDate(item.date)} · ${item.time} · ${
+              item.registered
+            } of ${item.capacity} registered`
+      }
       footer={
         <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
-          Close
+          {isEs ? "Cerrar" : "Close"}
         </Button>
       }
     >
       <div className="space-y-inline-sm">
         <Button fullWidth onClick={act(onEdit)}>
-          Edit Class
+          {isEs ? "Editar clase" : "Edit Class"}
         </Button>
 
         {item.status === "Open" ? (
@@ -330,7 +380,7 @@ export function ClassActionsModal({
             fullWidth
             onClick={act(() => onStatus("Not Yet Open"))}
           >
-            Close Registration
+            {isEs ? "Cerrar inscripción" : "Close Registration"}
           </Button>
         ) : item.status === "Not Yet Open" ? (
           <Button
@@ -339,7 +389,7 @@ export function ClassActionsModal({
             fullWidth
             onClick={act(() => onStatus("Open"))}
           >
-            Open Registration
+            {isEs ? "Abrir inscripción" : "Open Registration"}
           </Button>
         ) : (
           <Button
@@ -348,7 +398,7 @@ export function ClassActionsModal({
             fullWidth
             onClick={act(() => onStatus("Not Yet Open"))}
           >
-            Reinstate Class
+            {isEs ? "Restablecer clase" : "Reinstate Class"}
           </Button>
         )}
 
@@ -359,7 +409,11 @@ export function ClassActionsModal({
           onClick={act(onDuplicate)}
         >
           <Copy aria-hidden="true" />
-          <span>Duplicate for Next Week</span>
+          <span>
+            {isEs
+              ? "Duplicar para la próxima semana"
+              : "Duplicate for Next Week"}
+          </span>
         </Button>
 
         {item.status !== "Cancelled" ? (
@@ -369,7 +423,7 @@ export function ClassActionsModal({
             fullWidth
             onClick={act(() => onStatus("Cancelled"))}
           >
-            Cancel Class
+            {isEs ? "Cancelar clase" : "Cancel Class"}
           </Button>
         ) : (
           /* Only once it is cancelled, and only then: deleting a class
@@ -381,17 +435,23 @@ export function ClassActionsModal({
             onClick={act(onRemove)}
           >
             <Trash2 aria-hidden="true" />
-            <span>Delete Permanently</span>
+            <span>
+              {isEs ? "Eliminar definitivamente" : "Delete Permanently"}
+            </span>
           </Button>
         )}
 
         {isFull(item) && item.status === "Open" ? (
           <Alert tone="info">
-            This class is full. New registrations will need a bigger capacity.
+            {isEs
+              ? "Esta clase está llena. Para nuevas inscripciones se necesita un cupo mayor."
+              : "This class is full. New registrations will need a bigger capacity."}
           </Alert>
         ) : item.status === "Open" ? (
           <p className="text-body-sm text-fg-muted">
-            {seatsLeft(item)} places left.
+            {isEs
+              ? `Quedan ${seatsLeft(item)} lugares.`
+              : `${seatsLeft(item)} places left.`}
           </p>
         ) : null}
       </div>
@@ -416,16 +476,21 @@ export function AllClassesModal({
   today: string;
   onSelect: (item: ManagedClass) => void;
 }) {
+  const isEs = useIsEs();
   return (
     <Modal
       open={open}
       onClose={onClose}
       size="wide"
-      title="All Classes"
-      description="Every class on the schedule, past and cancelled included."
+      title={isEs ? "Todas las clases" : "All Classes"}
+      description={
+        isEs
+          ? "Todas las clases del calendario, incluidas las pasadas y las canceladas."
+          : "Every class on the schedule, past and cancelled included."
+      }
       footer={
         <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
-          Close
+          {isEs ? "Cerrar" : "Close"}
         </Button>
       }
     >
@@ -444,7 +509,8 @@ export function AllClassesModal({
                 {item.topic}
               </span>
               <span className="block truncate text-body-sm text-fg-muted">
-                {formatClassDate(item.date)} · {item.time} · {item.educator}
+                {formatClassDate(item.date, isEs)} · {item.time} ·{" "}
+                {item.educator}
               </span>
             </button>
 
@@ -454,11 +520,11 @@ export function AllClassesModal({
 
             {item.date < today && item.status !== "Cancelled" ? (
               <Badge tone="neutral" variant="soft">
-                Past
+                {isEs ? "Pasada" : "Past"}
               </Badge>
             ) : (
               <Badge tone={classTone[item.status]} variant="soft">
-                {item.status}
+                {classStatusLabel(item.status, isEs)}
               </Badge>
             )}
           </li>
@@ -466,7 +532,9 @@ export function AllClassesModal({
       </ul>
 
       {classes.length === 0 ? (
-        <p className="text-body-sm text-fg-muted">Nothing scheduled yet.</p>
+        <p className="text-body-sm text-fg-muted">
+          {isEs ? "Aún no hay nada programado." : "Nothing scheduled yet."}
+        </p>
       ) : null}
     </Modal>
   );
@@ -488,17 +556,22 @@ export function RecordingModal({
   link: string;
   onSave: (title: string, url: string) => void;
 }) {
+  const isEs = useIsEs();
   const [url, setUrl] = useState(link);
   if (!item) return null;
 
-  const error = recordingLinkError(url);
+  const error = recordingLinkError(url, isEs);
 
   return (
     <Modal
       open
       onClose={onClose}
       title={item.title}
-      description={`${formatClassDate(item.date)}${item.attended !== null ? ` · ${item.attended} attended` : ""}${item.rating > 0 ? ` · rated ${item.rating}` : ""}`}
+      description={
+        isEs
+          ? `${formatClassDate(item.date, true)}${item.attended !== null ? ` · ${item.attended} asistieron` : ""}${item.rating > 0 ? ` · calificación ${item.rating}` : ""}`
+          : `${formatClassDate(item.date)}${item.attended !== null ? ` · ${item.attended} attended` : ""}${item.rating > 0 ? ` · rated ${item.rating}` : ""}`
+      }
       footer={
         <>
           {/* Unpublishing takes it off members' home screens. */}
@@ -511,11 +584,11 @@ export function RecordingModal({
                 onClose();
               }}
             >
-              Unpublish
+              {isEs ? "Retirar publicación" : "Unpublish"}
             </Button>
           ) : null}
           <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
-            Close
+            {isEs ? "Cerrar" : "Close"}
           </Button>
           <Button
             disabled={!!error || !url.trim()}
@@ -524,7 +597,13 @@ export function RecordingModal({
               onClose();
             }}
           >
-            {link ? "Save Changes" : "Publish to Members"}
+            {link
+              ? isEs
+                ? "Guardar cambios"
+                : "Save Changes"
+              : isEs
+                ? "Publicar para los miembros"
+                : "Publish to Members"}
           </Button>
         </>
       }
@@ -538,7 +617,7 @@ export function RecordingModal({
             htmlFor="recording-url"
             className="block text-label-md text-fg-secondary"
           >
-            Recording link
+            {isEs ? "Enlace de la grabación" : "Recording link"}
           </label>
           <Input
             id="recording-url"
@@ -550,8 +629,14 @@ export function RecordingModal({
         </div>
 
         <p className="text-body-sm text-fg-muted">
-          Published recordings appear on every member&rsquo;s home screen, under
-          Recent Live Recordings.
+          {isEs ? (
+            "Las grabaciones publicadas aparecen en la pantalla de inicio de cada miembro, en Grabaciones recientes en vivo."
+          ) : (
+            <>
+              Published recordings appear on every member&rsquo;s home screen,
+              under Recent Live Recordings.
+            </>
+          )}
         </p>
 
         {error ? <Alert tone="warning">{error}</Alert> : null}
@@ -565,10 +650,12 @@ export function RecordingModal({
             className="inline-flex items-center gap-inline-xs text-body-sm font-semibold text-fg-brand hover:underline"
           >
             <ExternalLink aria-hidden="true" className="h-4 w-4" />
-            Open the recording
+            {isEs ? "Abrir la grabación" : "Open the recording"}
           </a>
         ) : (
-          <p className="text-body-sm text-fg-muted">Not published yet.</p>
+          <p className="text-body-sm text-fg-muted">
+            {isEs ? "Aún no publicada." : "Not published yet."}
+          </p>
         )}
       </div>
     </Modal>
@@ -588,16 +675,21 @@ export function RecordingsLibraryModal({
   recordings: Record<string, string>;
   onSelect: (item: RecentClass) => void;
 }) {
+  const isEs = useIsEs();
   return (
     <Modal
       open={open}
       onClose={onClose}
       size="wide"
-      title="All Recordings"
-      description="Every past class, and where its recording lives."
+      title={isEs ? "Todas las grabaciones" : "All Recordings"}
+      description={
+        isEs
+          ? "Todas las clases pasadas y dónde está su grabación."
+          : "Every past class, and where its recording lives."
+      }
       footer={
         <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
-          Close
+          {isEs ? "Cerrar" : "Close"}
         </Button>
       }
     >
@@ -619,7 +711,8 @@ export function RecordingsLibraryModal({
                   {item.title}
                 </span>
                 <span className="block truncate text-body-sm text-fg-muted">
-                  {formatClassDate(item.date)} · {item.attended} attended
+                  {formatClassDate(item.date, isEs)} · {item.attended}{" "}
+                  {isEs ? "asistieron" : "attended"}
                 </span>
               </button>
 
@@ -631,11 +724,11 @@ export function RecordingsLibraryModal({
                   className="inline-flex items-center gap-inline-xs text-body-sm font-semibold text-fg-brand hover:underline"
                 >
                   <ExternalLink aria-hidden="true" className="h-4 w-4" />
-                  Open
+                  {isEs ? "Abrir" : "Open"}
                 </a>
               ) : (
                 <Badge tone="neutral" variant="soft">
-                  No link
+                  {isEs ? "Sin enlace" : "No link"}
                 </Badge>
               )}
             </li>
@@ -659,24 +752,21 @@ function SettingControl({
   value: SettingValues[string];
   onChange: (next: SettingValues[string]) => void;
 }) {
+  const isEs = useIsEs();
   const id = `setting-${field.key}`;
+  const label = fieldLabel(field, isEs);
+  const note = fieldNote(field, isEs);
 
   if (field.kind === "switch") {
     return (
       <div className="flex items-center justify-between gap-inline-lg">
         <span className="min-w-0">
-          <span className="block text-label-md text-fg">{field.label}</span>
-          {field.note ? (
-            <span className="block text-body-sm text-fg-muted">
-              {field.note}
-            </span>
+          <span className="block text-label-md text-fg">{label}</span>
+          {note ? (
+            <span className="block text-body-sm text-fg-muted">{note}</span>
           ) : null}
         </span>
-        <Switch
-          checked={value === true}
-          onChange={onChange}
-          label={field.label}
-        />
+        <Switch checked={value === true} onChange={onChange} label={label} />
       </div>
     );
   }
@@ -684,7 +774,7 @@ function SettingControl({
   return (
     <div className="space-y-1.5">
       <label htmlFor={id} className="block text-label-md text-fg-secondary">
-        {field.label}
+        {label}
       </label>
 
       {field.kind === "select" ? (
@@ -696,7 +786,7 @@ function SettingControl({
         >
           {field.options?.map((option) => (
             <option key={option} value={option}>
-              {option}
+              {settingOptionLabel(option, isEs)}
             </option>
           ))}
         </Select>
@@ -719,9 +809,7 @@ function SettingControl({
         />
       )}
 
-      {field.note ? (
-        <p className="text-body-sm text-fg-muted">{field.note}</p>
-      ) : null}
+      {note ? <p className="text-body-sm text-fg-muted">{note}</p> : null}
     </div>
   );
 }
@@ -740,6 +828,7 @@ export function SettingModal({
   values: SettingValues;
   onSave: (id: SettingId, values: SettingValues) => void;
 }) {
+  const isEs = useIsEs();
   const [draft, setDraft] = useState<SettingValues>(values);
   if (!id) return null;
 
@@ -750,10 +839,10 @@ export function SettingModal({
   );
   const error =
     linkFields
-      .map((field) => recordingLinkError(String(draft[field.key] ?? "")))
+      .map((field) => recordingLinkError(String(draft[field.key] ?? ""), isEs))
       .find((problem) => problem !== null) ??
     SETTING_FIELDS[id]
-      .map((field) => settingNumberError(field, draft[field.key]))
+      .map((field) => settingNumberError(field, draft[field.key], isEs))
       .find((problem) => problem !== null);
 
   return (
@@ -764,7 +853,7 @@ export function SettingModal({
       footer={
         <>
           <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
-            Cancel
+            {isEs ? "Cancelar" : "Cancel"}
           </Button>
           <Button
             disabled={!!error}
@@ -773,7 +862,7 @@ export function SettingModal({
               onClose();
             }}
           >
-            Save
+            {isEs ? "Guardar" : "Save"}
           </Button>
         </>
       }

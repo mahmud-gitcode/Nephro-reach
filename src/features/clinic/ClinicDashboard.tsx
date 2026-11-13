@@ -44,6 +44,8 @@ import {
   TableThumb,
 } from "@/components/ui";
 import { useIsMounted } from "@/lib/utils/useIsMounted";
+import { useLanguage } from "@/context/LanguageContext";
+import { localizeActivity } from "./enrollment.mapping";
 import { cn } from "@/lib/utils/cn";
 import { tableIconButton } from "./tableButton";
 import { statusIconSolid, statusKeyTone } from "./StatusIconsSolid";
@@ -58,8 +60,10 @@ import {
   statusTile,
 } from "./clinicIcons";
 import {
+  chartLabel,
   liveClassLink,
   memberLink,
+  memberStatusLabel,
   messageLink,
   performance,
   programProgress,
@@ -165,6 +169,8 @@ function EnrollmentCard({
       ? null
       : Math.max(0, seats?.available ?? contracted - used);
   const pct = contracted ? Math.round((used / contracted) * 100) : null;
+  const { language } = useLanguage();
+  const isEs = language === "ES";
 
   return (
     <KeyCard
@@ -181,11 +187,13 @@ function EnrollmentCard({
           ) : null}
         </>
       }
-      label="Members Enrolled"
+      label={isEs ? "Miembros inscritos" : "Members Enrolled"}
       note={
         pct === null || remaining === null
           ? undefined
-          : `${pct}% taken · ${remaining} left`
+          : isEs
+            ? `${pct}% ocupado · ${remaining} disponibles`
+            : `${pct}% taken · ${remaining} left`
       }
     />
   );
@@ -193,6 +201,8 @@ function EnrollmentCard({
 
 function StatusCard({ card }: { card: StatusCardData }) {
   const Icon = statusIconSolid[card.status];
+  const { language } = useLanguage();
+  const isEs = language === "ES";
 
   return (
     <KeyCard
@@ -200,8 +210,14 @@ function StatusCard({ card }: { card: StatusCardData }) {
       icon={<Icon />}
       /* null: no source for this status yet (NEW-2). */
       value={card.count ?? "—"}
-      label={card.status}
-      note={card.share ? `${card.share} of members` : undefined}
+      label={memberStatusLabel(card.status, isEs)}
+      note={
+        card.share
+          ? isEs
+            ? `${card.share} de los miembros`
+            : `${card.share} of members`
+          : undefined
+      }
     />
   );
 }
@@ -209,8 +225,10 @@ function StatusCard({ card }: { card: StatusCardData }) {
 /* ------------------------------------------------ what needs doing now */
 
 function NeedsAttention({ dashboard }: { dashboard: Dashboard }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const items = dashboard.data
-    ? needsAttention(dashboard.data.roster, dashboard.data.activity)
+    ? needsAttention(dashboard.data.roster, dashboard.data.activity, isEs)
     : [];
 
   return (
@@ -218,11 +236,13 @@ function NeedsAttention({ dashboard }: { dashboard: Dashboard }) {
       <PanelHeading
         title={
           <span className="flex items-center gap-inline-md">
-            Needs Attention Today
+            {isEs ? "Requieren atención hoy" : "Needs Attention Today"}
             {items.length > 0 ? (
               <Badge tone="danger">
                 {items.length}
-                <span className="sr-only"> members</span>
+                <span className="sr-only">
+                  {isEs ? " miembros" : " members"}
+                </span>
               </Badge>
             ) : null}
           </span>
@@ -231,8 +251,16 @@ function NeedsAttention({ dashboard }: { dashboard: Dashboard }) {
       <AsyncSection
         pending={dashboard.isPending}
         error={dashboard.error}
-        errorTitle={errorTitleFor(dashboard.error, undefined)}
-        errorMessage={errorMessageFor(dashboard.error, undefined)}
+        errorTitle={errorTitleFor(
+          dashboard.error,
+          undefined,
+          isEs ? "es" : "en",
+        )}
+        errorMessage={errorMessageFor(
+          dashboard.error,
+          undefined,
+          isEs ? "es" : "en",
+        )}
         onRetry={canRetry(dashboard.error) ? dashboard.refetch : undefined}
         isEmpty={items.length === 0}
         skeleton={<SkeletonText lines={5} />}
@@ -240,8 +268,16 @@ function NeedsAttention({ dashboard }: { dashboard: Dashboard }) {
           <EmptyState
             variant="bare"
             icon={<PartyPopper />}
-            title="Nobody needs attention today"
-            description="Every member is on track, checked in and started."
+            title={
+              isEs
+                ? "Nadie requiere atención hoy"
+                : "Nobody needs attention today"
+            }
+            description={
+              isEs
+                ? "Todos los miembros están al día, con su registro hecho y su programa iniciado."
+                : "Every member is on track, checked in and started."
+            }
           />
         }
       >
@@ -281,12 +317,14 @@ function NeedsAttention({ dashboard }: { dashboard: Dashboard }) {
                 <div className="flex shrink-0 gap-inline-md pl-12 sm:pl-0">
                   <Link href={messageLink(member.id)} className={outlineLink}>
                     <MessageSquareText className="h-4 w-4" />
-                    Message
+                    {isEs ? "Mensaje" : "Message"}
                   </Link>
                   <Link
                     href={memberLink({ patientId: member.id })}
                     className={iconLink}
-                    aria-label={`View ${member.name}`}
+                    aria-label={
+                      isEs ? `Ver a ${member.name}` : `View ${member.name}`
+                    }
                   >
                     <Eye aria-hidden="true" />
                   </Link>
@@ -303,7 +341,9 @@ function NeedsAttention({ dashboard }: { dashboard: Dashboard }) {
 const QUICK_ACTIONS = [
   {
     label: "Enroll Patient",
+    labelEs: "Inscribir paciente",
     hint: "Add a patient to a program",
+    hintEs: "Agregue un paciente a un programa",
     href: "/dashboard/clinic/enroll-patients",
     icon: UserPlus,
     /* Opens the enroll form here instead of leaving the dashboard. */
@@ -311,7 +351,9 @@ const QUICK_ACTIONS = [
   },
   {
     label: "Send Message",
+    labelEs: "Enviar mensaje",
     hint: "Reach a member or your team",
+    hintEs: "Contacte a un miembro o a su equipo",
     href: MESSAGES,
     icon: MessageSquareText,
   },
@@ -319,13 +361,17 @@ const QUICK_ACTIONS = [
      the clinic follows its members' attendance and may join one. */
   {
     label: "Live Classes",
+    labelEs: "Clases en vivo",
     hint: "See what your members attend",
+    hintEs: "Vea a qué asisten sus miembros",
     href: "/dashboard/clinic/live-class",
     icon: CalendarPlus,
   },
   {
     label: "View Reports",
+    labelEs: "Ver informes",
     hint: "Engagement and outcomes",
+    hintEs: "Participación y resultados",
     href: "/dashboard/clinic/reports",
     icon: BarChart3,
   },
@@ -335,9 +381,11 @@ const quickActionClass =
   "flex w-full cursor-pointer items-center gap-inline-lg rounded-control border border-line-subtle bg-surface p-inset-sm text-left transition-colors duration-150 ease-standard hover:border-line-strong hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
 function QuickActions({ onEnroll }: { onEnroll?: () => void }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading title="Quick Actions" />
+      <PanelHeading title={isEs ? "Acciones rápidas" : "Quick Actions"} />
       <ul className="grid gap-inline-md sm:grid-cols-2 xl:grid-cols-1">
         {QUICK_ACTIONS.filter(
           /* No "Enroll Patient" for a role that cannot enroll. */
@@ -356,10 +404,10 @@ function QuickActions({ onEnroll }: { onEnroll?: () => void }) {
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-label-lg text-fg">
-                  {action.label}
+                  {isEs ? action.labelEs : action.label}
                 </span>
                 <span className="block text-caption text-fg-muted">
-                  {action.hint}
+                  {isEs ? action.hintEs : action.hint}
                 </span>
               </span>
               <ChevronRight
@@ -398,22 +446,32 @@ function QuickActionTarget({
 
 function RecentActivity({ dashboard }: { dashboard: Dashboard }) {
   const events = dashboard.data?.activity ?? [];
+  const { language } = useLanguage();
+  const isEs = language === "ES";
 
   return (
     <Card as="section" padding="small" className="h-full">
       <PanelHeading
-        title="Recent Activity"
+        title={isEs ? "Actividad reciente" : "Recent Activity"}
         action={
           <Link href={memberLink({})} className={outlineLink}>
-            View All
+            {isEs ? "Ver todo" : "View All"}
           </Link>
         }
       />
       <AsyncSection
         pending={dashboard.isPending}
         error={dashboard.error}
-        errorTitle={errorTitleFor(dashboard.error, undefined)}
-        errorMessage={errorMessageFor(dashboard.error, undefined)}
+        errorTitle={errorTitleFor(
+          dashboard.error,
+          undefined,
+          isEs ? "es" : "en",
+        )}
+        errorMessage={errorMessageFor(
+          dashboard.error,
+          undefined,
+          isEs ? "es" : "en",
+        )}
         onRetry={canRetry(dashboard.error) ? dashboard.refetch : undefined}
         isEmpty={events.length === 0}
         skeleton={<SkeletonText lines={5} />}
@@ -421,8 +479,12 @@ function RecentActivity({ dashboard }: { dashboard: Dashboard }) {
           <EmptyState
             variant="bare"
             icon={<Inbox />}
-            title="No activity yet"
-            description="Module completions and check-ins will show here."
+            title={isEs ? "Aún no hay actividad" : "No activity yet"}
+            description={
+              isEs
+                ? "Aquí aparecerán los módulos completados y los registros."
+                : "Module completions and check-ins will show here."
+            }
           />
         }
       >
@@ -459,11 +521,20 @@ function RecentActivity({ dashboard }: { dashboard: Dashboard }) {
 /* ----------------------------------------------------- existing panels */
 
 function PerformanceOverview() {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading title="Performance Overview" />
+      <PanelHeading
+        title={isEs ? "Resumen de desempeño" : "Performance Overview"}
+      />
       {/* The shared ring row: one size and label style everywhere. */}
-      <RingStats items={performance} />
+      <RingStats
+        items={performance.map((item) => ({
+          ...item,
+          label: chartLabel(item.label, isEs),
+        }))}
+      />
     </Card>
   );
 }
@@ -473,6 +544,8 @@ function UpcomingClasses({ dashboard }: { dashboard: Dashboard }) {
      time — reading the clock then would bake in the build date. So the
      list waits for the browser, and shows its skeleton until then. */
   const mounted = useIsMounted();
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const items =
     mounted && dashboard.data
       ? upcomingFrom(dashboard.data.classes, new Date())
@@ -482,10 +555,10 @@ function UpcomingClasses({ dashboard }: { dashboard: Dashboard }) {
     <Card as="section" padding="none" className="h-full overflow-hidden">
       <div className="px-card pt-card">
         <PanelHeading
-          title="Upcoming Classes"
+          title={isEs ? "Próximas clases" : "Upcoming Classes"}
           action={
             <Link href="/dashboard/clinic/live-class" className={outlineLink}>
-              View All
+              {isEs ? "Ver todo" : "View All"}
             </Link>
           }
         />
@@ -493,8 +566,16 @@ function UpcomingClasses({ dashboard }: { dashboard: Dashboard }) {
       <AsyncSection
         pending={dashboard.isPending || !mounted}
         error={dashboard.error}
-        errorTitle={errorTitleFor(dashboard.error, undefined)}
-        errorMessage={errorMessageFor(dashboard.error, undefined)}
+        errorTitle={errorTitleFor(
+          dashboard.error,
+          undefined,
+          isEs ? "es" : "en",
+        )}
+        errorMessage={errorMessageFor(
+          dashboard.error,
+          undefined,
+          isEs ? "es" : "en",
+        )}
         onRetry={canRetry(dashboard.error) ? dashboard.refetch : undefined}
         isEmpty={items.length === 0}
         skeleton={
@@ -507,14 +588,18 @@ function UpcomingClasses({ dashboard }: { dashboard: Dashboard }) {
             <EmptyState
               variant="bare"
               icon={<CalendarPlus />}
-              title="No upcoming classes"
-              description="Nothing is scheduled yet."
+              title={isEs ? "No hay próximas clases" : "No upcoming classes"}
+              description={
+                isEs
+                  ? "Todavía no hay nada programado."
+                  : "Nothing is scheduled yet."
+              }
               action={
                 <Link
                   href="/dashboard/clinic/live-class"
                   className={outlineLink}
                 >
-                  Go to Live Class
+                  {isEs ? "Ir a Clases en vivo" : "Go to Live Class"}
                 </Link>
               }
             />
@@ -525,16 +610,21 @@ function UpcomingClasses({ dashboard }: { dashboard: Dashboard }) {
           <Table minWidth={0}>
             <TableHead>
               <TableRow>
-                <TableHeaderCell>Date</TableHeaderCell>
-                <TableHeaderCell>Class</TableHeaderCell>
-                <TableHeaderCell className="text-right">Time</TableHeaderCell>
+                <TableHeaderCell>{isEs ? "Fecha" : "Date"}</TableHeaderCell>
+                <TableHeaderCell>{isEs ? "Clase" : "Class"}</TableHeaderCell>
+                <TableHeaderCell className="text-right">
+                  {isEs ? "Hora" : "Time"}
+                </TableHeaderCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {items.map((item) => (
                 <TableRow key={item.date}>
                   <TableCell className="whitespace-nowrap tabular-nums">
-                    {formatClassDate(item.date).replace(/, \d{4}$/, "")}
+                    {formatClassDate(item.date, isEs).replace(
+                      /,? (de )?\d{4}$/,
+                      "",
+                    )}
                   </TableCell>
                   <TableCell emphasis>
                     <Link
@@ -568,6 +658,8 @@ function UpcomingClasses({ dashboard }: { dashboard: Dashboard }) {
 
 function MemberRow({ member }: { member: RosterMember }) {
   const Icon = member.status ? statusIcon[member.status] : null;
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   return (
     <TableRow>
       <TableCell emphasis className="whitespace-nowrap">
@@ -591,7 +683,9 @@ function MemberRow({ member }: { member: RosterMember }) {
         <span className="flex items-center gap-inline-md">
           <Progress
             value={member.progress}
-            label={`${member.name} progress`}
+            label={
+              isEs ? `Progreso de ${member.name}` : `${member.name} progress`
+            }
             size="small"
             className="w-14"
           />
@@ -604,13 +698,15 @@ function MemberRow({ member }: { member: RosterMember }) {
             tone={statusTone[member.status]}
             icon={<Icon aria-hidden="true" />}
           >
-            {member.status}
+            {memberStatusLabel(member.status, isEs)}
           </Badge>
         ) : (
           <span className="text-fg-muted">—</span>
         )}
       </TableCell>
-      <TableCell className="whitespace-nowrap">{member.lastActivity}</TableCell>
+      <TableCell className="whitespace-nowrap">
+        {localizeActivity(member.lastActivity, isEs)}
+      </TableCell>
       <TableCell>
         {/* Two verbs, so two labelled icon links rather than a menu that
             hides them behind a third click. */}
@@ -618,16 +714,20 @@ function MemberRow({ member }: { member: RosterMember }) {
           <Link
             href={memberLink({ patientId: member.id })}
             className={iconLink}
-            aria-label={`View ${member.name}`}
-            title="View member"
+            aria-label={isEs ? `Ver a ${member.name}` : `View ${member.name}`}
+            title={isEs ? "Ver miembro" : "View member"}
           >
             <Eye aria-hidden="true" />
           </Link>
           <Link
             href={messageLink(member.id)}
             className={iconLink}
-            aria-label={`Message ${member.name}`}
-            title="Send message"
+            aria-label={
+              isEs
+                ? `Enviar mensaje a ${member.name}`
+                : `Message ${member.name}`
+            }
+            title={isEs ? "Enviar mensaje" : "Send message"}
           >
             <MessageSquareText aria-hidden="true" />
           </Link>
@@ -638,6 +738,9 @@ function MemberRow({ member }: { member: RosterMember }) {
 }
 
 function MembersPanel({ dashboard }: { dashboard: Dashboard }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
+  const lang = isEs ? "es" : "en";
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState(ALL_STATUSES);
   const [page, setPage] = useState(1);
@@ -667,23 +770,29 @@ function MembersPanel({ dashboard }: { dashboard: Dashboard }) {
        up under the title. */
     <Card as="section" padding="none" className="overflow-hidden">
       <div className="flex flex-col gap-inset-sm p-card pb-stack-lg lg:flex-row lg:items-center lg:justify-between">
-        <h2 className="text-heading-4 text-fg">Members</h2>
+        <h2 className="text-heading-4 text-fg">
+          {isEs ? "Miembros" : "Members"}
+        </h2>
         <div className="flex flex-col gap-inline-md sm:flex-row sm:items-center">
           <SearchField
-            label="Search members"
-            placeholder="Search by name or MRN…"
+            label={isEs ? "Buscar miembros" : "Search members"}
+            placeholder={
+              isEs ? "Buscar por nombre o MRN…" : "Search by name or MRN…"
+            }
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             className="sm:w-60"
           />
           <Select
             selectSize="small"
-            aria-label="Status"
+            aria-label={isEs ? "Estado" : "Status"}
             value={status}
             onChange={(event) => setStatus(event.target.value)}
           >
             {statusOptions.map((option) => (
-              <option key={option}>{option}</option>
+              <option key={option} value={option}>
+                {memberStatusLabel(option, isEs)}
+              </option>
             ))}
           </Select>
         </div>
@@ -692,8 +801,8 @@ function MembersPanel({ dashboard }: { dashboard: Dashboard }) {
       {dashboard.error ? (
         <div className="px-card pb-card">
           <ErrorState
-            title={errorTitleFor(dashboard.error, undefined)}
-            message={errorMessageFor(dashboard.error, undefined)}
+            title={errorTitleFor(dashboard.error, undefined, lang)}
+            message={errorMessageFor(dashboard.error, undefined, lang)}
             error={dashboard.error}
             onRetry={canRetry(dashboard.error) ? dashboard.refetch : undefined}
           />
@@ -704,13 +813,21 @@ function MembersPanel({ dashboard }: { dashboard: Dashboard }) {
             <Table minWidth={720}>
               <TableHead>
                 <TableRow>
-                  <TableHeaderCell>Name</TableHeaderCell>
-                  <TableHeaderCell>Program</TableHeaderCell>
-                  <TableHeaderCell>Progress</TableHeaderCell>
-                  <TableHeaderCell>Status</TableHeaderCell>
-                  <TableHeaderCell>Last Activity</TableHeaderCell>
+                  <TableHeaderCell>{isEs ? "Nombre" : "Name"}</TableHeaderCell>
+                  <TableHeaderCell>
+                    {isEs ? "Programa" : "Program"}
+                  </TableHeaderCell>
+                  <TableHeaderCell>
+                    {isEs ? "Progreso" : "Progress"}
+                  </TableHeaderCell>
+                  <TableHeaderCell>
+                    {isEs ? "Estado" : "Status"}
+                  </TableHeaderCell>
+                  <TableHeaderCell>
+                    {isEs ? "Última actividad" : "Last Activity"}
+                  </TableHeaderCell>
                   <TableHeaderCell className="text-right">
-                    Actions
+                    {isEs ? "Acciones" : "Actions"}
                   </TableHeaderCell>
                 </TableRow>
               </TableHead>
@@ -723,21 +840,33 @@ function MembersPanel({ dashboard }: { dashboard: Dashboard }) {
                       <EmptyState
                         variant="bare"
                         icon={<Users />}
-                        title="No patients enrolled yet"
-                        description="Enrolled patients will appear here."
+                        title={
+                          isEs
+                            ? "Aún no hay pacientes inscritos"
+                            : "No patients enrolled yet"
+                        }
+                        description={
+                          isEs
+                            ? "Aquí aparecerán los pacientes inscritos."
+                            : "Enrolled patients will appear here."
+                        }
                         action={
                           <Link
                             href="/dashboard/clinic/enroll-patients"
                             className={buttonStyles({ size: "small" })}
                           >
-                            Enroll a patient
+                            {isEs
+                              ? "Inscribir un paciente"
+                              : "Enroll a patient"}
                           </Link>
                         }
                       />
                     </TableEmptyRow>
                   ) : view.rows.length === 0 ? (
                     <TableEmptyRow colSpan={6}>
-                      No members match these filters.
+                      {isEs
+                        ? "Ningún miembro coincide con estos filtros."
+                        : "No members match these filters."}
                     </TableEmptyRow>
                   ) : (
                     view.rows.map((member) => (
@@ -751,14 +880,18 @@ function MembersPanel({ dashboard }: { dashboard: Dashboard }) {
 
           <div className="flex flex-col gap-inline-md border-t border-line p-card py-inset-md sm:flex-row sm:items-center sm:justify-between">
             <Link href={memberLink({})} className={outlineLink}>
-              View all members
+              {isEs ? "Ver todos los miembros" : "View all members"}
             </Link>
             {dashboard.isPending ? null : (
               <TablePagination
                 page={view.page}
                 pageCount={view.pageCount}
                 onPageChange={setPage}
-                summary={`Showing ${view.firstShown}–${view.lastShown} of ${view.total} members`}
+                summary={
+                  isEs
+                    ? `Mostrando ${view.firstShown}–${view.lastShown} de ${view.total} miembros`
+                    : `Showing ${view.firstShown}–${view.lastShown} of ${view.total} members`
+                }
               />
             )}
           </div>
@@ -773,23 +906,31 @@ function ProgramProgressPanel() {
   /* A top that divides by four, so the gridlines land on whole members. */
   const peak = Math.max(...programProgress.map((band) => band.value), 1);
   const top = Math.ceil(peak / 4) * 4;
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   return (
     <Card as="section" padding="small" className="h-full">
       <PanelHeading
-        title="Program Progress"
-        description={`Where all ${total} members are in their program.`}
+        title={isEs ? "Progreso del programa" : "Program Progress"}
+        description={
+          isEs
+            ? `En qué punto de su programa están los ${total} miembros.`
+            : `Where all ${total} members are in their program.`
+        }
       />
       {/* Ordered day bands — one measure, so one hue — with the busiest band
           featured, as the reference's "most active day". The values are in
           the chart's hidden table for a screen reader. */}
       <BarChart
-        label="Members by program stage"
-        unit="members"
+        label={
+          isEs ? "Miembros por etapa del programa" : "Members by program stage"
+        }
+        unit={isEs ? "miembros" : "members"}
         highlight="max"
         yMax={top}
         height={180}
         bars={programProgress.map((band) => ({
-          label: band.label,
+          label: chartLabel(band.label, isEs),
           value: band.value,
         }))}
       />
@@ -798,10 +939,14 @@ function ProgramProgressPanel() {
 }
 
 function ToolUsagePanel() {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   return (
     <Card as="section" padding="small" className="h-full">
       <h2 className="mb-6 text-heading-4 text-fg">
-        Tool Usage (Member Engagement)
+        {isEs
+          ? "Uso de herramientas (participación de los miembros)"
+          : "Tool Usage (Member Engagement)"}
       </h2>
       {/* One measure across six tools, so one hue — the row label carries
           identity. Label above the bar, so long names never squeeze it. */}
@@ -810,7 +955,7 @@ function ToolUsagePanel() {
           <li key={tool.label}>
             <div className="flex items-baseline justify-between gap-inline-md">
               <span className="text-body-sm text-fg-secondary">
-                {tool.label}
+                {chartLabel(tool.label, isEs)}
               </span>
               <span className="text-label-md text-fg tabular-nums">
                 {tool.value}%
@@ -818,7 +963,11 @@ function ToolUsagePanel() {
             </div>
             <Progress
               value={tool.value}
-              label={`${tool.label} usage`}
+              label={
+                isEs
+                  ? `Uso de ${chartLabel(tool.label, isEs)}`
+                  : `${tool.label} usage`
+              }
               size="small"
               className="mt-stack-xs"
             />
@@ -831,6 +980,8 @@ function ToolUsagePanel() {
 
 export default function ClinicDashboard() {
   const dashboard = useClinicData();
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const [enrolling, setEnrolling] = useState(false);
   /* Roster AND a program to choose (P16F-1): a role the server would
      refuse gets no "Enroll Patient" here. */
@@ -857,7 +1008,7 @@ export default function ClinicDashboard() {
             {canEnroll ? (
               <Button size="small" onClick={() => setEnrolling(true)}>
                 <UserPlus />
-                Enroll Patient
+                {isEs ? "Inscribir paciente" : "Enroll Patient"}
               </Button>
             ) : null}
           </div>
@@ -867,7 +1018,11 @@ export default function ClinicDashboard() {
       {justEnrolled ? (
         <Alert
           tone="success"
-          title={`${justEnrolled.name} is enrolled.`}
+          title={
+            isEs
+              ? `${justEnrolled.name} quedó inscrito.`
+              : `${justEnrolled.name} is enrolled.`
+          }
           onDismiss={() => setJustEnrolled(null)}
           action={
             <Link
@@ -876,11 +1031,15 @@ export default function ClinicDashboard() {
               })}
               className={outlineLink}
             >
-              View on the Member page
+              {isEs
+                ? "Ver en la página de Miembros"
+                : "View on the Member page"}
             </Link>
           }
         >
-          They count toward your contract seats.
+          {isEs
+            ? "Ocupa uno de los cupos de su contrato."
+            : "They count toward your contract seats."}
         </Alert>
       ) : null}
 
@@ -907,8 +1066,12 @@ export default function ClinicDashboard() {
       </section>
       <WindowNote
         window={dashboard.data?.window}
-        what="Status cards and the lists below cover"
-        noun="members"
+        what={
+          isEs
+            ? "Las tarjetas de estado y las listas de abajo incluyen"
+            : "Status cards and the lists below cover"
+        }
+        noun={isEs ? "miembros" : "members"}
       />
 
       {/* The reference's grid: each row splits two thirds / one third, the

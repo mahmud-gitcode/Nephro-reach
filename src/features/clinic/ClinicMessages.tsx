@@ -34,6 +34,7 @@ import {
   Textarea,
 } from "@/components/ui";
 import { cn } from "@/lib/utils/cn";
+import { useLanguage } from "@/context/LanguageContext";
 import { uploadErrorMessage, UploadError } from "@/lib/api/upload";
 import {
   canRetry,
@@ -140,16 +141,18 @@ function NoteModal({
   saving: boolean;
   error?: string;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const [text, setText] = useState(initial);
   return (
     <Modal
       open
       onClose={onClose}
-      title="Patient Note"
+      title={isEs ? "Nota del paciente" : "Patient Note"}
       footer={
         <>
           <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
-            Cancel
+            {isEs ? "Cancelar" : "Cancel"}
           </Button>
           <Button
             loading={saving}
@@ -159,7 +162,7 @@ function NoteModal({
               });
             }}
           >
-            Save Note
+            {isEs ? "Guardar nota" : "Save Note"}
           </Button>
         </>
       }
@@ -167,8 +170,12 @@ function NoteModal({
       <div className="space-y-stack-md">
         {error ? <Alert tone="danger">{error}</Alert> : null}
         <FormField
-          label="Note"
-          hint="Visible to clinic staff only. The patient never sees it."
+          label={isEs ? "Nota" : "Note"}
+          hint={
+            isEs
+              ? "Visible solo para el personal de la clínica. El paciente nunca la ve."
+              : "Visible to clinic staff only. The patient never sees it."
+          }
         >
           {(field) => (
             <Textarea
@@ -203,13 +210,18 @@ function PatientRail({
   /** Starts a reply offering a call, for the staff member to finish. */
   onScheduleCall: () => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
+  const lang = isEs ? "es" : "en";
   const [editingNote, setEditingNote] = useState(false);
   const note = useClinicNote(organizationId, conversation.patientId ?? null);
   const mrn = conversation.patient?.mrn;
 
   return (
     <div className="space-y-stack-lg">
-      <RailSection title="Patient Information">
+      <RailSection
+        title={isEs ? "Información del paciente" : "Patient Information"}
+      >
         <div className="rounded-card-nested border border-line p-inset-sm">
           <div className="mb-stack-sm flex items-center gap-inline-md">
             <MessagingAvatar name={conversation.memberName} />
@@ -224,7 +236,11 @@ function PatientRail({
           </dl>
           {note.error ? (
             <p className="mt-stack-sm border-t border-line pt-inset-xs text-body-sm text-fg-muted">
-              {errorMessageFor(note.error, "The note did not load.", "en")}
+              {errorMessageFor(
+                note.error,
+                isEs ? "La nota no se cargó." : "The note did not load.",
+                lang,
+              )}
             </p>
           ) : note.note ? (
             <p className="mt-stack-sm border-t border-line pt-inset-xs text-body-sm whitespace-pre-line text-fg-secondary">
@@ -234,32 +250,46 @@ function PatientRail({
         </div>
       </RailSection>
 
-      <RailSection title="Quick Actions">
+      <RailSection title={isEs ? "Acciones rápidas" : "Quick Actions"}>
         <ul className="space-y-0.5">
           {conversation.patientId ? (
             <RailActionItem
-              label="View Patient Profile"
+              label={isEs ? "Ver perfil del paciente" : "View Patient Profile"}
               icon={UserRound}
               href={`/dashboard/clinic/members?patient=${encodeURIComponent(conversation.patientId)}`}
             />
           ) : null}
           {canWrite ? (
             <RailActionItem
-              label="Schedule Call"
+              label={isEs ? "Programar llamada" : "Schedule Call"}
               icon={CalendarClock}
               onClick={onScheduleCall}
             />
           ) : null}
           {canWrite && !note.error && !note.isPending ? (
             <RailActionItem
-              label={note.note ? "Edit Note" : "Add Note"}
+              label={
+                note.note
+                  ? isEs
+                    ? "Editar nota"
+                    : "Edit Note"
+                  : isEs
+                    ? "Agregar nota"
+                    : "Add Note"
+              }
               icon={NotebookPen}
               onClick={() => setEditingNote(true)}
             />
           ) : null}
           <RailActionItem
             label={
-              conversation.flagged ? "Unflag Conversation" : "Flag Conversation"
+              conversation.flagged
+                ? isEs
+                  ? "Quitar marca a la conversación"
+                  : "Unflag Conversation"
+                : isEs
+                  ? "Marcar conversación"
+                  : "Flag Conversation"
             }
             icon={Flag}
             onClick={onToggleFlag}
@@ -267,18 +297,24 @@ function PatientRail({
         </ul>
       </RailSection>
 
-      <RailSection title="Conversation Tools">
+      <RailSection
+        title={isEs ? "Herramientas de conversación" : "Conversation Tools"}
+      >
         <ul className="space-y-0.5">
           <RailActionItem
-            label="Mark as Unread"
+            label={isEs ? "Marcar como no leído" : "Mark as Unread"}
             icon={MailOpen}
             onClick={onMarkUnread}
           />
           <RailActionItem
             label={
               conversation.archived
-                ? "Restore Conversation"
-                : "Archive Conversation"
+                ? isEs
+                  ? "Restaurar conversación"
+                  : "Restore Conversation"
+                : isEs
+                  ? "Archivar conversación"
+                  : "Archive Conversation"
             }
             icon={conversation.archived ? ArchiveRestore : Archive}
             onClick={onToggleArchive}
@@ -290,7 +326,7 @@ function PatientRail({
           initial={note.note}
           saving={note.save.isPending}
           error={
-            note.save.error ? saveErrorText(note.save.error, "en") : undefined
+            note.save.error ? saveErrorText(note.save.error, lang) : undefined
           }
           onSave={(text) => note.save.mutateAsync(text)}
           onClose={() => {
@@ -330,6 +366,9 @@ export default function ClinicMessages({
    *  hospital's (client, 2026-10-13). */
   showRides?: boolean;
 } = {}) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
+  const lang = isEs ? "es" : "en";
   const activeOffice = useActiveOffice();
   const organizationId = activeOffice.organizationId;
   const office = useMemo<CareTeamContact>(
@@ -499,10 +538,14 @@ export default function ClinicMessages({
   }, [visibleIds, activeId, conversations, open]);
 
   const filters: FilterOption<InboxFilter>[] = [
-    { id: "all", label: "All" },
-    { id: "unread", label: "Unread", count: unreadCount },
-    { id: "flagged", label: "Flagged", count: flaggedCount },
-    { id: "archived", label: "Archived" },
+    { id: "all", label: isEs ? "Todos" : "All" },
+    { id: "unread", label: isEs ? "No leídos" : "Unread", count: unreadCount },
+    {
+      id: "flagged",
+      label: isEs ? "Marcados" : "Flagged",
+      count: flaggedCount,
+    },
+    { id: "archived", label: isEs ? "Archivados" : "Archived" },
   ];
 
   return (
@@ -513,7 +556,9 @@ export default function ClinicMessages({
           /* Quiet status first, the page's one primary action last. */
           <div className="flex flex-wrap items-center gap-inline-md">
             {unreadCount > 0 ? (
-              <Badge tone="info">{unreadCount} unread</Badge>
+              <Badge tone="info">
+                {unreadCount} {isEs ? "sin leer" : "unread"}
+              </Badge>
             ) : null}
             {/* People not on NephroReach — a rehab facility, an outside
                 nephrology office — get a secure link (client,
@@ -524,7 +569,7 @@ export default function ClinicMessages({
                 leadingIcon={<SquarePen aria-hidden="true" />}
                 onClick={() => setComposing(true)}
               >
-                New Message
+                {isEs ? "Nuevo mensaje" : "New Message"}
               </Button>
             ) : null}
           </div>
@@ -534,12 +579,12 @@ export default function ClinicMessages({
       {writeError ? (
         <Alert
           tone="danger"
-          title="That change was not saved"
+          title={isEs ? "No se guardó ese cambio" : "That change was not saved"}
           onDismiss={clearWriteError}
         >
           {writeError instanceof UploadError
-            ? uploadErrorMessage(writeError)
-            : saveErrorText(writeError, "en")}
+            ? uploadErrorMessage(writeError, isEs)
+            : saveErrorText(writeError, lang)}
         </Alert>
       ) : null}
 
@@ -547,8 +592,14 @@ export default function ClinicMessages({
         pending={inbox.isPending && filter === "all"}
         error={inbox.error}
         onRetry={canRetry(inbox.error) ? inbox.refetch : undefined}
-        errorTitle={errorTitleFor(inbox.error, "Your inbox did not load", "en")}
-        errorMessage={errorMessageFor(inbox.error, undefined, "en")}
+        errorTitle={errorTitleFor(
+          inbox.error,
+          isEs
+            ? "Su bandeja de entrada no se cargó"
+            : "Your inbox did not load",
+          lang,
+        )}
+        errorMessage={errorMessageFor(inbox.error, undefined, lang)}
         isEmpty={
           filter === "all" && !inbox.isPending && conversations.length === 0
         }
@@ -556,8 +607,12 @@ export default function ClinicMessages({
         empty={
           <EmptyState
             icon={<MessageSquare aria-hidden="true" />}
-            title="No conversations yet"
-            description="Messages from your enrolled members will appear here."
+            title={isEs ? "Aún no hay conversaciones" : "No conversations yet"}
+            description={
+              isEs
+                ? "Aquí aparecerán los mensajes de sus miembros inscritos."
+                : "Messages from your enrolled members will appear here."
+            }
           />
         }
       >
@@ -574,9 +629,15 @@ export default function ClinicMessages({
               <InboxSearch
                 value={query}
                 onChange={setQuery}
-                placeholder="Search patients or messages..."
+                placeholder={
+                  isEs
+                    ? "Buscar pacientes o mensajes..."
+                    : "Search patients or messages..."
+                }
+                isEs={isEs}
               />
               <InboxFilters
+                isEs={isEs}
                 options={filters}
                 value={filter}
                 onChange={setFilter}
@@ -584,10 +645,10 @@ export default function ClinicMessages({
               {inbox.isPending ? (
                 <Skeleton className="h-40 w-full" />
               ) : visible.length === 0 ? (
-                <EmptyList searching={query.length > 0} />
+                <EmptyList searching={query.length > 0} isEs={isEs} />
               ) : (
                 <ol
-                  aria-label="Conversations"
+                  aria-label={isEs ? "Conversaciones" : "Conversations"}
                   className="-mx-inset-xs min-h-0 flex-1 space-y-0.5 overflow-y-auto px-inset-xs"
                 >
                   {visible.map((conversation) => {
@@ -602,15 +663,18 @@ export default function ClinicMessages({
                         titleExtra={
                           conversation.flagged ? (
                             <Flag
-                              aria-label="Flagged"
+                              aria-label={isEs ? "Marcada" : "Flagged"}
                               className="size-3.5 shrink-0 text-warning"
                             />
                           ) : null
                         }
-                        preview={previewOf(conversation, "clinic")}
+                        preview={previewOf(conversation, "clinic", isEs)}
                         time={
-                          last ? rules.inboxTimeLabel(last.sentAt, now) : null
+                          last
+                            ? rules.inboxTimeLabel(last.sentAt, now, isEs)
+                            : null
                         }
+                        isEs={isEs}
                         hasAttachment={rules.hasAttachment(conversation)}
                         unread={conversation.unread}
                         active={conversation.id === activeId}
@@ -646,11 +710,12 @@ export default function ClinicMessages({
                           tone="warning"
                           icon={<Flag aria-hidden="true" />}
                         >
-                          Flagged
+                          {isEs ? "Marcada" : "Flagged"}
                         </Badge>
                       ) : null
                     }
                     onBack={() => setOpened(null)}
+                    isEs={isEs}
                   />
                   <AsyncSection
                     pending={thread.isPending}
@@ -660,19 +725,22 @@ export default function ClinicMessages({
                     }
                     errorTitle={errorTitleFor(
                       thread.error,
-                      "The conversation did not load",
-                      "en",
+                      isEs
+                        ? "La conversación no se cargó"
+                        : "The conversation did not load",
+                      lang,
                     )}
                     errorMessage={errorMessageFor(
                       thread.error,
                       undefined,
-                      "en",
+                      lang,
                     )}
                     skeleton={<Skeleton className="m-inset-md h-40" />}
                   >
                     <MessageLog
                       conversation={active}
                       mine="clinic"
+                      isEs={isEs}
                       otherName={active.memberName}
                       firstUnreadId={firstUnreadIdOf(
                         active,
@@ -704,22 +772,37 @@ export default function ClinicMessages({
                           attachment,
                         });
                       }}
-                      placeholder={`Message ${active.memberName.split(" ")[0]}...`}
-                      label={`Message ${active.memberName}`}
+                      placeholder={
+                        isEs
+                          ? `Mensaje para ${active.memberName.split(" ")[0]}...`
+                          : `Message ${active.memberName.split(" ")[0]}...`
+                      }
+                      label={
+                        isEs
+                          ? `Mensaje para ${active.memberName}`
+                          : `Message ${active.memberName}`
+                      }
+                      isEs={isEs}
                     />
                   ) : (
                     <p className="shrink-0 border-t border-line px-inset-md py-inset-sm text-body-sm text-fg-muted">
-                      Your role can read patients&rsquo; messages but not reply.
-                      A nurse, physician, social worker, care coordinator or
-                      administrator can.
+                      {isEs
+                        ? "Su rol puede leer los mensajes de los pacientes, pero no responderlos. Un enfermero, médico, trabajador social, coordinador de atención o administrador sí puede."
+                        : "Your role can read patients\u2019 messages but not reply. A nurse, physician, social worker, care coordinator or administrator can."}
                     </p>
                   )}
                 </>
               ) : (
                 <NoThread
                   icon={<MessageSquare />}
-                  title="Pick a conversation"
-                  description="Choose a patient on the left to read and reply to their messages."
+                  title={
+                    isEs ? "Elija una conversación" : "Pick a conversation"
+                  }
+                  description={
+                    isEs
+                      ? "Elija un paciente a la izquierda para leer y responder sus mensajes."
+                      : "Choose a patient on the left to read and reply to their messages."
+                  }
                 />
               )}
             </div>
@@ -728,7 +811,9 @@ export default function ClinicMessages({
                 exists once a thread is open. */}
             {active ? (
               <aside
-                aria-label="Patient information"
+                aria-label={
+                  isEs ? "Información del paciente" : "Patient information"
+                }
                 className="border-t border-line p-inset-md lg:col-span-2 xl:col-span-1 xl:h-[calc(100dvh-13rem)] xl:min-h-[560px] xl:overflow-y-auto xl:border-t-0 xl:border-l"
               >
                 <PatientRail
@@ -743,8 +828,9 @@ export default function ClinicMessages({
                   onScheduleCall={() =>
                     setDrafts((current) => ({
                       ...current,
-                      [active.id]:
-                        "We would like to set up a call with you. Would one of these times work for you? ",
+                      [active.id]: isEs
+                        ? "Nos gustaría programar una llamada con usted. ¿Le conviene alguno de estos horarios? "
+                        : "We would like to set up a call with you. Would one of these times work for you? ",
                     }))
                   }
                   /* Marking unread or archiving is a decision to leave the
@@ -773,8 +859,9 @@ export default function ClinicMessages({
 
       {composing ? (
         <NewMessageModal
-          title="New Message"
-          recipientLabel="Patient"
+          title={isEs ? "Nuevo mensaje" : "New Message"}
+          recipientLabel={isEs ? "Paciente" : "Patient"}
+          isEs={isEs}
           initialRecipient={composeTo}
           recipients={recipients.patients.map((patient) => ({
             value: patient.patientId,
@@ -785,17 +872,19 @@ export default function ClinicMessages({
           recipientsPending={recipients.isPending}
           recipientsError={
             recipients.error
-              ? saveErrorText(recipients.error, "en")
+              ? saveErrorText(recipients.error, lang)
               : recipients.isPending || recipients.patients.length > 0
                 ? undefined
-                : "No patients are on this office's roster yet."
+                : isEs
+                  ? "Aún no hay pacientes en la lista de este consultorio."
+                  : "No patients are on this office's roster yet."
           }
           sending={messaging.start.isPending}
           sendError={
             messaging.start.error
               ? messaging.start.error instanceof UploadError
-                ? uploadErrorMessage(messaging.start.error)
-                : saveErrorText(messaging.start.error, "en")
+                ? uploadErrorMessage(messaging.start.error, isEs)
+                : saveErrorText(messaging.start.error, lang)
               : undefined
           }
           onSend={async (patientId, body) => {
@@ -805,7 +894,7 @@ export default function ClinicMessages({
             });
             setOpened(
               conversations.find((c) => c.id === started.id) ??
-                fromOfficeConversation(started, office),
+                fromOfficeConversation(started, office, isEs),
             );
           }}
           onClose={() => {

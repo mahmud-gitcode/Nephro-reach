@@ -3,6 +3,7 @@
 import React from "react";
 import { AlertTriangle, RotateCw } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { useLanguageCode } from "@/context/LanguageContext";
 import { Button } from "./Button";
 
 /* ==========================================================================
@@ -44,14 +45,18 @@ function readableMessage(error: unknown): string | null {
 }
 
 export function ErrorState({
-  title = "That did not load",
+  title: titleProp,
   message,
   error,
   onRetry,
-  retryLabel = "Try again",
+  retryLabel: retryLabelProp,
   variant = "bordered",
   className,
 }: ErrorStateProps) {
+  const isEs = useLanguageCode() === "ES";
+  const title = titleProp ?? (isEs ? "No se pudo cargar" : "That did not load");
+  const retryLabel =
+    retryLabelProp ?? (isEs ? "Intentar de nuevo" : "Try again");
   return (
     <div
       role="alert"
@@ -75,7 +80,9 @@ export function ErrorState({
       <p className="mt-stack-xs max-w-sm text-body-sm text-fg-muted">
         {message ??
           readableMessage(error) ??
-          "Something went wrong on this device. Your saved information has not been changed."}
+          (isEs
+            ? "Algo salió mal en este dispositivo. Su información guardada no ha cambiado."
+            : "Something went wrong on this device. Your saved information has not been changed.")}
       </p>
 
       {onRetry ? (

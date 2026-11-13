@@ -57,6 +57,8 @@ import {
   type AccessActions,
 } from "./useAccess";
 import {
+  accessTypeLabel,
+  appointmentTitleLabel,
   CONCERN_KINDS,
   MOBILITY_LEVELS,
   activeTransport,
@@ -225,20 +227,22 @@ function OverviewCard({ record, isEs, today }: Props) {
       <SectionTitle title={isEs ? "Resumen del Acceso" : "Access Overview"} />
       <dl>
         <Fact label={isEs ? "Tipo de acceso" : "Access Type"}>
-          {overview.type}
+          {accessTypeLabel(overview.type, isEs)}
         </Fact>
         <Fact label={isEs ? "Ubicación" : "Location"}>{overview.location}</Fact>
         <Fact label={isEs ? "Fecha de creación" : "Created"}>
-          {overview.createdOn ? formatDay(overview.createdOn) : "—"}
+          {overview.createdOn ? formatDay(overview.createdOn, isEs) : "—"}
         </Fact>
         <Fact label={isEs ? "Estado actual" : "Current Status"}>
           <AccessStatusBadge status={overview.status} isEs={isEs} />
         </Fact>
         <Fact label={isEs ? "Última evaluación" : "Last Assessment"}>
-          {overview.lastAssessment ? formatDay(overview.lastAssessment) : "—"}
+          {overview.lastAssessment
+            ? formatDay(overview.lastAssessment, isEs)
+            : "—"}
         </Fact>
         <Fact label={isEs ? "Próximo control" : "Next Follow-Up"}>
-          {next ? formatDay(next.date) : "—"}
+          {next ? formatDay(next.date, isEs) : "—"}
         </Fact>
       </dl>
     </Card>
@@ -792,7 +796,8 @@ function RideRequestModal({
             >
               {open.map((appointment) => (
                 <option key={appointment.id} value={appointment.id}>
-                  {appointment.title} · {formatDay(appointment.date)},{" "}
+                  {appointmentTitleLabel(appointment.title, isEs)} ·{" "}
+                  {formatDay(appointment.date, isEs)},{" "}
                   {formatTime(appointment.time)}
                 </option>
               ))}
@@ -915,11 +920,13 @@ function TransportCard(props: Props) {
                 <div className="flex items-start justify-between gap-inline-md">
                   <div className="min-w-0">
                     <p className="text-label-md text-fg">
-                      {appointment?.title ?? "—"}
+                      {appointment
+                        ? appointmentTitleLabel(appointment.title, isEs)
+                        : "—"}
                     </p>
                     {appointment ? (
                       <p className="text-caption text-fg-muted">
-                        {formatDay(appointment.date)} ·{" "}
+                        {formatDay(appointment.date, isEs)} ·{" "}
                         {formatTime(appointment.time)} · {appointment.place}
                       </p>
                     ) : null}
@@ -1217,7 +1224,8 @@ export default function VascularAccess() {
               >
                 {profiles.profiles.map((profile) => (
                   <option key={profile.id} value={profile.id}>
-                    {profile.accessCenter.name} · {profile.overview.type}
+                    {profile.accessCenter.name} ·{" "}
+                    {accessTypeLabel(profile.overview.type, isEs)}
                   </option>
                 ))}
               </Select>
@@ -1257,6 +1265,7 @@ export default function VascularAccess() {
             <UpdatesTimeline
               updates={sortedUpdates(record).slice(0, 5)}
               emptyLabel={isEs ? "Sin novedades." : "No updates yet."}
+              isEs={isEs}
             />
           </Card>
         </div>

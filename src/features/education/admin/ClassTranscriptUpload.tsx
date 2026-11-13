@@ -18,12 +18,18 @@ import {
   toVtt,
   withResolvedEnds,
 } from "@/features/education/vtt";
+import { useLanguage } from "@/context/LanguageContext";
 
 type CaptionLanguage = "EN" | "ES";
 
 const LANGUAGE_NAME: Record<CaptionLanguage, string> = {
   EN: "English",
   ES: "Español",
+};
+
+const LANGUAGE_NAME_ES: Record<CaptionLanguage, string> = {
+  EN: "inglés",
+  ES: "español",
 };
 
 /**
@@ -62,6 +68,8 @@ export default function ClassTranscriptUpload({
   onChange: (patch: Partial<CourseClass>) => void;
   mediaSeconds: number | null;
 }) {
+  const { language: uiLanguage } = useLanguage();
+  const isEs = uiLanguage === "ES";
   const [language, setLanguage] = useState<CaptionLanguage>("EN");
   const [error, setError] = useState<string | null>(null);
   const [pasting, setPasting] = useState(false);
@@ -100,7 +108,11 @@ export default function ClassTranscriptUpload({
     setError(null);
 
     if (parsed.length === 0) {
-      setError("No caption lines found. Expecting a .vtt or .srt file.");
+      setError(
+        isEs
+          ? "No se encontraron líneas de subtítulos. Se espera un archivo .vtt o .srt."
+          : "No caption lines found. Expecting a .vtt or .srt file.",
+      );
       return;
     }
 
@@ -174,7 +186,7 @@ export default function ClassTranscriptUpload({
 
       <div className="flex flex-wrap items-center gap-2">
         <label className="sr-only" htmlFor="caption-language">
-          Transcript language
+          {isEs ? "Idioma de la transcripción" : "Transcript language"}
         </label>
         <select
           id="caption-language"
@@ -194,7 +206,7 @@ export default function ClassTranscriptUpload({
           className="flex cursor-pointer items-center gap-1.5 rounded-control bg-primary-solid px-3 py-2 text-caption font-bold text-primary-on-solid transition-colors hover:bg-primary-solid-hover"
         >
           <Upload className="h-3.5 w-3.5" />
-          Upload transcript
+          {isEs ? "Subir transcripción" : "Upload transcript"}
         </button>
 
         <button
@@ -204,7 +216,7 @@ export default function ClassTranscriptUpload({
           className="flex cursor-pointer items-center gap-1.5 rounded-control border border-line bg-surface px-3 py-2 text-caption font-bold text-fg-secondary transition-colors hover:bg-surface-sunken"
         >
           <FileText className="h-3.5 w-3.5" />
-          Paste script
+          {isEs ? "Pegar guion" : "Paste script"}
         </button>
       </div>
 
@@ -214,8 +226,14 @@ export default function ClassTranscriptUpload({
             htmlFor="script-paste"
             className="block text-caption font-bold text-fg-muted"
           >
-            Script ({LANGUAGE_NAME[language]}) — one caption per line. Lines are
-            spaced evenly across the recording.
+            {isEs ? (
+              `Guion (${LANGUAGE_NAME_ES[language]}): un subtítulo por línea. Las líneas se distribuyen de forma uniforme a lo largo de la grabación.`
+            ) : (
+              <>
+                Script ({LANGUAGE_NAME[language]}) — one caption per line. Lines
+                are spaced evenly across the recording.
+              </>
+            )}
           </label>
           <textarea
             id="script-paste"
@@ -233,7 +251,7 @@ export default function ClassTranscriptUpload({
               }}
               className="cursor-pointer rounded-control px-3 py-1.5 text-caption font-bold text-fg-muted hover:bg-surface"
             >
-              Cancel
+              {isEs ? "Cancelar" : "Cancel"}
             </button>
             <button
               type="button"
@@ -241,7 +259,7 @@ export default function ClassTranscriptUpload({
               disabled={!script.trim()}
               className="cursor-pointer rounded-control bg-primary-solid px-3 py-1.5 text-caption font-bold text-primary-on-solid hover:bg-primary-solid-hover disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Add script
+              {isEs ? "Agregar guion" : "Add script"}
             </button>
           </div>
         </div>
@@ -257,15 +275,23 @@ export default function ClassTranscriptUpload({
       {durationMismatch && (
         <p className="flex gap-2 rounded-control bg-danger-surface px-3 py-2 text-caption leading-relaxed font-medium text-danger">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          This transcript ends at {formatClock(lastCueAt)} but the media is only{" "}
-          {formatClock(mediaSeconds ?? 0)} long. The two may not belong
-          together.
+          {isEs ? (
+            `Esta transcripción termina en ${formatClock(lastCueAt)}, pero el archivo multimedia solo dura ${formatClock(mediaSeconds ?? 0)}. Es posible que no correspondan entre sí.`
+          ) : (
+            <>
+              This transcript ends at {formatClock(lastCueAt)} but the media is
+              only {formatClock(mediaSeconds ?? 0)} long. The two may not belong
+              together.
+            </>
+          )}
         </p>
       )}
 
       {loaded.length === 0 ? (
         <p className="rounded-control border border-dashed border-line p-6 text-center text-body-sm text-fg-muted">
-          No transcript uploaded yet.
+          {isEs
+            ? "Todavía no se ha subido ninguna transcripción."
+            : "No transcript uploaded yet."}
         </p>
       ) : (
         <ul className="space-y-2">
@@ -279,17 +305,24 @@ export default function ClassTranscriptUpload({
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-body-sm font-semibold text-fg">
-                  {LANGUAGE_NAME[entry.code]}
+                  {isEs
+                    ? LANGUAGE_NAME_ES[entry.code].charAt(0).toUpperCase() +
+                      LANGUAGE_NAME_ES[entry.code].slice(1)
+                    : LANGUAGE_NAME[entry.code]}
                 </span>
                 <span className="block text-caption font-medium text-fg-muted">
-                  {entry.lines} lines
+                  {isEs ? `${entry.lines} líneas` : `${entry.lines} lines`}
                 </span>
               </span>
 
               <button
                 type="button"
                 onClick={() => exportLanguage(entry.code)}
-                aria-label={`Download ${LANGUAGE_NAME[entry.code]} transcript`}
+                aria-label={
+                  isEs
+                    ? `Descargar transcripción en ${LANGUAGE_NAME_ES[entry.code]}`
+                    : `Download ${LANGUAGE_NAME[entry.code]} transcript`
+                }
                 className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-surface-sunken hover:text-fg-secondary"
               >
                 <Download className="h-4 w-4" />
@@ -297,7 +330,11 @@ export default function ClassTranscriptUpload({
               <button
                 type="button"
                 onClick={() => removeLanguage(entry.code)}
-                aria-label={`Remove ${LANGUAGE_NAME[entry.code]} transcript`}
+                aria-label={
+                  isEs
+                    ? `Quitar transcripción en ${LANGUAGE_NAME_ES[entry.code]}`
+                    : `Remove ${LANGUAGE_NAME[entry.code]} transcript`
+                }
                 className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-danger-surface hover:text-danger"
               >
                 <Trash2 className="h-4 w-4" />

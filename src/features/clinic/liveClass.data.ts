@@ -156,8 +156,8 @@ export function classDate(iso: string): Date {
 }
 
 /** "Sep 12, 2026" */
-export function formatClassDate(iso: string): string {
-  return classDate(iso).toLocaleDateString("en-US", {
+export function formatClassDate(iso: string, isEs = false): string {
+  return classDate(iso).toLocaleDateString(isEs ? "es-US" : "en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -190,30 +190,42 @@ export const settings = [
     id: "zoom",
     title: "Zoom Integration",
     description: "Manage meeting settings",
+    titleEs: "Integración con Zoom",
+    descriptionEs: "Administrar la configuración de reuniones",
   },
   {
     id: "reminders",
     title: "Email & SMS Reminders",
     description: "Automate notifications",
+    titleEs: "Recordatorios por correo y SMS",
+    descriptionEs: "Automatizar las notificaciones",
   },
   {
     id: "limits",
     title: "Registration Limits",
     description: "Set capacity per class",
+    titleEs: "Límites de inscripción",
+    descriptionEs: "Fijar el cupo de cada clase",
   },
   {
     id: "resources",
     title: "Class Resources",
     description: "Upload handouts & links",
+    titleEs: "Recursos de la clase",
+    descriptionEs: "Subir materiales y enlaces",
   },
   {
     id: "surveys",
     title: "Post-Class Surveys",
     description: "Collect feedback",
+    titleEs: "Encuestas después de la clase",
+    descriptionEs: "Recoger comentarios",
   },
   {
     id: "certificates",
     title: "Certificates",
     description: "Enable certificates of completion",
+    titleEs: "Certificados",
+    descriptionEs: "Activar certificados de finalización",
   },
 ] as const;

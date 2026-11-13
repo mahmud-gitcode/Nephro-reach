@@ -1080,7 +1080,7 @@ export function ExportReporting({ log }: { log: MedicationLog }) {
         >
           <Share2 aria-hidden="true" />
           {isEs
-            ? "Compartir Fuera de NephroReach"
+            ? "Compartir fuera de NephroReach"
             : "Share Outside NephroReach"}
         </Button>
         {share.notice}

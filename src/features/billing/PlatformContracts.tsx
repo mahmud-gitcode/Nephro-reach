@@ -37,15 +37,16 @@ import {
   TabPanel,
   Tabs,
 } from "@/components/ui";
+import { useLanguage } from "@/context/LanguageContext";
 import { canRetry } from "@/lib/data/asyncState";
 import { useCanLevel } from "@/features/staff/useStaffAccounts";
 import {
   ActionError,
   ContractStatusBadge,
   InvoiceStatusBadge,
-  NOT_AVAILABLE_NOTE,
   SkeletonTable,
   actionErrorText,
+  notAvailableNote,
   readErrorCopy,
 } from "./consoleUi";
 import {
@@ -55,7 +56,7 @@ import {
   formatInstant,
   parseDollars,
 } from "./money";
-import { AUDIENCE_LABEL, type AdminOrgPlan } from "./platformPlans.mappers";
+import { audienceLabelFor, type AdminOrgPlan } from "./platformPlans.mappers";
 import type {
   ApiContract,
   ApiPlatformOrganization,
@@ -76,6 +77,17 @@ const TOPIC_LABEL: Record<string, string> = {
   contact: "Contact",
   other: "Other",
 };
+const TOPIC_LABEL_ES: Record<string, string> = {
+  seats: "Plazas",
+  fee: "Tarifa",
+  dates: "Fechas",
+  contact: "Contacto",
+  other: "Otro",
+};
+
+function topicLabel(topic: string, isEs: boolean): string {
+  return (isEs ? TOPIC_LABEL_ES : TOPIC_LABEL)[topic] ?? topic;
+}
 
 /** Today as YYYY-MM-DD on this computer's calendar. */
 function today(): string {
@@ -84,8 +96,11 @@ function today(): string {
 }
 
 export function PlatformContracts({ orgPlans }: { orgPlans: AdminOrgPlan[] }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const orgs = useOrganizationNames();
-  const label = (id: string) => orgs.nameOf(id) ?? `Office ${id.slice(0, 8)}`;
+  const label = (id: string) =>
+    orgs.nameOf(id) ?? `${isEs ? "Oficina" : "Office"} ${id.slice(0, 8)}`;
   return (
     <>
       <ContractsCard
@@ -115,16 +130,26 @@ function ContractsCard({
   const canWrite = useCanLevel("contracts", 2);
   const [creating, setCreating] = useState(false);
   const [renewing, setRenewing] = useState<ApiContract | null>(null);
-  const copy = readErrorCopy(contracts.error, "The contracts did not load");
+  const { language } = useLanguage();
+  const isEs = language === "ES";
+  const copy = readErrorCopy(
+    contracts.error,
+    isEs ? "Los contratos no se cargaron" : "The contracts did not load",
+    isEs,
+  );
+  const notAvailable = notAvailableNote(isEs);
 
   return (
     <Card padding="none">
       <div className="flex flex-col gap-inline-lg p-card sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h3 className="text-heading-5 text-fg">Organizations</h3>
+          <h3 className="text-heading-5 text-fg">
+            {isEs ? "Organizaciones" : "Organizations"}
+          </h3>
           <p className="mt-stack-xs text-caption text-fg-muted">
-            Each office&apos;s plan is its contract: the plan, the patients
-            allowed, the fee and the term.
+            {isEs
+              ? "El plan de cada oficina es su contrato: el plan, los pacientes permitidos, la tarifa y el plazo."
+              : "Each office's plan is its contract: the plan, the patients allowed, the fee and the term."}
           </p>
         </div>
         {canWrite ? (
@@ -138,14 +163,14 @@ function ContractsCard({
               setCreating(true);
             }}
           >
-            New Contract
+            {isEs ? "Nuevo contrato" : "New Contract"}
           </Button>
         ) : null}
       </div>
       <div className="px-card">
         <ActionError
           error={contracts.actionError}
-          title="The contract did not change"
+          title={isEs ? "El contrato no cambió" : "The contract did not change"}
           onDismiss={contracts.dismissActionError}
           className="mb-stack-md"
         />
@@ -160,18 +185,26 @@ function ContractsCard({
         <Table minWidth={900}>
           <TableHead>
             <TableRow>
-              <TableHeaderCell>Organization</TableHeaderCell>
+              <TableHeaderCell>
+                {isEs ? "Organización" : "Organization"}
+              </TableHeaderCell>
               <TableHeaderCell>Plan</TableHeaderCell>
-              <TableHeaderCell>Monthly fee</TableHeaderCell>
-              <TableHeaderCell>Term</TableHeaderCell>
-              <TableHeaderCell>Status</TableHeaderCell>
-              <TableHeaderCell className="text-right">Actions</TableHeaderCell>
+              <TableHeaderCell>
+                {isEs ? "Tarifa mensual" : "Monthly fee"}
+              </TableHeaderCell>
+              <TableHeaderCell>{isEs ? "Plazo" : "Term"}</TableHeaderCell>
+              <TableHeaderCell>{isEs ? "Estado" : "Status"}</TableHeaderCell>
+              <TableHeaderCell className="text-right">
+                {isEs ? "Acciones" : "Actions"}
+              </TableHeaderCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {contracts.contracts.length === 0 ? (
               <TableEmptyRow colSpan={6}>
-                <p className="text-body-sm text-fg-muted">No contracts yet.</p>
+                <p className="text-body-sm text-fg-muted">
+                  {isEs ? "Aún no hay contratos." : "No contracts yet."}
+                </p>
               </TableEmptyRow>
             ) : null}
             {contracts.contracts.map((c) => (
@@ -179,14 +212,19 @@ function ContractsCard({
                 <TableCell emphasis>
                   {label(c.organizationId)}
                   <span className="block text-caption text-fg-muted">
-                    {c.contractNumber ?? "No contract number"} ·{" "}
-                    {c.patientsAllowed} patients
+                    {c.contractNumber ??
+                      (isEs
+                        ? "Sin número de contrato"
+                        : "No contract number")}{" "}
+                    · {c.patientsAllowed} {isEs ? "pacientes" : "patients"}
                   </span>
                 </TableCell>
                 <TableCell>{c.plan.name}</TableCell>
-                <TableCell numeric>{formatCents(c.monthlyFeeCents)}</TableCell>
+                <TableCell numeric>
+                  {formatCents(c.monthlyFeeCents, "USD", isEs)}
+                </TableCell>
                 <TableCell>
-                  {formatDay(c.startsOn)} – {formatDay(c.endsOn)}
+                  {formatDay(c.startsOn, isEs)} – {formatDay(c.endsOn, isEs)}
                 </TableCell>
                 <TableCell>
                   <ContractStatusBadge status={c.status} />
@@ -200,9 +238,13 @@ function ContractsCard({
                         appearance="stroke"
                         loading={contracts.actionPendingId === c.id}
                         onClick={() => contracts.setStatus(c.id, "activate")}
-                        aria-label={`Activate the contract for ${label(c.organizationId)}`}
+                        aria-label={
+                          isEs
+                            ? `Activar el contrato de ${label(c.organizationId)}`
+                            : `Activate the contract for ${label(c.organizationId)}`
+                        }
                       >
-                        Activate
+                        {isEs ? "Activar" : "Activate"}
                       </Button>
                     ) : null}
                     {canWrite && c.status !== "ENDED" ? (
@@ -215,9 +257,13 @@ function ContractsCard({
                             contracts.resetRenew();
                             setRenewing(c);
                           }}
-                          aria-label={`Renew the contract for ${label(c.organizationId)}`}
+                          aria-label={
+                            isEs
+                              ? `Renovar el contrato de ${label(c.organizationId)}`
+                              : `Renew the contract for ${label(c.organizationId)}`
+                          }
                         >
-                          Renew
+                          {isEs ? "Renovar" : "Renew"}
                         </Button>
                         <Button
                           size="small"
@@ -225,9 +271,13 @@ function ContractsCard({
                           appearance="stroke"
                           loading={contracts.actionPendingId === c.id}
                           onClick={() => contracts.setStatus(c.id, "end")}
-                          aria-label={`End the contract for ${label(c.organizationId)}`}
+                          aria-label={
+                            isEs
+                              ? `Finalizar el contrato de ${label(c.organizationId)}`
+                              : `End the contract for ${label(c.organizationId)}`
+                          }
                         >
-                          End
+                          {isEs ? "Finalizar" : "End"}
                         </Button>
                       </>
                     ) : null}
@@ -239,10 +289,14 @@ function ContractsCard({
                       variant="neutral"
                       appearance="ghost"
                       disabled
-                      title={NOT_AVAILABLE_NOTE}
-                      aria-label={`Pause the contract for ${label(c.organizationId)} (not available yet)`}
+                      title={notAvailable}
+                      aria-label={
+                        isEs
+                          ? `Pausar el contrato de ${label(c.organizationId)} (aún no está disponible)`
+                          : `Pause the contract for ${label(c.organizationId)} (not available yet)`
+                      }
                     >
-                      Pause
+                      {isEs ? "Pausar" : "Pause"}
                     </Button>
                   </span>
                 </TableCell>
@@ -258,11 +312,14 @@ function ContractsCard({
             summary={
               contracts.total === null
                 ? undefined
-                : `${contracts.total} contract${contracts.total === 1 ? "" : "s"}`
+                : isEs
+                  ? `${contracts.total} contrato${contracts.total === 1 ? "" : "s"}`
+                  : `${contracts.total} contract${contracts.total === 1 ? "" : "s"}`
             }
           />
           <p className="mt-stack-xs text-caption text-fg-muted">
-            Pause and trial: {NOT_AVAILABLE_NOTE.toLowerCase()}
+            {isEs ? "Pausa y prueba" : "Pause and trial"}:{" "}
+            {notAvailable.toLowerCase()}
           </p>
         </div>
       </AsyncSection>
@@ -341,23 +398,41 @@ function NewContractModal({
   const [activate, setActivate] = useState(false);
   const [autoRenew, setAutoRenew] = useState(true);
   const [tried, setTried] = useState(false);
+  const { language } = useLanguage();
+  const isEs = language === "ES";
 
-  const officeError = office ? undefined : "Choose an office.";
+  const officeError = office
+    ? undefined
+    : isEs
+      ? "Elija una oficina."
+      : "Choose an office.";
   const planError = chosenPlan
     ? undefined
-    : "There is no published plan for this type of office.";
-  const startError = DAY.test(startsOn) ? undefined : "Choose a start date.";
+    : isEs
+      ? "No hay un plan publicado para este tipo de oficina."
+      : "There is no published plan for this type of office.";
+  const startError = DAY.test(startsOn)
+    ? undefined
+    : isEs
+      ? "Elija una fecha de inicio."
+      : "Choose a start date.";
   const endError =
     !endsOn || (DAY.test(endsOn) && endsOn >= startsOn)
       ? undefined
-      : "The end date must be on or after the start date.";
+      : isEs
+        ? "La fecha de finalización debe ser igual o posterior a la fecha de inicio."
+        : "The end date must be on or after the start date.";
 
   return (
     <Modal
       open
       onClose={onClose}
-      title="New Contract"
-      description="The plan's fee and patient limit apply; the server records who made it."
+      title={isEs ? "Nuevo contrato" : "New Contract"}
+      description={
+        isEs
+          ? "Se aplican la tarifa y el límite de pacientes del plan; el servidor registra quién lo creó."
+          : "The plan's fee and patient limit apply; the server records who made it."
+      }
       footer={
         <>
           <Button
@@ -366,7 +441,7 @@ function NewContractModal({
             onClick={onClose}
             disabled={saving}
           >
-            Cancel
+            {isEs ? "Cancelar" : "Cancel"}
           </Button>
           <Button
             loading={saving}
@@ -384,19 +459,24 @@ function NewContractModal({
               });
             }}
           >
-            Create Contract
+            {isEs ? "Crear contrato" : "Create Contract"}
           </Button>
         </>
       }
     >
       <div className="space-y-stack-md">
         {error ? (
-          <Alert tone="danger" title="The contract was not created">
-            {actionErrorText(error)}
+          <Alert
+            tone="danger"
+            title={
+              isEs ? "El contrato no se creó" : "The contract was not created"
+            }
+          >
+            {actionErrorText(error, isEs)}
           </Alert>
         ) : null}
         <FormField
-          label="Office"
+          label={isEs ? "Oficina" : "Office"}
           required
           error={tried ? officeError : undefined}
         >
@@ -411,7 +491,7 @@ function NewContractModal({
             >
               {offices.map((o) => (
                 <option key={o.id} value={o.id}>
-                  {o.name} · {AUDIENCE_LABEL[o.type] ?? o.type}
+                  {o.name} · {audienceLabelFor(o.type, isEs)}
                 </option>
               ))}
             </Select>
@@ -423,7 +503,9 @@ function NewContractModal({
           error={tried ? planError : undefined}
           hint={
             chosenPlan
-              ? `${formatCents(chosenPlan.monthlyFeeCents)} a month · ${chosenPlan.patientsIncluded} patients`
+              ? isEs
+                ? `${formatCents(chosenPlan.monthlyFeeCents, "USD", true)} al mes · ${chosenPlan.patientsIncluded} pacientes`
+                : `${formatCents(chosenPlan.monthlyFeeCents)} a month · ${chosenPlan.patientsIncluded} patients`
               : undefined
           }
         >
@@ -443,7 +525,7 @@ function NewContractModal({
         </FormField>
         <div className="grid grid-cols-1 gap-inline-lg sm:grid-cols-2">
           <FormField
-            label="Starts on"
+            label={isEs ? "Comienza el" : "Starts on"}
             required
             error={tried ? startError : undefined}
           >
@@ -456,7 +538,10 @@ function NewContractModal({
               />
             )}
           </FormField>
-          <FormField label="Ends on" error={tried ? endError : undefined}>
+          <FormField
+            label={isEs ? "Termina el" : "Ends on"}
+            error={tried ? endError : undefined}
+          >
             {(field) => (
               <Input
                 {...field}
@@ -467,27 +552,35 @@ function NewContractModal({
             )}
           </FormField>
         </div>
-        <FormField label="Contract number">
+        <FormField label={isEs ? "Número de contrato" : "Contract number"}>
           {(field) => (
             <Input
               {...field}
               maxLength={40}
               value={contractNumber}
               onChange={(e) => setContractNumber(e.target.value)}
-              placeholder="e.g. NR-2027-0001"
+              placeholder={isEs ? "p. ej., NR-2027-0001" : "e.g. NR-2027-0001"}
             />
           )}
         </FormField>
         <SwitchRow
           checked={activate}
           onChange={setActivate}
-          title="Active from the start date"
-          description="Off: the contract waits as Pending until someone activates it."
+          title={
+            isEs
+              ? "Activo desde la fecha de inicio"
+              : "Active from the start date"
+          }
+          description={
+            isEs
+              ? "Desactivado: el contrato queda como Pendiente hasta que alguien lo active."
+              : "Off: the contract waits as Pending until someone activates it."
+          }
         />
         <SwitchRow
           checked={autoRenew}
           onChange={setAutoRenew}
-          title="Renews automatically"
+          title={isEs ? "Se renueva automáticamente" : "Renews automatically"}
         />
       </div>
     </Modal>
@@ -524,24 +617,42 @@ function RenewContractModal({
   const [patients, setPatients] = useState(String(contract.patientsAllowed));
   const [tried, setTried] = useState(false);
   const cents = parseDollars(fee);
-  const startError = DAY.test(startsOn) ? undefined : "Choose a start date.";
+  const { language } = useLanguage();
+  const isEs = language === "ES";
+  const startError = DAY.test(startsOn)
+    ? undefined
+    : isEs
+      ? "Elija una fecha de inicio."
+      : "Choose a start date.";
   const endError =
     !endsOn || (DAY.test(endsOn) && endsOn >= startsOn)
       ? undefined
-      : "The end date must be on or after the start date.";
+      : isEs
+        ? "La fecha de finalización debe ser igual o posterior a la fecha de inicio."
+        : "The end date must be on or after the start date.";
   const feeError =
-    cents !== null ? undefined : "Enter the fee in dollars and cents.";
+    cents !== null
+      ? undefined
+      : isEs
+        ? "Ingrese la tarifa en dólares y centavos."
+        : "Enter the fee in dollars and cents.";
   const patientsError =
     /^\d+$/.test(patients.trim()) && Number(patients) >= 1
       ? undefined
-      : "Enter a whole number of patients.";
+      : isEs
+        ? "Ingrese un número entero de pacientes."
+        : "Enter a whole number of patients.";
 
   return (
     <Modal
       open
       onClose={onClose}
-      title={`Renew: ${name}`}
-      description="The renewal starts a new term; the current one keeps its history."
+      title={isEs ? `Renovar: ${name}` : `Renew: ${name}`}
+      description={
+        isEs
+          ? "La renovación inicia un nuevo plazo; el actual conserva su historial."
+          : "The renewal starts a new term; the current one keeps its history."
+      }
       footer={
         <>
           <Button
@@ -550,7 +661,7 @@ function RenewContractModal({
             onClick={onClose}
             disabled={saving}
           >
-            Cancel
+            {isEs ? "Cancelar" : "Cancel"}
           </Button>
           <Button
             loading={saving}
@@ -565,20 +676,25 @@ function RenewContractModal({
               });
             }}
           >
-            Renew Contract
+            {isEs ? "Renovar contrato" : "Renew Contract"}
           </Button>
         </>
       }
     >
       <div className="space-y-stack-md">
         {error ? (
-          <Alert tone="danger" title="The contract was not renewed">
-            {actionErrorText(error)}
+          <Alert
+            tone="danger"
+            title={
+              isEs ? "El contrato no se renovó" : "The contract was not renewed"
+            }
+          >
+            {actionErrorText(error, isEs)}
           </Alert>
         ) : null}
         <div className="grid grid-cols-1 gap-inline-lg sm:grid-cols-2">
           <FormField
-            label="New term starts"
+            label={isEs ? "El nuevo plazo comienza" : "New term starts"}
             required
             error={tried ? startError : undefined}
           >
@@ -591,7 +707,10 @@ function RenewContractModal({
               />
             )}
           </FormField>
-          <FormField label="New term ends" error={tried ? endError : undefined}>
+          <FormField
+            label={isEs ? "El nuevo plazo termina" : "New term ends"}
+            error={tried ? endError : undefined}
+          >
             {(field) => (
               <Input
                 {...field}
@@ -604,7 +723,7 @@ function RenewContractModal({
         </div>
         <div className="grid grid-cols-1 gap-inline-lg sm:grid-cols-2">
           <FormField
-            label="Monthly fee (USD)"
+            label={isEs ? "Tarifa mensual (USD)" : "Monthly fee (USD)"}
             required
             error={tried ? feeError : undefined}
           >
@@ -618,7 +737,7 @@ function RenewContractModal({
             )}
           </FormField>
           <FormField
-            label="Patients allowed"
+            label={isEs ? "Pacientes permitidos" : "Patients allowed"}
             required
             error={tried ? patientsError : undefined}
           >
@@ -652,16 +771,25 @@ function InvoicesCard({ label }: { label: (id: string) => string }) {
   const canWrite = useCanLevel("contracts", 2);
   const canManage = useCanLevel("contracts", 3);
   const [issuing, setIssuing] = useState(false);
-  const copy = readErrorCopy(invoices.error, "The invoices did not load");
+  const { language } = useLanguage();
+  const isEs = language === "ES";
+  const copy = readErrorCopy(
+    invoices.error,
+    isEs ? "Las facturas no se cargaron" : "The invoices did not load",
+    isEs,
+  );
 
   return (
     <Card padding="none">
       <div className="flex flex-col gap-inline-lg p-card sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h3 className="text-heading-5 text-fg">Invoices</h3>
+          <h3 className="text-heading-5 text-fg">
+            {isEs ? "Facturas" : "Invoices"}
+          </h3>
           <p className="mt-stack-xs text-caption text-fg-muted">
-            Issued against a contract. Offices see their own invoices on their
-            billing page.
+            {isEs
+              ? "Emitidas contra un contrato. Las oficinas ven sus propias facturas en su página de facturación."
+              : "Issued against a contract. Offices see their own invoices on their billing page."}
           </p>
         </div>
         {canWrite ? (
@@ -675,14 +803,18 @@ function InvoicesCard({ label }: { label: (id: string) => string }) {
               setIssuing(true);
             }}
           >
-            Issue Invoice
+            {isEs ? "Emitir factura" : "Issue Invoice"}
           </Button>
         ) : null}
       </div>
       <div className="px-card">
         <ActionError
           error={invoices.markPaidError}
-          title="The invoice was not marked paid"
+          title={
+            isEs
+              ? "La factura no se marcó como pagada"
+              : "The invoice was not marked paid"
+          }
           onDismiss={invoices.dismissMarkPaidError}
           className="mb-stack-md"
         />
@@ -697,18 +829,24 @@ function InvoicesCard({ label }: { label: (id: string) => string }) {
         <Table minWidth={860}>
           <TableHead>
             <TableRow>
-              <TableHeaderCell>Invoice</TableHeaderCell>
-              <TableHeaderCell>Organization</TableHeaderCell>
-              <TableHeaderCell>Amount</TableHeaderCell>
-              <TableHeaderCell>Due</TableHeaderCell>
-              <TableHeaderCell>Status</TableHeaderCell>
-              <TableHeaderCell className="text-right">Actions</TableHeaderCell>
+              <TableHeaderCell>{isEs ? "Factura" : "Invoice"}</TableHeaderCell>
+              <TableHeaderCell>
+                {isEs ? "Organización" : "Organization"}
+              </TableHeaderCell>
+              <TableHeaderCell>{isEs ? "Monto" : "Amount"}</TableHeaderCell>
+              <TableHeaderCell>{isEs ? "Vence" : "Due"}</TableHeaderCell>
+              <TableHeaderCell>{isEs ? "Estado" : "Status"}</TableHeaderCell>
+              <TableHeaderCell className="text-right">
+                {isEs ? "Acciones" : "Actions"}
+              </TableHeaderCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {invoices.invoices.length === 0 ? (
               <TableEmptyRow colSpan={6}>
-                <p className="text-body-sm text-fg-muted">No invoices yet.</p>
+                <p className="text-body-sm text-fg-muted">
+                  {isEs ? "Aún no hay facturas." : "No invoices yet."}
+                </p>
               </TableEmptyRow>
             ) : null}
             {invoices.invoices.map((inv) => (
@@ -716,19 +854,20 @@ function InvoicesCard({ label }: { label: (id: string) => string }) {
                 <TableCell emphasis>
                   {inv.number}
                   <span className="block text-caption text-fg-muted">
-                    {inv.periodLabel} · issued {formatDay(inv.issuedOn)}
+                    {inv.periodLabel} · {isEs ? "emitida el" : "issued"}{" "}
+                    {formatDay(inv.issuedOn, isEs)}
                   </span>
                 </TableCell>
                 <TableCell>{label(inv.organizationId)}</TableCell>
                 <TableCell numeric>
-                  {formatCents(inv.amountCents, inv.currency || "USD")}
+                  {formatCents(inv.amountCents, inv.currency || "USD", isEs)}
                 </TableCell>
-                <TableCell>{formatDay(inv.dueOn)}</TableCell>
+                <TableCell>{formatDay(inv.dueOn, isEs)}</TableCell>
                 <TableCell>
                   <InvoiceStatusBadge status={inv.status} />
                   {inv.paidAt ? (
                     <span className="block text-caption text-fg-muted">
-                      {formatInstant(inv.paidAt)}
+                      {formatInstant(inv.paidAt, isEs)}
                     </span>
                   ) : null}
                 </TableCell>
@@ -740,9 +879,13 @@ function InvoicesCard({ label }: { label: (id: string) => string }) {
                       appearance="stroke"
                       loading={invoices.markPaidPendingId === inv.id}
                       onClick={() => invoices.markPaid(inv.id)}
-                      aria-label={`Mark ${inv.number} paid`}
+                      aria-label={
+                        isEs
+                          ? `Marcar ${inv.number} como pagada`
+                          : `Mark ${inv.number} paid`
+                      }
                     >
-                      Mark Paid
+                      {isEs ? "Marcar como pagada" : "Mark Paid"}
                     </Button>
                   ) : null}
                 </TableCell>
@@ -811,25 +954,49 @@ function IssueInvoiceModal({
   );
   const [tried, setTried] = useState(false);
   const cents = parseDollars(amount);
+  const { language } = useLanguage();
+  const isEs = language === "ES";
 
   const errors = {
-    contract: contract ? undefined : "Choose a contract.",
-    number: number.trim() ? undefined : "Enter the invoice number.",
-    period: periodLabel.trim() ? undefined : "Enter the billing period.",
-    issued: DAY.test(issuedOn) ? undefined : "Choose the issue date.",
+    contract: contract
+      ? undefined
+      : isEs
+        ? "Elija un contrato."
+        : "Choose a contract.",
+    number: number.trim()
+      ? undefined
+      : isEs
+        ? "Ingrese el número de factura."
+        : "Enter the invoice number.",
+    period: periodLabel.trim()
+      ? undefined
+      : isEs
+        ? "Ingrese el período de facturación."
+        : "Enter the billing period.",
+    issued: DAY.test(issuedOn)
+      ? undefined
+      : isEs
+        ? "Elija la fecha de emisión."
+        : "Choose the issue date.",
     due:
       DAY.test(dueOn) && dueOn >= issuedOn
         ? undefined
-        : "The due date must be on or after the issue date.",
+        : isEs
+          ? "La fecha de vencimiento debe ser igual o posterior a la fecha de emisión."
+          : "The due date must be on or after the issue date.",
     amount:
-      cents !== null ? undefined : "Enter the amount in dollars and cents.",
+      cents !== null
+        ? undefined
+        : isEs
+          ? "Ingrese el monto en dólares y centavos."
+          : "Enter the amount in dollars and cents.",
   };
 
   return (
     <Modal
       open
       onClose={onClose}
-      title="Issue Invoice"
+      title={isEs ? "Emitir factura" : "Issue Invoice"}
       footer={
         <>
           <Button
@@ -838,7 +1005,7 @@ function IssueInvoiceModal({
             onClick={onClose}
             disabled={saving}
           >
-            Cancel
+            {isEs ? "Cancelar" : "Cancel"}
           </Button>
           <Button
             loading={saving}
@@ -855,19 +1022,24 @@ function IssueInvoiceModal({
               });
             }}
           >
-            Issue Invoice
+            {isEs ? "Emitir factura" : "Issue Invoice"}
           </Button>
         </>
       }
     >
       <div className="space-y-stack-md">
         {error ? (
-          <Alert tone="danger" title="The invoice was not issued">
-            {actionErrorText(error)}
+          <Alert
+            tone="danger"
+            title={
+              isEs ? "La factura no se emitió" : "The invoice was not issued"
+            }
+          >
+            {actionErrorText(error, isEs)}
           </Alert>
         ) : null}
         <FormField
-          label="Contract"
+          label={isEs ? "Contrato" : "Contract"}
           required
           error={tried ? errors.contract : undefined}
         >
@@ -891,7 +1063,7 @@ function IssueInvoiceModal({
         </FormField>
         <div className="grid grid-cols-1 gap-inline-lg sm:grid-cols-2">
           <FormField
-            label="Invoice number"
+            label={isEs ? "Número de factura" : "Invoice number"}
             required
             error={tried ? errors.number : undefined}
           >
@@ -905,7 +1077,7 @@ function IssueInvoiceModal({
             )}
           </FormField>
           <FormField
-            label="Billing period"
+            label={isEs ? "Período de facturación" : "Billing period"}
             required
             error={tried ? errors.period : undefined}
           >
@@ -915,14 +1087,14 @@ function IssueInvoiceModal({
                 maxLength={40}
                 value={periodLabel}
                 onChange={(e) => setPeriodLabel(e.target.value)}
-                placeholder="e.g. Nov 2026"
+                placeholder={isEs ? "p. ej., nov. 2026" : "e.g. Nov 2026"}
               />
             )}
           </FormField>
         </div>
         <div className="grid grid-cols-1 gap-inline-lg sm:grid-cols-3">
           <FormField
-            label="Issued on"
+            label={isEs ? "Emitida el" : "Issued on"}
             required
             error={tried ? errors.issued : undefined}
           >
@@ -936,7 +1108,7 @@ function IssueInvoiceModal({
             )}
           </FormField>
           <FormField
-            label="Due on"
+            label={isEs ? "Vence el" : "Due on"}
             required
             error={tried ? errors.due : undefined}
           >
@@ -950,7 +1122,7 @@ function IssueInvoiceModal({
             )}
           </FormField>
           <FormField
-            label="Amount (USD)"
+            label={isEs ? "Monto (USD)" : "Amount (USD)"}
             required
             error={tried ? errors.amount : undefined}
           >
@@ -965,7 +1137,8 @@ function IssueInvoiceModal({
           </FormField>
         </div>
         <p className="text-caption text-fg-muted">
-          Attaching the invoice PDF: {NOT_AVAILABLE_NOTE.toLowerCase()}
+          {isEs ? "Adjuntar el PDF de la factura" : "Attaching the invoice PDF"}
+          : {notAvailableNote(isEs).toLowerCase()}
         </p>
       </div>
     </Modal>
@@ -982,25 +1155,36 @@ function ChangeRequestsCard({ label }: { label: (id: string) => string }) {
     tab === "cr-open" ? "open" : "resolved",
   );
   const canManage = useCanLevel("contracts", 3);
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const copy = readErrorCopy(
     requests.error,
-    "The change requests did not load",
+    isEs
+      ? "Las solicitudes de cambio no se cargaron"
+      : "The change requests did not load",
+    isEs,
   );
 
   return (
     <Card padding="none">
       <div className="flex flex-col gap-inline-lg p-card sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h3 className="text-heading-5 text-fg">Change Requests</h3>
+          <h3 className="text-heading-5 text-fg">
+            {isEs ? "Solicitudes de cambio" : "Change Requests"}
+          </h3>
           <p className="mt-stack-xs text-caption text-fg-muted">
-            What offices asked to change on their contract.
+            {isEs
+              ? "Lo que las oficinas pidieron cambiar en su contrato."
+              : "What offices asked to change on their contract."}
           </p>
         </div>
         <Tabs
-          label="Change request status"
+          label={
+            isEs ? "Estado de la solicitud de cambio" : "Change request status"
+          }
           items={[
-            { id: "cr-open", label: "Open" },
-            { id: "cr-resolved", label: "Resolved" },
+            { id: "cr-open", label: isEs ? "Abiertas" : "Open" },
+            { id: "cr-resolved", label: isEs ? "Resueltas" : "Resolved" },
           ]}
           value={tab}
           onChange={(next) => {
@@ -1012,7 +1196,11 @@ function ChangeRequestsCard({ label }: { label: (id: string) => string }) {
       <div className="px-card">
         <ActionError
           error={requests.resolveError}
-          title="The request was not resolved"
+          title={
+            isEs
+              ? "La solicitud no se resolvió"
+              : "The request was not resolved"
+          }
           onDismiss={requests.dismissResolveError}
           className="mb-stack-md"
         />
@@ -1028,12 +1216,18 @@ function ChangeRequestsCard({ label }: { label: (id: string) => string }) {
           <Table minWidth={760}>
             <TableHead>
               <TableRow>
-                <TableHeaderCell>Organization</TableHeaderCell>
-                <TableHeaderCell>Topic</TableHeaderCell>
-                <TableHeaderCell>Request</TableHeaderCell>
-                <TableHeaderCell>Requested</TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Organización" : "Organization"}
+                </TableHeaderCell>
+                <TableHeaderCell>{isEs ? "Tema" : "Topic"}</TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Solicitud" : "Request"}
+                </TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Solicitada" : "Requested"}
+                </TableHeaderCell>
                 <TableHeaderCell className="text-right">
-                  Actions
+                  {isEs ? "Acciones" : "Actions"}
                 </TableHeaderCell>
               </TableRow>
             </TableHead>
@@ -1042,25 +1236,30 @@ function ChangeRequestsCard({ label }: { label: (id: string) => string }) {
                 <TableEmptyRow colSpan={5}>
                   <p className="text-body-sm text-fg-muted">
                     {tab === "cr-open"
-                      ? "No open change requests."
-                      : "No resolved change requests."}
+                      ? isEs
+                        ? "No hay solicitudes de cambio abiertas."
+                        : "No open change requests."
+                      : isEs
+                        ? "No hay solicitudes de cambio resueltas."
+                        : "No resolved change requests."}
                   </p>
                 </TableEmptyRow>
               ) : null}
               {requests.requests.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell emphasis>{label(r.organizationId)}</TableCell>
-                  <TableCell>{TOPIC_LABEL[r.topic] ?? r.topic}</TableCell>
+                  <TableCell>{topicLabel(r.topic, isEs)}</TableCell>
                   <TableCell>
                     <span className="block max-w-[360px] text-body-sm break-words whitespace-pre-line">
                       {r.detail}
                     </span>
                   </TableCell>
                   <TableCell>
-                    {formatInstant(r.requestedAt)}
+                    {formatInstant(r.requestedAt, isEs)}
                     {r.resolvedAt ? (
                       <span className="block text-caption text-fg-muted">
-                        Resolved {formatInstant(r.resolvedAt)}
+                        {isEs ? "Resuelta el" : "Resolved"}{" "}
+                        {formatInstant(r.resolvedAt, isEs)}
                       </span>
                     ) : null}
                   </TableCell>
@@ -1072,9 +1271,13 @@ function ChangeRequestsCard({ label }: { label: (id: string) => string }) {
                         appearance="stroke"
                         loading={requests.resolvePendingId === r.id}
                         onClick={() => requests.resolve(r.id)}
-                        aria-label={`Resolve the ${TOPIC_LABEL[r.topic] ?? r.topic} request from ${label(r.organizationId)}`}
+                        aria-label={
+                          isEs
+                            ? `Resolver la solicitud de ${topicLabel(r.topic, true)} de ${label(r.organizationId)}`
+                            : `Resolve the ${topicLabel(r.topic, false)} request from ${label(r.organizationId)}`
+                        }
                       >
-                        Resolve
+                        {isEs ? "Resolver" : "Resolve"}
                       </Button>
                     ) : null}
                   </TableCell>

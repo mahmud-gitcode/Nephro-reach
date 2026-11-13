@@ -116,7 +116,7 @@ export function ShareLogCard({
             onClick={() => setOutside(true)}
           >
             {isEs
-              ? "Compartir Fuera de NephroReach"
+              ? "Compartir fuera de NephroReach"
               : "Share Outside NephroReach"}
           </Button>
         ) : null}
@@ -145,7 +145,7 @@ export function ShareLogCard({
               window.location.href = mailtoHref(
                 picked.email,
                 title,
-                emailBody(title, table, footer),
+                emailBody(title, table, footer, isEs),
               );
             });
           }}
@@ -176,7 +176,7 @@ export function ShareLogCard({
               window.location.href = mailtoHref(
                 to,
                 title,
-                emailBody(title, table, footer),
+                emailBody(title, table, footer, isEs),
               );
             });
           }}

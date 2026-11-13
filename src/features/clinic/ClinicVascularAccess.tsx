@@ -43,6 +43,7 @@ import {
   Tabs,
   TabPanel,
 } from "@/components/ui";
+import { useLanguageCode } from "@/context/LanguageContext";
 import { isApiError } from "@/lib/api/client";
 import {
   canRetry,
@@ -169,10 +170,54 @@ function PanelHeading({
   );
 }
 
-function concernLabel(ids: string[]) {
+function concernLabel(ids: string[], isEs = false) {
   return ids
-    .map((id) => CONCERN_KINDS.find((kind) => kind.id === id)?.en ?? id)
+    .map((id) => {
+      const kind = CONCERN_KINDS.find((k) => k.id === id);
+      return (isEs ? kind?.es : kind?.en) ?? id;
+    })
     .join(", ");
+}
+
+/* Spanish display text for the access center's fixed lists. The values
+   sent to the server stay English; text from the server that is not in a
+   list is shown as it came. */
+const APPOINTMENT_ES: Record<string, string> = {
+  "Access Follow-Up": "Seguimiento del acceso",
+  "Ultrasound (Access)": "Ecografía (acceso)",
+  Fistulogram: "Fistulografía",
+  "Access Check": "Revisión del acceso",
+  "Catheter Exchange": "Cambio de catéter",
+  "Surgical Consult": "Consulta quirúrgica",
+  "Access Placement Surgery": "Cirugía de colocación del acceso",
+  "PD Catheter Placement": "Colocación de catéter de DP",
+};
+
+const ACCESS_TYPE_ES: Record<string, string> = {
+  "AV Fistula": "Fístula AV",
+  "AV Graft": "Injerto AV",
+  "Tunneled Catheter": "Catéter tunelizado",
+  "PD Catheter": "Catéter de DP",
+  TBD: "Por determinar",
+};
+
+const ACCESS_STATUS_ES: Record<string, string> = {
+  "All Statuses": "Todos los estados",
+  "No Active Concern": "Sin inquietudes activas",
+  "Review Requested": "Revisión solicitada",
+  "Concern Reported": "Inquietud reportada",
+  "Appointment Scheduled": "Cita programada",
+  "Follow-Up Needed": "Requiere seguimiento",
+  Closed: "Cerrado",
+};
+
+const TEAM_ES: Record<AccessTeam, string> = {
+  vascular: "Equipo de acceso vascular",
+  dialysis: "Centro de diálisis",
+};
+
+function inSpanish(map: Record<string, string>, text: string, isEs: boolean) {
+  return isEs ? (map[text] ?? text) : text;
 }
 
 /** What the signed-in person may do here: hints from their membership's
@@ -198,10 +243,12 @@ type Perms = {
 };
 
 /** The server's refusal, as a short line in a modal. */
-function refusal(error: unknown): string {
+function refusal(error: unknown, isEs = false): string {
   return isApiError(error) && error.messages[0]
     ? error.messages[0]
-    : "That change did not save. Try again.";
+    : isEs
+      ? "No se pudo guardar el cambio. Inténtelo de nuevo."
+      : "That change did not save. Try again.";
 }
 
 /* -------------------------------------------------------- schedule form */
@@ -222,6 +269,7 @@ function ScheduleModal({
 }) {
   const now = useNow();
   const today = dayKey(now);
+  const isEs = useLanguageCode() === "ES";
   const [profileId, setProfileId] = useState(initialProfileId);
   const [title, setTitle] = useState<string>(APPOINTMENT_TYPES[0]);
   const [date, setDate] = useState(addDays(today, 7));
@@ -236,7 +284,7 @@ function ScheduleModal({
     <Modal
       open
       onClose={onClose}
-      title="Schedule Appointment"
+      title={isEs ? "Programar cita" : "Schedule Appointment"}
       footer={
         <>
           <Button
@@ -245,7 +293,7 @@ function ScheduleModal({
             size="small"
             onClick={onClose}
           >
-            Cancel
+            {isEs ? "Cancelar" : "Cancel"}
           </Button>
           <Button
             size="small"
@@ -267,7 +315,7 @@ function ScheduleModal({
               onClose();
             }}
           >
-            Schedule
+            {isEs ? "Programar" : "Schedule"}
           </Button>
         </>
       }
@@ -279,10 +327,14 @@ function ScheduleModal({
             className="sm:col-span-2"
             onDismiss={() => setFailed(null)}
           >
-            {refusal(actions.error ?? failed)}
+            {refusal(actions.error ?? failed, isEs)}
           </Alert>
         ) : null}
-        <FormField label="Patient" required className="sm:col-span-2">
+        <FormField
+          label={isEs ? "Paciente" : "Patient"}
+          required
+          className="sm:col-span-2"
+        >
           {(field) => (
             <Select
               {...field}
@@ -298,7 +350,7 @@ function ScheduleModal({
             </Select>
           )}
         </FormField>
-        <FormField label="Appointment" required>
+        <FormField label={isEs ? "Cita" : "Appointment"} required>
           {(field) => (
             <Select
               {...field}
@@ -306,12 +358,14 @@ function ScheduleModal({
               onChange={(e) => setTitle(e.target.value)}
             >
               {APPOINTMENT_TYPES.map((option) => (
-                <option key={option}>{option}</option>
+                <option key={option} value={option}>
+                  {inSpanish(APPOINTMENT_ES, option, isEs)}
+                </option>
               ))}
             </Select>
           )}
         </FormField>
-        <FormField label="Location" required>
+        <FormField label={isEs ? "Lugar" : "Location"} required>
           {(field) => (
             <Input
               {...field}
@@ -321,9 +375,15 @@ function ScheduleModal({
           )}
         </FormField>
         <FormField
-          label="Date"
+          label={isEs ? "Fecha" : "Date"}
           required
-          error={date < today ? "Pick a future date" : undefined}
+          error={
+            date < today
+              ? isEs
+                ? "Elija una fecha futura"
+                : "Pick a future date"
+              : undefined
+          }
         >
           {(field) => (
             <Input
@@ -335,7 +395,7 @@ function ScheduleModal({
             />
           )}
         </FormField>
-        <FormField label="Time" required>
+        <FormField label={isEs ? "Hora" : "Time"} required>
           {(field) => (
             <Input
               {...field}
@@ -347,12 +407,18 @@ function ScheduleModal({
         </FormField>
         <SegmentedChoice
           className="sm:col-span-2"
-          label="With"
+          label={isEs ? "Con" : "With"}
           value={team}
           onChange={(next: AccessTeam) => setTeam(next)}
           options={[
-            { value: "vascular", label: TEAM_LABEL.vascular },
-            { value: "dialysis", label: TEAM_LABEL.dialysis },
+            {
+              value: "vascular",
+              label: isEs ? TEAM_ES.vascular : TEAM_LABEL.vascular,
+            },
+            {
+              value: "dialysis",
+              label: isEs ? TEAM_ES.dialysis : TEAM_LABEL.dialysis,
+            },
           ]}
         />
       </div>
@@ -373,20 +439,23 @@ function CompleteForm({
 }) {
   const [result, setResult] = useState("");
   const [performedBy, setPerformedBy] = useState("");
+  const isEs = useLanguageCode() === "ES";
   const valid = result.trim() !== "" && performedBy.trim() !== "";
   return (
     <div className="mt-stack-sm grid gap-inline-md rounded-control border border-line bg-surface-sunken p-inset-sm sm:grid-cols-[1fr_1fr_auto]">
       <Input
         inputSize="small"
-        aria-label="Result"
-        placeholder="Result, e.g. Normal flow"
+        aria-label={isEs ? "Resultado" : "Result"}
+        placeholder={
+          isEs ? "Resultado, ej.: flujo normal" : "Result, e.g. Normal flow"
+        }
         value={result}
         onChange={(e) => setResult(e.target.value)}
       />
       <Input
         inputSize="small"
-        aria-label="Performed by"
-        placeholder="Performed by"
+        aria-label={isEs ? "Realizado por" : "Performed by"}
+        placeholder={isEs ? "Realizado por" : "Performed by"}
         value={performedBy}
         onChange={(e) => setPerformedBy(e.target.value)}
       />
@@ -397,14 +466,14 @@ function CompleteForm({
           size="small"
           onClick={onCancel}
         >
-          Cancel
+          {isEs ? "Cancelar" : "Cancel"}
         </Button>
         <Button
           size="small"
           disabled={!valid}
           onClick={() => onSave(result.trim(), performedBy.trim())}
         >
-          Save
+          {isEs ? "Guardar" : "Save"}
         </Button>
       </span>
     </div>
@@ -437,6 +506,7 @@ function PatientModal({
   const today = dayKey(now);
   const [tab, setTab] = useState<PatientTab>(initialTab);
   const [completing, setCompleting] = useState<string | null>(null);
+  const isEs = useLanguageCode() === "ES";
   const reads = useAccessRecord(target, row.id, {
     memberName: row.memberName,
     mrn: row.mrn,
@@ -458,8 +528,14 @@ function PatientModal({
   if (reads.error) {
     content = (
       <ErrorState
-        title={errorTitleFor(reads.error, "This record could not be loaded")}
-        message={errorMessageFor(reads.error, undefined)}
+        title={errorTitleFor(
+          reads.error,
+          isEs
+            ? "No se pudo cargar este registro"
+            : "This record could not be loaded",
+          isEs ? "es" : "en",
+        )}
+        message={errorMessageFor(reads.error, undefined, isEs ? "es" : "en")}
         error={reads.error}
         onRetry={canRetry(reads.error) ? reads.refetch : undefined}
       />
@@ -471,7 +547,7 @@ function PatientModal({
       <>
         <TabPanel id="overview" value={tab} className="space-y-stack-lg">
           <div className="flex flex-wrap items-end gap-inline-lg">
-            <FormField label="Access status">
+            <FormField label={isEs ? "Estado del acceso" : "Access status"}>
               {(field) => (
                 <Select
                   {...field}
@@ -491,25 +567,31 @@ function PatientModal({
                   }
                 >
                   {ACCESS_STATUSES.map((status) => (
-                    <option key={status}>{status}</option>
+                    <option key={status} value={status}>
+                      {inSpanish(ACCESS_STATUS_ES, status, isEs)}
+                    </option>
                   ))}
                 </Select>
               )}
             </FormField>
             <dl className="flex flex-wrap gap-inline-lg text-body-sm">
               <div>
-                <dt className="text-caption text-fg-muted">Created</dt>
+                <dt className="text-caption text-fg-muted">
+                  {isEs ? "Creado" : "Created"}
+                </dt>
                 <dd className="text-label-lg text-fg">
                   {record.overview.createdOn
-                    ? formatDay(record.overview.createdOn)
+                    ? formatDay(record.overview.createdOn, isEs)
                     : "—"}
                 </dd>
               </div>
               <div>
-                <dt className="text-caption text-fg-muted">Last Assessment</dt>
+                <dt className="text-caption text-fg-muted">
+                  {isEs ? "Última evaluación" : "Last Assessment"}
+                </dt>
                 <dd className="text-label-lg text-fg">
                   {record.overview.lastAssessment
-                    ? formatDay(record.overview.lastAssessment)
+                    ? formatDay(record.overview.lastAssessment, isEs)
                     : "—"}
                 </dd>
               </div>
@@ -521,17 +603,21 @@ function PatientModal({
                 onClick={onRefer}
                 leadingIcon={<BellRing aria-hidden="true" />}
               >
-                Alert Access Center
+                {isEs
+                  ? "Alertar al centro de acceso vascular"
+                  : "Alert Access Center"}
               </Button>
             ) : null}
           </div>
 
           <section hidden={!perms.concerns}>
             <h3 className="mb-stack-sm text-heading-5 text-fg">
-              Open Concerns
+              {isEs ? "Inquietudes abiertas" : "Open Concerns"}
             </h3>
             {concerns.length === 0 ? (
-              <p className="text-body-sm text-fg-muted">No open concerns.</p>
+              <p className="text-body-sm text-fg-muted">
+                {isEs ? "No hay inquietudes abiertas." : "No open concerns."}
+              </p>
             ) : (
               <ul className="space-y-stack-sm">
                 {concerns.map((concern) => (
@@ -545,19 +631,19 @@ function PatientModal({
                         profileId={record.id}
                         kind="concern"
                         id={concern.id}
-                        alt={`Photo from ${record.memberName}`}
+                        alt={`${isEs ? "Foto de" : "Photo from"} ${record.memberName}`}
                         className="h-20 w-20 shrink-0 rounded-control"
                       />
                     ) : null}
                     <div className="min-w-0 flex-1">
                       <p className="text-label-lg text-fg">
-                        {concernLabel(concern.kinds)}
+                        {concernLabel(concern.kinds, isEs)}
                       </p>
                       <p className="text-body-sm text-fg-secondary">
                         {concern.detail}
                       </p>
                       <p className="mt-stack-xs text-caption text-fg-muted">
-                        {messaging.relativeLabel(concern.reportedAt, now)}
+                        {messaging.relativeLabel(concern.reportedAt, now, isEs)}
                       </p>
                     </div>
                     <Button
@@ -570,7 +656,7 @@ function PatientModal({
                       }
                     >
                       <Check aria-hidden="true" />
-                      Mark reviewed
+                      {isEs ? "Marcar como revisada" : "Mark reviewed"}
                     </Button>
                   </li>
                 ))}
@@ -580,11 +666,13 @@ function PatientModal({
 
           <section>
             <h3 className="mb-stack-sm text-heading-5 text-fg">
-              Recent Updates
+              {isEs ? "Actualizaciones recientes" : "Recent Updates"}
             </h3>
             <UpdatesTimeline
               updates={sortedUpdates(record).slice(0, 4)}
-              emptyLabel="No updates yet."
+              emptyLabel={
+                isEs ? "Aún no hay actualizaciones." : "No updates yet."
+              }
             />
           </section>
         </TabPanel>
@@ -594,12 +682,17 @@ function PatientModal({
             <div className="mb-stack-md flex justify-end">
               <Button size="small" onClick={onSchedule}>
                 <CalendarPlus aria-hidden="true" />
-                Schedule Appointment
+                {isEs ? "Programar cita" : "Schedule Appointment"}
               </Button>
             </div>
           ) : null}
           {upcoming.length === 0 ? (
-            <EmptyState variant="bare" title="No upcoming appointments" />
+            <EmptyState
+              variant="bare"
+              title={
+                isEs ? "No hay citas próximas" : "No upcoming appointments"
+              }
+            />
           ) : (
             <ul className="divide-y divide-line-subtle">
               {upcoming.map((appointment) => {
@@ -611,6 +704,7 @@ function PatientModal({
                   >
                     <AppointmentRow
                       appointment={appointment}
+                      isEs={isEs}
                       action={
                         completing === appointment.id ||
                         !perms.schedule ||
@@ -621,7 +715,7 @@ function PatientModal({
                             appearance="fill-stroke"
                             onClick={() => setCompleting(appointment.id)}
                           >
-                            Complete
+                            {isEs ? "Completar" : "Complete"}
                           </Button>
                         )
                       }
@@ -630,9 +724,14 @@ function PatientModal({
                         to confirm the appointment; the dialysis center books
                         it (client, 2026-10-07). */}
                     <p className="mt-stack-xs flex items-center gap-inline-sm text-caption text-fg-muted">
-                      Transportation:{" "}
+                      {isEs ? "Transporte:" : "Transportation:"}{" "}
                       {ride ? (
-                        <TransportStatusBadge status={ride.status} />
+                        <TransportStatusBadge
+                          status={ride.status}
+                          isEs={isEs}
+                        />
+                      ) : isEs ? (
+                        "Sin coordinar"
                       ) : (
                         "None arranged"
                       )}
@@ -664,6 +763,7 @@ function PatientModal({
             party={party}
             target={target}
             myName={record.memberName}
+            isEs={isEs}
             readOnlyReason={perms.converse ? undefined : perms.readOnlyReason}
             sending={actions.isSaving}
             onSend={(body, isPrivate) =>
@@ -679,24 +779,41 @@ function PatientModal({
         </TabPanel>
 
         <TabPanel id="history" value={tab}>
-          <HistoryTable history={sortedHistory(record)} />
+          <HistoryTable history={sortedHistory(record)} isEs={isEs} />
           {/* Export and share the history (client, 2026-10-06). */}
           <div className="mt-stack-lg">
             <ShareLogCard
-              title={`Access history: ${record.memberName}`}
-              description="Download the patient's access history, print it, or email it to another care team."
+              title={`${isEs ? "Historial del acceso" : "Access history"}: ${record.memberName}`}
+              description={
+                isEs
+                  ? "Descargue el historial del acceso del paciente, imprímalo o envíelo por correo electrónico a otro equipo de atención."
+                  : "Download the patient's access history, print it, or email it to another care team."
+              }
               fileName="access-history"
-              isEs={false}
-              footer="Sent from the NephroReach care team portal."
+              isEs={isEs}
+              footer={
+                isEs
+                  ? "Enviado desde el portal del equipo de atención de NephroReach."
+                  : "Sent from the NephroReach care team portal."
+              }
               table={{
-                header: [
-                  "Date",
-                  "Type",
-                  "Procedure",
-                  "Location",
-                  "Performed by",
-                  "Result",
-                ],
+                header: isEs
+                  ? [
+                      "Fecha",
+                      "Tipo",
+                      "Procedimiento",
+                      "Lugar",
+                      "Realizado por",
+                      "Resultado",
+                    ]
+                  : [
+                      "Date",
+                      "Type",
+                      "Procedure",
+                      "Location",
+                      "Performed by",
+                      "Result",
+                    ],
                 rows: sortedHistory(record).map((h) => [
                   h.date,
                   h.type,
@@ -719,26 +836,34 @@ function PatientModal({
       onClose={onClose}
       size="wide"
       title={row.memberName}
-      description={`${row.mrn ? `MRN ${row.mrn} · ` : ""}${row.overview.type}, ${row.overview.location}`}
+      description={`${row.mrn ? `MRN ${row.mrn} · ` : ""}${inSpanish(ACCESS_TYPE_ES, row.overview.type, isEs)}, ${row.overview.location}`}
     >
       <Tabs
-        label="Patient access"
+        label={isEs ? "Acceso del paciente" : "Patient access"}
         value={tab}
         onChange={showTab}
         className="mb-stack-lg"
         items={[
-          { id: "overview", label: "Overview" },
-          { id: "appointments", label: `Appointments (${upcoming.length})` },
+          { id: "overview", label: isEs ? "Resumen" : "Overview" },
+          {
+            id: "appointments",
+            label: `${isEs ? "Citas" : "Appointments"} (${upcoming.length})`,
+          },
           {
             id: "messages",
-            label: unread > 0 ? `Messages (${unread})` : "Messages",
+            label:
+              unread > 0
+                ? `${isEs ? "Mensajes" : "Messages"} (${unread})`
+                : isEs
+                  ? "Mensajes"
+                  : "Messages",
           },
-          { id: "history", label: "History" },
+          { id: "history", label: isEs ? "Historial" : "History" },
         ]}
       />
       {actions.error ? (
         <Alert tone="danger" onDismiss={actions.clearError}>
-          {refusal(actions.error)}
+          {refusal(actions.error, isEs)}
         </Alert>
       ) : null}
       {content}
@@ -761,6 +886,7 @@ function AddAccessModal({
   onClose: () => void;
 }) {
   const today = dayKey(useNow());
+  const isEs = useLanguageCode() === "ES";
   const [patientId, setPatientId] = useState(candidates[0]?.patientId ?? "");
   const [type, setType] = useState<string>(ACCESS_TYPES[0]);
   const [location, setLocation] = useState("");
@@ -770,19 +896,27 @@ function AddAccessModal({
   const [failed, setFailed] = useState<unknown>(null);
   /* No location yet while the access type is still to be decided. */
   const locationError =
-    type === "TBD" || location.trim() ? undefined : "Where is the access?";
+    type === "TBD" || location.trim()
+      ? undefined
+      : isEs
+        ? "¿Dónde está el acceso?"
+        : "Where is the access?";
 
   return (
     <Modal
       open
       onClose={onClose}
       size="big"
-      title="Add Patient"
-      description="Starts the access record the patient and both centers share."
+      title={isEs ? "Agregar paciente" : "Add Patient"}
+      description={
+        isEs
+          ? "Crea el registro de acceso que comparten el paciente y ambos centros."
+          : "Starts the access record the patient and both centers share."
+      }
       footer={
         <>
           <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
-            Cancel
+            {isEs ? "Cancelar" : "Cancel"}
           </Button>
           <Button
             disabled={candidates.length === 0 || actions.isSaving}
@@ -801,7 +935,7 @@ function AddAccessModal({
               else setFailed(true);
             }}
           >
-            Add Patient
+            {isEs ? "Agregar paciente" : "Add Patient"}
           </Button>
         </>
       }
@@ -809,16 +943,20 @@ function AddAccessModal({
       {candidates.length === 0 ? (
         <EmptyState
           variant="bare"
-          title="Every clinic patient already has an access record"
+          title={
+            isEs
+              ? "Todos los pacientes de la clínica ya tienen un registro de acceso"
+              : "Every clinic patient already has an access record"
+          }
         />
       ) : (
         <div className="space-y-stack-md">
           {failed ? (
             <Alert tone="danger" onDismiss={() => setFailed(null)}>
-              {refusal(actions.error ?? failed)}
+              {refusal(actions.error ?? failed, isEs)}
             </Alert>
           ) : null}
-          <FormField label="Patient" required>
+          <FormField label={isEs ? "Paciente" : "Patient"} required>
             {(field) => (
               <Select
                 {...field}
@@ -835,7 +973,7 @@ function AddAccessModal({
             )}
           </FormField>
           <div className="grid gap-stack-md sm:grid-cols-2">
-            <FormField label="Access type" required>
+            <FormField label={isEs ? "Tipo de acceso" : "Access type"} required>
               {(field) => (
                 <Select
                   {...field}
@@ -843,13 +981,15 @@ function AddAccessModal({
                   onChange={(e) => setType(e.target.value)}
                 >
                   {ACCESS_TYPES.map((o) => (
-                    <option key={o}>{o}</option>
+                    <option key={o} value={o}>
+                      {inSpanish(ACCESS_TYPE_ES, o, isEs)}
+                    </option>
                   ))}
                 </Select>
               )}
             </FormField>
             <FormField
-              label="Location"
+              label={isEs ? "Ubicación" : "Location"}
               required={type !== "TBD"}
               error={tried ? locationError : undefined}
             >
@@ -858,11 +998,16 @@ function AddAccessModal({
                   {...field}
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
-                  placeholder="E.g. Left Forearm"
+                  placeholder={
+                    isEs ? "Ej.: antebrazo izquierdo" : "E.g. Left Forearm"
+                  }
                 />
               )}
             </FormField>
-            <FormField label="Created on" required>
+            <FormField
+              label={isEs ? "Fecha de creación" : "Created on"}
+              required
+            >
               {(field) => (
                 <Input
                   {...field}
@@ -873,7 +1018,7 @@ function AddAccessModal({
                 />
               )}
             </FormField>
-            <FormField label="Status" required>
+            <FormField label={isEs ? "Estado" : "Status"} required>
               {(field) => (
                 <Select
                   {...field}
@@ -881,7 +1026,9 @@ function AddAccessModal({
                   onChange={(e) => setStatus(e.target.value as AccessStatus)}
                 >
                   {ACCESS_STATUSES.map((o) => (
-                    <option key={o}>{o}</option>
+                    <option key={o} value={o}>
+                      {inSpanish(ACCESS_STATUS_ES, o, isEs)}
+                    </option>
                   ))}
                 </Select>
               )}
@@ -910,6 +1057,7 @@ function OfficeConcerns({
   onOpen: (profileId: string) => void;
 }) {
   const now = useNow();
+  const isEs = useLanguageCode() === "ES";
   const flagged = rows.filter((row) => row.openConcerns > 0).slice(0, 20);
   const results = useQueries({
     queries: flagged.map((row) => ({
@@ -923,8 +1071,14 @@ function OfficeConcerns({
   if (error) {
     return (
       <ErrorState
-        title={errorTitleFor(error, "Open concerns could not be loaded")}
-        message={errorMessageFor(error, undefined)}
+        title={errorTitleFor(
+          error,
+          isEs
+            ? "No se pudieron cargar las inquietudes abiertas"
+            : "Open concerns could not be loaded",
+          isEs ? "es" : "en",
+        )}
+        message={errorMessageFor(error, undefined, isEs ? "es" : "en")}
         error={error}
       />
     );
@@ -941,7 +1095,11 @@ function OfficeConcerns({
     )
     .sort((a, b) => b.concern.reportedAt.localeCompare(a.concern.reportedAt));
   if (items.length === 0) {
-    return <p className="text-body-sm text-fg-muted">No open concerns.</p>;
+    return (
+      <p className="text-body-sm text-fg-muted">
+        {isEs ? "No hay inquietudes abiertas." : "No open concerns."}
+      </p>
+    );
   }
   return (
     <ul className="divide-y divide-line-subtle">
@@ -956,7 +1114,7 @@ function OfficeConcerns({
               profileId={row.id}
               kind="concern"
               id={concern.id}
-              alt={`Photo from ${row.memberName}`}
+              alt={`${isEs ? "Foto de" : "Photo from"} ${row.memberName}`}
               className="h-12 w-12 shrink-0 rounded-control"
             />
           ) : null}
@@ -972,11 +1130,11 @@ function OfficeConcerns({
               {row.memberName}
             </button>
             <p className="text-body-sm text-fg-secondary">
-              {concernLabel(concern.kinds)} — {concern.detail}
+              {concernLabel(concern.kinds, isEs)} — {concern.detail}
             </p>
           </div>
           <span className="shrink-0 text-caption text-fg-muted">
-            {messaging.relativeLabel(concern.reportedAt, now)}
+            {messaging.relativeLabel(concern.reportedAt, now, isEs)}
           </span>
         </li>
       ))}
@@ -1018,6 +1176,7 @@ export default function ClinicVascularAccess({
 }) {
   const HREF = STAFF_HREF[party];
   const { user } = useAuth();
+  const isEs = useLanguageCode() === "ES";
   /* Who refers from this page: the access center itself, or the office
      signed in — the dialysis center, or the nephrology office, which
      shares the clinic's pages (client, 2026-10-05). */
@@ -1059,10 +1218,14 @@ export default function ClinicVascularAccess({
     converse: reply && office !== "nephrology",
     readOnlyReason:
       office === "nephrology"
-        ? "The nephrology office reads this conversation. To reach the access center, send a message from Access Center Messages."
+        ? isEs
+          ? "El consultorio de nefrología lee esta conversación. Para comunicarse con el centro de acceso vascular, envíe un mensaje desde Mensajes del centro de acceso vascular."
+          : "The nephrology office reads this conversation. To reach the access center, send a message from Access Center Messages."
         : reply
           ? undefined
-          : `${user?.staffRole ?? "Administrator"} accounts can read this conversation but not reply.`,
+          : isEs
+            ? `Las cuentas de ${user?.staffRole ?? "Administrator"} pueden leer esta conversación, pero no responder.`
+            : `${user?.staffRole ?? "Administrator"} accounts can read this conversation but not reply.`,
   };
   const now = useNow();
   const today = dayKey(now);
@@ -1129,9 +1292,12 @@ export default function ClinicVascularAccess({
       <ErrorState
         title={errorTitleFor(
           roster.error,
-          "Access records could not be loaded",
+          isEs
+            ? "No se pudieron cargar los registros de acceso"
+            : "Access records could not be loaded",
+          isEs ? "es" : "en",
         )}
-        message={errorMessageFor(roster.error, undefined)}
+        message={errorMessageFor(roster.error, undefined, isEs ? "es" : "en")}
         error={roster.error}
         onRetry={canRetry(roster.error) ? roster.refetch : undefined}
       />
@@ -1143,20 +1309,26 @@ export default function ClinicVascularAccess({
           <Table minWidth={760}>
             <TableHead className="bg-surface-sunken">
               <TableRow>
-                <TableHeaderCell>Name</TableHeaderCell>
-                <TableHeaderCell>Access</TableHeaderCell>
-                <TableHeaderCell>Status</TableHeaderCell>
-                <TableHeaderCell>Next Appointment</TableHeaderCell>
-                <TableHeaderCell>Concerns</TableHeaderCell>
+                <TableHeaderCell>{isEs ? "Nombre" : "Name"}</TableHeaderCell>
+                <TableHeaderCell>{isEs ? "Acceso" : "Access"}</TableHeaderCell>
+                <TableHeaderCell>{isEs ? "Estado" : "Status"}</TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Próxima cita" : "Next Appointment"}
+                </TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Inquietudes" : "Concerns"}
+                </TableHeaderCell>
                 <TableHeaderCell className="text-right">
-                  Actions
+                  {isEs ? "Acciones" : "Actions"}
                 </TableHeaderCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {rows.length === 0 ? (
                 <TableEmptyRow colSpan={6}>
-                  No patients match these filters.
+                  {isEs
+                    ? "Ningún paciente coincide con estos filtros."
+                    : "No patients match these filters."}
                 </TableEmptyRow>
               ) : (
                 rows.map((row) => {
@@ -1198,20 +1370,24 @@ export default function ClinicVascularAccess({
                         ) : null}
                       </TableCell>
                       <TableCell>
-                        {row.overview.type}
+                        {inSpanish(ACCESS_TYPE_ES, row.overview.type, isEs)}
                         <span className="block text-caption text-fg-muted">
                           {row.overview.location}
                         </span>
                       </TableCell>
                       <TableCell>
-                        <AccessStatusBadge status={row.overview.status} />
+                        <AccessStatusBadge
+                          status={row.overview.status}
+                          isEs={isEs}
+                        />
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         {next ? (
                           <>
-                            {formatDay(next.date)}
+                            {formatDay(next.date, isEs)}
                             <span className="block text-caption text-fg-muted">
-                              {next.title} · {formatTime(next.time)}
+                              {inSpanish(APPOINTMENT_ES, next.title, isEs)} ·{" "}
+                              {formatTime(next.time)}
                             </span>
                           </>
                         ) : (
@@ -1222,15 +1398,24 @@ export default function ClinicVascularAccess({
                         {openCount + staffCount > 0 ? (
                           <>
                             <Badge tone="danger">
-                              {openCount + staffCount} open
+                              {openCount + staffCount}{" "}
+                              {isEs
+                                ? openCount + staffCount === 1
+                                  ? "abierta"
+                                  : "abiertas"
+                                : "open"}
                             </Badge>
                             <span className="block text-caption text-fg-muted">
                               {[
                                 openCount > 0
-                                  ? `${openCount} from patient`
+                                  ? isEs
+                                    ? `${openCount} del paciente`
+                                    : `${openCount} from patient`
                                   : null,
                                 staffCount > 0
-                                  ? `${staffCount} from staff`
+                                  ? isEs
+                                    ? `${staffCount} del personal`
+                                    : `${staffCount} from staff`
                                   : null,
                               ]
                                 .filter(Boolean)
@@ -1249,8 +1434,8 @@ export default function ClinicVascularAccess({
                               setOpen({ id: row.id, tab: "overview" })
                             }
                             className={iconControl}
-                            aria-label={`View ${row.memberName}`}
-                            title="View access"
+                            aria-label={`${isEs ? "Ver" : "View"} ${row.memberName}`}
+                            title={isEs ? "Ver acceso" : "View access"}
                           >
                             <Eye aria-hidden="true" />
                           </button>
@@ -1263,10 +1448,14 @@ export default function ClinicVascularAccess({
                             className={cn(iconControl, "relative")}
                             aria-label={
                               unread > 0
-                                ? `Messages for ${row.memberName}, ${unread} unread`
-                                : `Messages for ${row.memberName}`
+                                ? isEs
+                                  ? `Mensajes de ${row.memberName}, ${unread} sin leer`
+                                  : `Messages for ${row.memberName}, ${unread} unread`
+                                : isEs
+                                  ? `Mensajes de ${row.memberName}`
+                                  : `Messages for ${row.memberName}`
                             }
-                            title="Messages"
+                            title={isEs ? "Mensajes" : "Messages"}
                           >
                             <MessageSquareText aria-hidden="true" />
                             {unread > 0 ? (
@@ -1281,8 +1470,10 @@ export default function ClinicVascularAccess({
                               type="button"
                               onClick={() => setScheduling(row.id)}
                               className={iconControl}
-                              aria-label={`Schedule for ${row.memberName}`}
-                              title="Schedule appointment"
+                              aria-label={`${isEs ? "Programar para" : "Schedule for"} ${row.memberName}`}
+                              title={
+                                isEs ? "Programar cita" : "Schedule appointment"
+                              }
                             >
                               <CalendarPlus aria-hidden="true" />
                             </button>
@@ -1305,7 +1496,7 @@ export default function ClinicVascularAccess({
               disabled={roster.isLoadingMore}
               onClick={roster.loadMore}
             >
-              Load more
+              {isEs ? "Cargar más" : "Load more"}
             </Button>
           </div>
         ) : null}
@@ -1321,62 +1512,78 @@ export default function ClinicVascularAccess({
       <>
         {actions.error && !open && scheduling === null && !addingPatient ? (
           <Alert tone="danger" onDismiss={actions.clearError}>
-            {refusal(actions.error)}
+            {refusal(actions.error, isEs)}
           </Alert>
         ) : null}
 
         <section
-          aria-label="Access summary"
+          aria-label={isEs ? "Resumen de acceso" : "Access summary"}
           className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2"
         >
           <KeyCard
             tone="brand"
             icon={<UsersSolid />}
             value={roster.error ? "—" : roster.total}
-            label="Access Patients"
+            label={isEs ? "Pacientes de acceso" : "Access Patients"}
           />
           <KeyCard
             tone="danger"
             icon={<AlertTriangleSolid />}
             value={roster.error ? "—" : openConcernCount}
-            label="Open Concerns"
+            label={isEs ? "Inquietudes abiertas" : "Open Concerns"}
           />
           <KeyCard
             tone="accent"
             icon={<ClockSolid />}
             value={roster.error ? "—" : upcomingCount}
-            label="Appointments, Next 30 Days"
+            label={
+              isEs ? "Citas, próximos 30 días" : "Appointments, Next 30 Days"
+            }
           />
           <KeyCard
             tone="warning"
             icon={<BellRing />}
             value={referralsRead.error ? "—" : openReferralCount}
-            label={party === "access" ? "New Referrals" : "Open Referrals"}
+            label={
+              party === "access"
+                ? isEs
+                  ? "Derivaciones nuevas"
+                  : "New Referrals"
+                : isEs
+                  ? "Derivaciones abiertas"
+                  : "Open Referrals"
+            }
           />
         </section>
 
         <Card as="section" padding="small" className="min-w-0">
-          <PanelHeading title="Access Patients" />
+          <PanelHeading
+            title={isEs ? "Pacientes de acceso" : "Access Patients"}
+          />
           <div className="mb-stack-lg flex flex-col gap-inline-md lg:flex-row lg:items-center">
             <Input
               type="search"
               inputSize="small"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by name or MRN..."
-              aria-label="Search patients"
+              placeholder={
+                isEs ? "Buscar por nombre o MRN..." : "Search by name or MRN..."
+              }
+              aria-label={isEs ? "Buscar pacientes" : "Search patients"}
               leadingIcon={<Search aria-hidden="true" />}
               className="lg:max-w-60 lg:flex-1"
             />
             <Select
               selectSize="small"
-              aria-label="Access status"
+              aria-label={isEs ? "Estado del acceso" : "Access status"}
               value={status}
               onChange={(e) => setStatus(e.target.value)}
               className="lg:w-48"
             >
               {["All Statuses", ...ACCESS_STATUSES].map((option) => (
-                <option key={option}>{option}</option>
+                <option key={option} value={option}>
+                  {inSpanish(ACCESS_STATUS_ES, option, isEs)}
+                </option>
               ))}
             </Select>
           </div>
@@ -1390,9 +1597,13 @@ export default function ClinicVascularAccess({
             className="h-full"
             hidden={!perms.concerns}
           >
-            <PanelHeading title="Open Concerns" />
+            <PanelHeading
+              title={isEs ? "Inquietudes abiertas" : "Open Concerns"}
+            />
             {roster.error ? (
-              <p className="text-body-sm text-fg-muted">No open concerns.</p>
+              <p className="text-body-sm text-fg-muted">
+                {isEs ? "No hay inquietudes abiertas." : "No open concerns."}
+              </p>
             ) : (
               <OfficeConcerns
                 rows={rows}
@@ -1548,7 +1759,9 @@ export default function ClinicVascularAccess({
                 onClick={() => setReferring({})}
               >
                 <Send aria-hidden="true" />
-                Message Access Center
+                {isEs
+                  ? "Enviar mensaje al centro de acceso vascular"
+                  : "Message Access Center"}
               </Button>
             ) : null}
             {perms.schedule ? (
@@ -1559,7 +1772,7 @@ export default function ClinicVascularAccess({
                 onClick={() => setAddingPatient(true)}
               >
                 <UserPlus aria-hidden="true" />
-                Add Patient
+                {isEs ? "Agregar paciente" : "Add Patient"}
               </Button>
             ) : null}
             {perms.schedule ? (
@@ -1569,7 +1782,7 @@ export default function ClinicVascularAccess({
                 disabled={!rows.some((row) => row.party === "access")}
               >
                 <CalendarPlus aria-hidden="true" />
-                Schedule Appointment
+                {isEs ? "Programar cita" : "Schedule Appointment"}
               </Button>
             ) : null}
           </div>

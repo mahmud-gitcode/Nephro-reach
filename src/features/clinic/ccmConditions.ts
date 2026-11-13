@@ -139,6 +139,72 @@ export const DEFAULT_CONDITIONS: CcmCondition[] = [
   ),
 ];
 
+/** Spanish display text for the default library's names, short names and
+ *  groups, keyed by the English. A clinic's own entries are shown as typed;
+ *  short names that are clinical abbreviations stay as they are. */
+const CONDITION_TEXT_ES: Record<string, string> = {
+  "Kidney / Renal": "Riñón / renal",
+  Cardiovascular: "Cardiovascular",
+  "Endocrine / Metabolic": "Endocrino / metabólico",
+  "CKD-Related": "Relacionadas con la ERC",
+  "Other Chronic Conditions": "Otras afecciones crónicas",
+  "Chronic Kidney Disease (CKD) Stage 1":
+    "Enfermedad renal crónica (ERC), estadio 1",
+  "CKD Stage 2": "ERC, estadio 2",
+  "CKD Stage 3a": "ERC, estadio 3a",
+  "CKD Stage 3b": "ERC, estadio 3b",
+  "CKD Stage 4": "ERC, estadio 4",
+  "CKD Stage 5 — Not on Dialysis": "ERC, estadio 5 — sin diálisis",
+  "End-Stage Kidney Disease (ESKD) / Dialysis":
+    "Enfermedad renal en etapa terminal (ESKD) / diálisis",
+  "Acute Kidney Injury (AKI)": "Lesión renal aguda (AKI)",
+  "Proteinuria / Albuminuria": "Proteinuria / albuminuria",
+  "Nephrotic Syndrome": "Síndrome nefrótico",
+  Nephrotic: "Nefrótico",
+  "Polycystic Kidney Disease": "Enfermedad renal poliquística",
+  "Congestive Heart Failure / Heart Failure (CHF/HF)":
+    "Insuficiencia cardíaca congestiva / insuficiencia cardíaca (CHF/HF)",
+  "Hypertension (HTN)": "Hipertensión (HTN)",
+  "Resistant Hypertension": "Hipertensión resistente",
+  "Resistant HTN": "HTN resistente",
+  "Coronary Artery Disease (CAD)":
+    "Enfermedad de las arterias coronarias (CAD)",
+  "Atrial Fibrillation": "Fibrilación auricular",
+  "Peripheral Arterial Disease (PAD)": "Enfermedad arterial periférica (PAD)",
+  "Type 2 Diabetes": "Diabetes tipo 2",
+  "Type 1 Diabetes": "Diabetes tipo 1",
+  Obesity: "Obesidad",
+  Hyperlipidemia: "Hiperlipidemia",
+  Gout: "Gota",
+  "Thyroid Disorder": "Trastorno de la tiroides",
+  Thyroid: "Tiroides",
+  "Anemia of CKD": "Anemia por ERC",
+  "Secondary Hyperparathyroidism": "Hiperparatiroidismo secundario",
+  "CKD-Mineral and Bone Disorder (CKD-MBD)":
+    "Trastorno mineral y óseo de la ERC (CKD-MBD)",
+  Hyperkalemia: "Hiperpotasemia",
+  "Metabolic Acidosis": "Acidosis metabólica",
+  "Met. Acidosis": "Acidosis met.",
+  COPD: "EPOC (COPD)",
+  Asthma: "Asma",
+  "Chronic Liver Disease": "Enfermedad hepática crónica",
+  "Dementia / Cognitive Impairment": "Demencia / deterioro cognitivo",
+  Dementia: "Demencia",
+  Depression: "Depresión",
+  Anxiety: "Ansiedad",
+  "Osteoarthritis / Chronic Pain": "Osteoartritis / dolor crónico",
+  "OA/Pain": "OA/dolor",
+};
+
+/** A library name, short name or group as the reader's language shows it.
+ *  English, and anything not in the default library, is returned as is. */
+export function conditionText(text: string, isEs = false): string {
+  if (!isEs) return text;
+  return Object.prototype.hasOwnProperty.call(CONDITION_TEXT_ES, text)
+    ? CONDITION_TEXT_ES[text]
+    : text;
+}
+
 /** Older free-text entries, read as the library condition they meant. */
 const ALIASES: Record<string, string> = {
   "ckd 3": "ckd-3a",
@@ -195,15 +261,24 @@ export type ConditionDraft = {
 export function conditionDraftError(
   draft: ConditionDraft,
   library: CcmCondition[],
+  isEs = false,
 ): string | null {
   const label = draft.label.trim();
-  if (label.length < 2) return "Enter the condition's name.";
+  if (label.length < 2)
+    return isEs
+      ? "Escriba el nombre de la afección."
+      : "Enter the condition's name.";
   if (draft.short.trim().length > 16)
-    return "Keep the short name to 16 characters.";
+    return isEs
+      ? "El nombre corto debe tener 16 caracteres como máximo."
+      : "Keep the short name to 16 characters.";
   const taken = library.some(
     (condition) => condition.label.toLowerCase() === label.toLowerCase(),
   );
-  if (taken) return "That condition is already in the library.";
+  if (taken)
+    return isEs
+      ? "Esa afección ya está en la biblioteca."
+      : "That condition is already in the library.";
   return null;
 }
 
@@ -229,6 +304,8 @@ export type ResolvedCondition = {
 export function resolveCondition(
   value: string,
   library: CcmCondition[] = DEFAULT_CONDITIONS,
+  /** Shows a default condition's names in Spanish (display only). */
+  isEs = false,
 ): ResolvedCondition {
   const key = value.trim().toLowerCase();
   const target = ALIASES[key] ?? key;
@@ -242,8 +319,8 @@ export function resolveCondition(
     const condition = library[index];
     return {
       value,
-      label: condition.label,
-      short: condition.short,
+      label: conditionText(condition.label, isEs),
+      short: conditionText(condition.short, isEs),
       rank: index,
       secondary: Boolean(condition.secondary),
       other: false,
@@ -264,9 +341,10 @@ export function resolveCondition(
 export function sortedConditions(
   values: string[],
   library: CcmCondition[] = DEFAULT_CONDITIONS,
+  isEs = false,
 ): ResolvedCondition[] {
   return values
-    .map((value) => resolveCondition(value, library))
+    .map((value) => resolveCondition(value, library, isEs))
     .sort((a, b) => a.rank - b.rank || a.label.localeCompare(b.label));
 }
 
@@ -286,8 +364,9 @@ export function conditionSummary(
   values: string[],
   library: CcmCondition[] = DEFAULT_CONDITIONS,
   shown = 2,
+  isEs = false,
 ): { text: string; more: number; full: string } {
-  const sorted = sortedConditions(values, library);
+  const sorted = sortedConditions(values, library, isEs);
   return {
     text: sorted
       .slice(0, shown)

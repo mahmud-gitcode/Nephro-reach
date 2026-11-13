@@ -111,6 +111,7 @@ function SettingsMenu({
   generalHeader: string;
   tabsLabels: { profile: string; notification: string; password: string };
 }) {
+  const { language } = useLanguage();
   const items = [
     { id: "profile" as const, label: tabsLabels.profile, icon: <UserCircle /> },
     {
@@ -128,7 +129,9 @@ function SettingsMenu({
       </p>
       <Tabs
         variant="vertical"
-        label="Settings sections"
+        label={
+          language === "ES" ? "Secciones de configuración" : "Settings sections"
+        }
         items={items}
         value={activeTab}
         onChange={(id) => {

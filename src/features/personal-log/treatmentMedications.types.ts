@@ -45,9 +45,9 @@ export type TreatmentMedicationBody = {
 };
 
 /** "May 31, 2024" for a YYYY-MM-DD day (local calendar). */
-export function rowDate(iso: string): string {
+export function rowDate(iso: string, isEs = false): string {
   const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("en-US", {
+  return new Date(y, m - 1, d).toLocaleDateString(isEs ? "es-US" : "en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",

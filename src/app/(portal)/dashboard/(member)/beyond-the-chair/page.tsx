@@ -409,21 +409,21 @@ export default function BetweenTreatmentPage() {
             fileName="check-ins"
             table={{
               header: [
-                "Date",
-                "Treatment day",
-                "Feeling",
-                "Symptoms",
-                "Severity",
-                "Missed treatment",
-                "Notes",
+                isEs ? "Fecha" : "Date",
+                isEs ? "Día de tratamiento" : "Treatment day",
+                isEs ? "Cómo se sintió" : "Feeling",
+                isEs ? "Síntomas" : "Symptoms",
+                isEs ? "Gravedad" : "Severity",
+                isEs ? "Tratamiento perdido" : "Missed treatment",
+                isEs ? "Notas" : "Notes",
               ],
               rows: entries.map((e) => [
                 e.date,
-                e.treatmentDay ? "Yes" : "No",
+                e.treatmentDay ? (isEs ? "Sí" : "Yes") : "No",
                 e.feeling,
                 e.symptoms.join("; "),
                 e.severity,
-                e.missedTreatment ? "Yes" : "No",
+                e.missedTreatment ? (isEs ? "Sí" : "Yes") : "No",
                 e.notes,
               ]),
             }}

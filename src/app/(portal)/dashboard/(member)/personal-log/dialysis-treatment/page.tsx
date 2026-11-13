@@ -27,6 +27,7 @@ import {
   intraSymptomCounts,
   monthSummary,
   uncharted,
+  displayDate,
 } from "@/features/personal-log/dialysis/treatmentLog";
 import { useLanguage } from "@/context/LanguageContext";
 import {
@@ -237,7 +238,7 @@ function ClinicalMeasurementsCards({
         </span>
         {entry ? (
           <span className="text-body-sm font-normal text-fg-muted">
-            · {entry.displayDate}
+            · {isEs ? displayDate(entry.date, true) : entry.displayDate}
           </span>
         ) : null}
       </h2>
@@ -646,7 +647,9 @@ function TreatmentEntriesTable({
               <TableRow key={entry.id}>
                 <TableCell emphasis>
                   <span className="block">
-                    {entry.displayDate.split(",").slice(0, 2).join(",")}
+                    {isEs
+                      ? displayDate(entry.date, true)
+                      : entry.displayDate.split(",").slice(0, 2).join(",")}
                   </span>
                   <span className="block text-caption font-normal text-fg-muted">
                     {entry.startTime} – {entry.endTime}
@@ -726,7 +729,7 @@ function TreatmentEntriesTable({
                       title={
                         dt?.table?.viewTooltip || "View Full Entry Details"
                       }
-                      aria-label={`${isEs ? "Ver el registro completo del" : "View full entry for"} ${entry.displayDate}`}
+                      aria-label={`${isEs ? "Ver el registro completo del" : "View full entry for"} ${isEs ? displayDate(entry.date, true) : entry.displayDate}`}
                     >
                       <Eye />
                     </Link>
@@ -740,7 +743,7 @@ function TreatmentEntriesTable({
                         iconOnly: true,
                       })}
                       title={dt?.table?.editTooltip || "Edit Entry"}
-                      aria-label={`${isEs ? "Editar el registro del" : "Edit entry for"} ${entry.displayDate}`}
+                      aria-label={`${isEs ? "Editar el registro del" : "Edit entry for"} ${isEs ? displayDate(entry.date, true) : entry.displayDate}`}
                     >
                       <Pencil />
                     </Link>

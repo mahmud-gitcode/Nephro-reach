@@ -66,29 +66,88 @@ export type OrganizationProfile = {
 
 /** The labels the page always showed, with the IANA id each stands for. */
 export const TIME_ZONES = [
-  { label: "(GMT-10:00) Hawaii Time (HT)", iana: "Pacific/Honolulu" },
-  { label: "(GMT-09:00) Alaska Time (AKT)", iana: "America/Anchorage" },
-  { label: "(GMT-08:00) Pacific Time (PT)", iana: "America/Los_Angeles" },
-  { label: "(GMT-07:00) Mountain Time (MT)", iana: "America/Denver" },
-  { label: "(GMT-06:00) Central Time (CT)", iana: "America/Chicago" },
-  { label: "(GMT-05:00) Eastern Time (ET)", iana: "America/New_York" },
+  {
+    label: "(GMT-10:00) Hawaii Time (HT)",
+    labelEs: "(GMT-10:00) Hora de Hawái (HT)",
+    iana: "Pacific/Honolulu",
+  },
+  {
+    label: "(GMT-09:00) Alaska Time (AKT)",
+    labelEs: "(GMT-09:00) Hora de Alaska (AKT)",
+    iana: "America/Anchorage",
+  },
+  {
+    label: "(GMT-08:00) Pacific Time (PT)",
+    labelEs: "(GMT-08:00) Hora del Pacífico (PT)",
+    iana: "America/Los_Angeles",
+  },
+  {
+    label: "(GMT-07:00) Mountain Time (MT)",
+    labelEs: "(GMT-07:00) Hora de la Montaña (MT)",
+    iana: "America/Denver",
+  },
+  {
+    label: "(GMT-06:00) Central Time (CT)",
+    labelEs: "(GMT-06:00) Hora del Centro (CT)",
+    iana: "America/Chicago",
+  },
+  {
+    label: "(GMT-05:00) Eastern Time (ET)",
+    labelEs: "(GMT-05:00) Hora del Este (ET)",
+    iana: "America/New_York",
+  },
 ] as const;
 
 /** The label for an IANA id; an id the list does not know shows itself,
  *  never a wrong label. */
-export function timeZoneLabel(iana: string): string {
-  return TIME_ZONES.find((zone) => zone.iana === iana)?.label ?? iana;
+export function timeZoneLabel(iana: string, isEs = false): string {
+  const zone = TIME_ZONES.find((item) => item.iana === iana);
+  if (!zone) return iana;
+  return isEs ? zone.labelEs : zone.label;
 }
 
 export const NOTIFICATIONS = [
-  { id: "enrollments", label: "New member enrollments" },
-  { id: "checkIns", label: "Patient check-in alerts" },
-  { id: "liveClass", label: "Live class reminders" },
-  { id: "billing", label: "Contract & billing updates" },
-  { id: "announcements", label: "Platform announcements" },
-  { id: "support", label: "Support ticket responses" },
-  { id: "weeklySummary", label: "Weekly summary email" },
-  { id: "sms", label: "SMS notifications", optional: true },
+  {
+    id: "enrollments",
+    label: "New member enrollments",
+    labelEs: "Nuevas inscripciones de miembros",
+  },
+  {
+    id: "checkIns",
+    label: "Patient check-in alerts",
+    labelEs: "Alertas de registros de pacientes",
+  },
+  {
+    id: "liveClass",
+    label: "Live class reminders",
+    labelEs: "Recordatorios de clases en vivo",
+  },
+  {
+    id: "billing",
+    label: "Contract & billing updates",
+    labelEs: "Novedades de contrato y facturación",
+  },
+  {
+    id: "announcements",
+    label: "Platform announcements",
+    labelEs: "Anuncios de la plataforma",
+  },
+  {
+    id: "support",
+    label: "Support ticket responses",
+    labelEs: "Respuestas a solicitudes de soporte",
+  },
+  {
+    id: "weeklySummary",
+    label: "Weekly summary email",
+    labelEs: "Correo de resumen semanal",
+  },
+  {
+    id: "sms",
+    label: "SMS notifications",
+    labelEs: "Notificaciones por SMS",
+    optional: true,
+  },
 ] as const;
 
 export type NotificationId = (typeof NOTIFICATIONS)[number]["id"];
@@ -192,15 +251,27 @@ const E164 = /^\+[1-9]\d{1,14}$/;
 export type ProfileErrors = Partial<Record<keyof OrganizationProfile, string>>;
 
 /** What the server would refuse, said in words before sending. */
-export function validateProfile(profile: OrganizationProfile): ProfileErrors {
+export function validateProfile(
+  profile: OrganizationProfile,
+  isEs = false,
+): ProfileErrors {
   const errors: ProfileErrors = {};
-  if (!profile.email.trim()) errors.email = "Enter an email address.";
+  if (!profile.email.trim())
+    errors.email = isEs
+      ? "Ingrese un correo electrónico."
+      : "Enter an email address.";
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email.trim()))
-    errors.email = "Enter an email address like name@clinic.com.";
+    errors.email = isEs
+      ? "Ingrese un correo electrónico como nombre@clinica.com."
+      : "Enter an email address like name@clinic.com.";
   if (profile.phone.trim() && !OFFICE_PHONE.test(profile.phone.trim()))
-    errors.phone = "Enter a phone number with digits, spaces, ( ) - + or .";
+    errors.phone = isEs
+      ? "Ingrese un número de teléfono con dígitos, espacios, ( ) - + o ."
+      : "Enter a phone number with digits, spaces, ( ) - + or .";
   if (profile.address.trim().length > 300)
-    errors.address = "Keep the address under 300 characters.";
+    errors.address = isEs
+      ? "La dirección debe tener menos de 300 caracteres."
+      : "Keep the address under 300 characters.";
   return errors;
 }
 

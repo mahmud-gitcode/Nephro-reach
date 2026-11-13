@@ -12,6 +12,7 @@ import {
 import { Badge, Button, Select, Switch } from "@/components/ui";
 import { cn } from "@/lib/utils/cn";
 import { notBuiltYet } from "@/lib/utils/notBuiltYet";
+import { useLanguageCode } from "@/context/LanguageContext";
 import { useAuth } from "@/features/auth/AuthContext";
 import { userCan } from "@/features/staff/staff";
 import { useOfficeOrgId } from "@/features/vascular-access/useAccess";
@@ -21,9 +22,13 @@ import { usDate } from "./ccm.data";
 import type { CcmKidneyCarePlan, KidneyCareBody } from "./ccm.repository";
 import {
   ACCESS_TYPE_CHOICES,
+  ACCESS_TYPE_LABEL_ES,
   KRT_ANSWERS,
+  KRT_ANSWER_LABEL_ES,
   KRT_ITEMS,
+  KRT_ITEM_LABEL_ES,
   PROGRESS_STEPS,
+  PROGRESS_STEP_LABEL_ES,
   accessProgress,
   milestones,
   type AccessTypeChoice,
@@ -43,16 +48,32 @@ import {
 
 const glyph: Record<
   MilestoneState,
-  { icon: typeof Circle; className: string; label: string }
+  { icon: typeof Circle; className: string; label: string; labelEs: string }
 > = {
-  done: { icon: CircleCheck, className: "text-success", label: "Done" },
+  done: {
+    icon: CircleCheck,
+    className: "text-success",
+    label: "Done",
+    labelEs: "Hecho",
+  },
   partial: {
     icon: Contrast,
     className: "text-warning-glyph",
     label: "In progress",
+    labelEs: "En curso",
   },
-  todo: { icon: Circle, className: "text-fg-subtle", label: "Not yet" },
-  na: { icon: CircleMinus, className: "text-fg-subtle", label: "N/A" },
+  todo: {
+    icon: Circle,
+    className: "text-fg-subtle",
+    label: "Not yet",
+    labelEs: "Aún no",
+  },
+  na: {
+    icon: CircleMinus,
+    className: "text-fg-subtle",
+    label: "N/A",
+    labelEs: "N/A",
+  },
 };
 
 /** The server's plan in the shape the milestone rules read. */
@@ -84,6 +105,7 @@ export function KidneyCareSection({
   canEdit: boolean;
 }) {
   const { user } = useAuth();
+  const isEs = useLanguageCode() === "ES";
   /* Phase 10: the practice's referrals for this patient, from the API by
      patient id. The CCM page (Phase 9) passes the id; without one, the
      patient is found on this office's own roster by its MRN, and only when
@@ -109,7 +131,7 @@ export function KidneyCareSection({
     ? access.referrals.filter((r) => r.patient?.id === patientId)
     : [];
   const progress = accessProgress(plan, referrals, undefined);
-  const marks = milestones(plan, progress);
+  const marks = milestones(plan, progress, isEs);
   const sent = referrals.some((r) => r.kind !== "General Message");
   const showSend =
     plan?.answers.accessReferral === "Yes" &&
@@ -147,12 +169,16 @@ export function KidneyCareSection({
     <section>
       <div className="mb-stack-sm flex flex-wrap items-baseline justify-between gap-inline-md">
         <h3 className="text-heading-5 text-fg">
-          CKD Access / Kidney Replacement Therapy Planning
+          {isEs
+            ? "Acceso para ERC / Planificación de la terapia de reemplazo renal"
+            : "CKD Access / Kidney Replacement Therapy Planning"}
         </h3>
         <span className="text-caption text-fg-muted">
           {plan?.updatedOn
-            ? `Last updated ${usDate(plan.updatedOn.slice(0, 10))}`
-            : "Not started"}
+            ? `${isEs ? "Última actualización" : "Last updated"} ${usDate(plan.updatedOn.slice(0, 10))}`
+            : isEs
+              ? "Sin iniciar"
+              : "Not started"}
         </span>
       </div>
 
@@ -160,7 +186,7 @@ export function KidneyCareSection({
         {/* At a glance */}
         <div>
           <p className="mb-stack-sm text-label-md text-fg">
-            Kidney Care Milestones
+            {isEs ? "Hitos del cuidado renal" : "Kidney Care Milestones"}
           </p>
           <ul className="grid gap-x-inline-lg gap-y-stack-xs sm:grid-cols-2">
             {marks.map((mark) => {
@@ -176,7 +202,9 @@ export function KidneyCareSection({
                     className={cn("size-5 shrink-0", g.className)}
                   />
                   <span>{mark.label}</span>
-                  <span className="sr-only">: {g.label}</span>
+                  <span className="sr-only">
+                    : {isEs ? g.labelEs : g.label}
+                  </span>
                   {mark.state === "na" ? (
                     <span className="text-caption text-fg-muted">N/A</span>
                   ) : null}
@@ -190,9 +218,13 @@ export function KidneyCareSection({
         {progress > 0 ? (
           <div className="border-t border-line pt-stack-md">
             <p className="mb-stack-sm text-label-md text-fg">
-              Access Referral Progress
+              {isEs
+                ? "Progreso de la derivación de acceso"
+                : "Access Referral Progress"}
               <span className="ml-inline-sm text-caption font-normal text-fg-muted">
-                {referrals[0] ? `at ${referrals[0].to.name}` : null}
+                {referrals[0]
+                  ? `${isEs ? "en" : "at"} ${referrals[0].to.name}`
+                  : null}
               </span>
             </p>
             <ol className="flex flex-wrap items-center gap-inline-sm">
@@ -204,9 +236,15 @@ export function KidneyCareSection({
                       tone={reached ? "success" : "neutral"}
                       icon={reached ? <Check aria-hidden="true" /> : undefined}
                     >
-                      {step}
+                      {isEs ? PROGRESS_STEP_LABEL_ES[step] : step}
                       <span className="sr-only">
-                        {reached ? " (reached)" : " (not yet)"}
+                        {reached
+                          ? isEs
+                            ? " (alcanzado)"
+                            : " (reached)"
+                          : isEs
+                            ? " (aún no)"
+                            : " (not yet)"}
                       </span>
                     </Badge>
                     {i < PROGRESS_STEPS.length - 1 ? (
@@ -225,17 +263,28 @@ export function KidneyCareSection({
           <div className="flex flex-wrap items-center justify-between gap-inline-md rounded-card-nested bg-surface-sunken p-inset-sm">
             <p className="text-body-sm text-fg-secondary">
               {canSend
-                ? "Referral marked as placed. Send it to the access center to follow its progress here."
-                : "Sending from here is not available yet for this patient: they could not be matched to one patient on your practice's list. Send it from Access Center Messages instead."}
+                ? isEs
+                  ? "Derivación marcada como realizada. Envíela al centro de acceso vascular para seguir su progreso aquí."
+                  : "Referral marked as placed. Send it to the access center to follow its progress here."
+                : isEs
+                  ? "El envío desde aquí aún no está disponible para este paciente: no se pudo asociar con un único paciente de la lista de su consultorio. Envíela desde Mensajes del centro de acceso vascular."
+                  : "Sending from here is not available yet for this patient: they could not be matched to one patient on your practice's list. Send it from Access Center Messages instead."}
             </p>
             <Button
               size="small"
               leadingIcon={<Send aria-hidden="true" />}
               {...(canSend
                 ? { onClick: () => setReferring(true) }
-                : notBuiltYet("Sending this referral from CCM"))}
+                : notBuiltYet(
+                    isEs
+                      ? "Enviar esta derivación desde CCM"
+                      : "Sending this referral from CCM",
+                    isEs,
+                  ))}
             >
-              Send to Access Center
+              {isEs
+                ? "Enviar al centro de acceso vascular"
+                : "Send to Access Center"}
             </Button>
           </div>
         ) : null}
@@ -247,11 +296,13 @@ export function KidneyCareSection({
               key={item.id}
               className="flex items-center justify-between gap-inline-md py-inset-xs"
             >
-              <span className="text-label-md text-fg">{item.label}</span>
+              <span className="text-label-md text-fg">
+                {isEs ? KRT_ITEM_LABEL_ES[item.id] : item.label}
+              </span>
               <div className="w-36 shrink-0">
                 <Select
                   selectSize="small"
-                  aria-label={item.label}
+                  aria-label={isEs ? KRT_ITEM_LABEL_ES[item.id] : item.label}
                   className="w-full"
                   disabled={!canEdit}
                   value={plan?.answers[item.id] ?? ""}
@@ -266,18 +317,22 @@ export function KidneyCareSection({
                 >
                   <option value="">—</option>
                   {KRT_ANSWERS.map((answer) => (
-                    <option key={answer}>{answer}</option>
+                    <option key={answer} value={answer}>
+                      {isEs ? KRT_ANSWER_LABEL_ES[answer] : answer}
+                    </option>
                   ))}
                 </Select>
               </div>
             </li>
           ))}
           <li className="flex items-center justify-between gap-inline-md py-inset-xs">
-            <span className="text-label-md text-fg">Access type</span>
+            <span className="text-label-md text-fg">
+              {isEs ? "Tipo de acceso" : "Access type"}
+            </span>
             <div className="w-36 shrink-0">
               <Select
                 selectSize="small"
-                aria-label="Access type"
+                aria-label={isEs ? "Tipo de acceso" : "Access type"}
                 className="w-full"
                 disabled={!canEdit}
                 value={plan?.accessType ?? ""}
@@ -287,16 +342,20 @@ export function KidneyCareSection({
               >
                 {plan?.accessType ? null : <option value="">—</option>}
                 {ACCESS_TYPE_CHOICES.map((choice) => (
-                  <option key={choice}>{choice}</option>
+                  <option key={choice} value={choice}>
+                    {isEs ? ACCESS_TYPE_LABEL_ES[choice] : choice}
+                  </option>
                 ))}
               </Select>
             </div>
           </li>
           <li className="flex items-center justify-between gap-inline-md py-inset-xs">
-            <span className="text-label-md text-fg">Documentation in EHR</span>
+            <span className="text-label-md text-fg">
+              {isEs ? "Documentación en el EHR" : "Documentation in EHR"}
+            </span>
             <Switch
               size="small"
-              label="Documentation in EHR"
+              label={isEs ? "Documentación en el EHR" : "Documentation in EHR"}
               checked={plan?.ehrDocumented ?? false}
               disabled={!canEdit}
               onChange={(on) => save({ ehrDocumented: on })}
@@ -305,8 +364,9 @@ export function KidneyCareSection({
         </ul>
 
         <p className="text-caption text-fg-muted">
-          Practice-entered tracking only. Clinical decisions and documentation
-          remain with the practice.
+          {isEs
+            ? "Seguimiento ingresado solo por el consultorio. Las decisiones clínicas y la documentación siguen a cargo del consultorio."
+            : "Practice-entered tracking only. Clinical decisions and documentation remain with the practice."}
         </p>
       </div>
 

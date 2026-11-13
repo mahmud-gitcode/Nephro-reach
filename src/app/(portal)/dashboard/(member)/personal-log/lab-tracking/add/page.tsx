@@ -471,7 +471,11 @@ export default function AddLabTrackingPage() {
                                 onChange={(e) =>
                                   handleValueChange(t.name, e.target.value)
                                 }
-                                aria-label={`${getTestDisplayName(t.id, t.name)} result`}
+                                aria-label={
+                                  isEs
+                                    ? `Resultado de ${getTestDisplayName(t.id, t.name)}`
+                                    : `${getTestDisplayName(t.id, t.name)} result`
+                                }
                                 placeholder={
                                   l?.addModal?.enterValuePlaceholder ||
                                   "Enter value"
@@ -519,7 +523,7 @@ export default function AddLabTrackingPage() {
               ? "Informe (foto o PDF del papel)"
               : "Report (a photo or PDF of the paper)"
           }
-          optionalLabel="optional"
+          optionalLabel={isEs ? "opcional" : "optional"}
           hint={
             isEs
               ? "JPG, PNG o PDF, hasta 10 MB. Se abre solo desde sus resultados."
@@ -538,7 +542,7 @@ export default function AddLabTrackingPage() {
 
         <FormField
           label={l?.addModal?.notesLabel || "Notes & Observations"}
-          optionalLabel="optional"
+          optionalLabel={isEs ? "opcional" : "optional"}
         >
           {(props) => (
             <Textarea

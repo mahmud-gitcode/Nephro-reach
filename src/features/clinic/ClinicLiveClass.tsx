@@ -51,6 +51,7 @@ import { useLiveClasses } from "./useLiveClasses";
 import { zoneLabel } from "./liveClass.mappers";
 import { isSafeLinkUrl } from "@/lib/utils/safeUrl";
 import { toDay } from "@/lib/api/paging";
+import { useLanguage } from "@/context/LanguageContext";
 
 const todayDay = () => toDay(new Date());
 import {
@@ -59,7 +60,9 @@ import {
   errorTitleFor,
 } from "@/lib/data/asyncState";
 import {
+  classStatusLabel,
   classesOnDay,
+  programLabel,
   settingSummary,
   type ManagedClass,
   type SettingId,
@@ -76,6 +79,12 @@ import {
 } from "./LiveClassModals";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const WEEKDAYS_ES = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+function useIsEs() {
+  const { language } = useLanguage();
+  return language === "ES";
+}
 
 const SETTING_ICONS: Record<(typeof settings)[number]["id"], React.ReactNode> =
   {
@@ -114,6 +123,7 @@ function PanelHeading({
 /** Five stars filled to the rating, and the number beside them — the
     figure is what a screen reader hears, the stars are decoration. */
 function Rating({ value, size = "h-4 w-4" }: { value: number; size?: string }) {
+  const isEs = useIsEs();
   return (
     <span className="inline-flex items-center gap-inline-xs">
       <span aria-hidden="true" className="flex">
@@ -128,7 +138,9 @@ function Rating({ value, size = "h-4 w-4" }: { value: number; size?: string }) {
           />
         ))}
       </span>
-      <span className="sr-only">Rated {value} out of 5</span>
+      <span className="sr-only">
+        {isEs ? `Calificación de ${value} de 5` : `Rated ${value} out of 5`}
+      </span>
     </span>
   );
 }
@@ -149,6 +161,8 @@ function SummaryCards({
   today: string;
   manage: boolean;
 }) {
+  const isEs = useIsEs();
+  const noData = isEs ? "Aún no hay datos" : "No data yet";
   const month = today.slice(0, 7);
   const thisMonth = upcoming.filter((c) => c.date.startsWith(month)).length;
   const registrations = upcoming.reduce((sum, c) => sum + c.registered, 0);
@@ -174,24 +188,30 @@ function SummaryCards({
         tone="brand"
         icon={<VideoSolid />}
         value={thisMonth}
-        label="Upcoming Live Classes"
-        note="This month"
+        label={isEs ? "Próximas clases en vivo" : "Upcoming Live Classes"}
+        note={isEs ? "Este mes" : "This month"}
       />
 
       <KeyCard
         tone="success"
         icon={<UsersSolid />}
         value={registrations}
-        label="Total Registrations"
-        note="For upcoming classes"
+        label={isEs ? "Total de inscripciones" : "Total Registrations"}
+        note={isEs ? "Para las próximas clases" : "For upcoming classes"}
       />
 
       <KeyCard
         tone="brand"
         icon={<UserCheckSolid />}
         value={attendance === null ? "—" : `${attendance}%`}
-        label="Average Attendance"
-        note={attendance === null ? "No data yet" : "Classes held"}
+        label={isEs ? "Asistencia promedio" : "Average Attendance"}
+        note={
+          attendance === null
+            ? noData
+            : isEs
+              ? "Clases realizadas"
+              : "Classes held"
+        }
       />
 
       <KeyCard
@@ -207,8 +227,8 @@ function SummaryCards({
             </>
           )
         }
-        label="Average Rating"
-        note={rating === null ? "No data yet" : undefined}
+        label={isEs ? "Calificación promedio" : "Average Rating"}
+        note={rating === null ? noData : undefined}
       >
         {rating === null ? null : <Rating value={rating} />}
       </KeyCard>
@@ -216,14 +236,16 @@ function SummaryCards({
       {/* Not a figure, so not a KeyCard: there is no number to lead with
           and no panel colour that would mean anything. */}
       <Card as="article" padding="small" className="flex flex-col">
-        <p className="text-heading-5 text-fg-secondary">Member Feedback</p>
+        <p className="text-heading-5 text-fg-secondary">
+          {isEs ? "Comentarios de los miembros" : "Member Feedback"}
+        </p>
         <figure className="mt-stack-md flex flex-1 flex-col">
           <Quote aria-hidden="true" className="h-5 w-5 text-fg-brand" />
           <blockquote className="mt-stack-xs text-body-md text-fg-muted">
-            No data yet
+            {noData}
           </blockquote>
           <figcaption className="mt-auto pt-stack-sm text-caption text-fg-muted">
-            — Member Feedback
+            {isEs ? "— Comentarios de los miembros" : "— Member Feedback"}
           </figcaption>
         </figure>
       </Card>
@@ -243,11 +265,12 @@ function UpcomingClassesTable({
   onEdit?: (item: ManagedClass) => void;
   onActions?: (item: ManagedClass) => void;
 }) {
+  const isEs = useIsEs();
   const editable = Boolean(onEdit && onActions);
   return (
     <Card as="section" padding="small">
       <PanelHeading
-        title="Upcoming Live Classes"
+        title={isEs ? "Próximas clases en vivo" : "Upcoming Live Classes"}
         action={
           <Button
             variant="neutral"
@@ -255,7 +278,7 @@ function UpcomingClassesTable({
             size="small"
             onClick={onViewAll}
           >
-            View All
+            {isEs ? "Ver todas" : "View All"}
           </Button>
         }
       />
@@ -263,16 +286,22 @@ function UpcomingClassesTable({
         <Table minWidth={860}>
           <TableHead className="bg-surface-sunken">
             <TableRow>
-              <TableHeaderCell>Date</TableHeaderCell>
-              <TableHeaderCell>Time (EST)</TableHeaderCell>
-              <TableHeaderCell>Topic</TableHeaderCell>
-              <TableHeaderCell>Educator</TableHeaderCell>
-              <TableHeaderCell>Program</TableHeaderCell>
-              <TableHeaderCell>Registered</TableHeaderCell>
-              <TableHeaderCell>Status</TableHeaderCell>
+              <TableHeaderCell>{isEs ? "Fecha" : "Date"}</TableHeaderCell>
+              <TableHeaderCell>
+                {isEs ? "Hora (EST)" : "Time (EST)"}
+              </TableHeaderCell>
+              <TableHeaderCell>{isEs ? "Tema" : "Topic"}</TableHeaderCell>
+              <TableHeaderCell>
+                {isEs ? "Educador" : "Educator"}
+              </TableHeaderCell>
+              <TableHeaderCell>{isEs ? "Programa" : "Program"}</TableHeaderCell>
+              <TableHeaderCell>
+                {isEs ? "Inscritos" : "Registered"}
+              </TableHeaderCell>
+              <TableHeaderCell>{isEs ? "Estado" : "Status"}</TableHeaderCell>
               {editable ? (
                 <TableHeaderCell className="text-right">
-                  Actions
+                  {isEs ? "Acciones" : "Actions"}
                 </TableHeaderCell>
               ) : null}
             </TableRow>
@@ -280,21 +309,27 @@ function UpcomingClassesTable({
           <TableBody>
             {classes.length === 0 ? (
               <TableEmptyRow colSpan={editable ? 8 : 7}>
-                No upcoming live classes. NephroReach has not scheduled the next
-                one yet.
+                {isEs ? (
+                  "No hay próximas clases en vivo. NephroReach aún no ha programado la siguiente."
+                ) : (
+                  <>
+                    No upcoming live classes. NephroReach has not scheduled the
+                    next one yet.
+                  </>
+                )}
               </TableEmptyRow>
             ) : null}
             {classes.map((item) => (
               <TableRow key={item.id}>
                 <TableCell className="whitespace-nowrap tabular-nums">
-                  {formatClassDate(item.date)}
+                  {formatClassDate(item.date, isEs)}
                 </TableCell>
                 <TableCell className="whitespace-nowrap tabular-nums">
                   {item.time}
                 </TableCell>
                 <TableCell emphasis>{item.topic}</TableCell>
                 <TableCell>{item.educator}</TableCell>
-                <TableCell>{item.program}</TableCell>
+                <TableCell>{programLabel(item.program, isEs)}</TableCell>
                 <TableCell>
                   <span className="block whitespace-nowrap tabular-nums">
                     {item.registered} / {item.capacity}
@@ -302,13 +337,19 @@ function UpcomingClassesTable({
                   <Progress
                     value={item.registered}
                     max={item.capacity}
-                    label={`${item.topic} registrations`}
+                    label={
+                      isEs
+                        ? `Inscripciones de ${item.topic}`
+                        : `${item.topic} registrations`
+                    }
                     size="small"
                     className="mt-stack-xs w-16"
                   />
                 </TableCell>
                 <TableCell>
-                  <Badge tone={classTone[item.status]}>{item.status}</Badge>
+                  <Badge tone={classTone[item.status]}>
+                    {classStatusLabel(item.status, isEs)}
+                  </Badge>
                 </TableCell>
                 {editable ? (
                   <TableCell>
@@ -320,7 +361,9 @@ function UpcomingClassesTable({
                         size="small"
                         iconOnly
                         className={tableIconButton}
-                        aria-label={`Edit ${item.topic}`}
+                        aria-label={
+                          isEs ? `Editar ${item.topic}` : `Edit ${item.topic}`
+                        }
                       >
                         <Pencil aria-hidden="true" />
                       </Button>
@@ -331,7 +374,11 @@ function UpcomingClassesTable({
                         size="small"
                         iconOnly
                         className={tableIconButton}
-                        aria-label={`Actions for ${item.topic}`}
+                        aria-label={
+                          isEs
+                            ? `Acciones para ${item.topic}`
+                            : `Actions for ${item.topic}`
+                        }
                       >
                         <MoreSolid />
                       </Button>
@@ -365,16 +412,20 @@ function LiveClassCalendar({ classes }: { classes: ManagedClass[] }) {
   const [year, setYear] = useState(first.getFullYear());
   const [month, setMonth] = useState(first.getMonth());
   const [day, setDay] = useState<number | null>(first.getDate());
+  const isEs = useIsEs();
+  const locale = isEs ? "es-US" : "en-US";
 
   const selected = day === null ? [] : classesOnDay(classes, year, month, day);
-  const monthLabel = new Date(year, month, 1).toLocaleDateString("en-US", {
+  const monthLabel = new Date(year, month, 1).toLocaleDateString(locale, {
     month: "long",
     year: "numeric",
   });
 
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading title="Live Class Calendar" />
+      <PanelHeading
+        title={isEs ? "Calendario de clases en vivo" : "Live Class Calendar"}
+      />
       <MonthCalendar
         year={year}
         month={month}
@@ -386,9 +437,9 @@ function LiveClassCalendar({ classes }: { classes: ManagedClass[] }) {
           setDay(null);
         }}
         monthLabel={monthLabel}
-        weekdayLabels={WEEKDAYS}
+        weekdayLabels={isEs ? WEEKDAYS_ES : WEEKDAYS}
         formatDayLabel={(date) =>
-          date.toLocaleDateString("en-US", {
+          date.toLocaleDateString(locale, {
             weekday: "long",
             month: "long",
             day: "numeric",
@@ -409,7 +460,7 @@ function LiveClassCalendar({ classes }: { classes: ManagedClass[] }) {
           aria-hidden="true"
           className="h-1.5 w-1.5 rounded-pill bg-action"
         />
-        Live class scheduled
+        {isEs ? "Clase en vivo programada" : "Live class scheduled"}
       </p>
 
       <div
@@ -418,11 +469,19 @@ function LiveClassCalendar({ classes }: { classes: ManagedClass[] }) {
       >
         {day === null ? (
           <p className="text-body-sm text-fg-muted">
-            Pick a day to see its class.
+            {isEs
+              ? "Elija un día para ver su clase."
+              : "Pick a day to see its class."}
           </p>
         ) : selected.length === 0 ? (
           <p className="text-body-sm text-fg-muted">
-            No live class on {monthLabel.split(" ")[0]} {day}.
+            {isEs ? (
+              `No hay clase en vivo el ${day} de ${monthLabel.split(" ")[0]}.`
+            ) : (
+              <>
+                No live class on {monthLabel.split(" ")[0]} {day}.
+              </>
+            )}
           </p>
         ) : (
           selected.map((item) => (
@@ -436,14 +495,17 @@ function LiveClassCalendar({ classes }: { classes: ManagedClass[] }) {
               <div className="min-w-0 flex-1">
                 <p className="text-label-lg text-fg">{item.topic}</p>
                 <p className="text-body-sm text-fg-secondary">
-                  {formatClassDate(item.date)} · {item.time}{" "}
+                  {formatClassDate(item.date, isEs)} · {item.time}{" "}
                   {zoneLabel(item.startsAt ?? new Date())}
                 </p>
                 <p className="text-body-sm text-fg-muted">
-                  {item.educator} · {item.registered}/{item.capacity} registered
+                  {item.educator} · {item.registered}/{item.capacity}{" "}
+                  {isEs ? "inscritos" : "registered"}
                 </p>
               </div>
-              <Badge tone={classTone[item.status]}>{item.status}</Badge>
+              <Badge tone={classTone[item.status]}>
+                {classStatusLabel(item.status, isEs)}
+              </Badge>
             </div>
           ))
         )}
@@ -466,13 +528,16 @@ function RecentLiveClasses({
   onView?: (item: RecentClass) => void;
   onViewAll?: () => void;
 }) {
+  const isEs = useIsEs();
   return (
     <Card as="section" padding="small">
       <PanelHeading
-        title="Recent Live Classes"
+        title={isEs ? "Clases en vivo recientes" : "Recent Live Classes"}
         description={
           onView
-            ? "Publish a recording and it appears on every member's home screen, under Recent Live Recordings."
+            ? isEs
+              ? "Publique una grabación y aparecerá en la pantalla de inicio de cada miembro, en Grabaciones recientes en vivo."
+              : "Publish a recording and it appears on every member's home screen, under Recent Live Recordings."
             : undefined
         }
       />
@@ -491,8 +556,12 @@ function RecentLiveClasses({
             <div className="min-w-0 flex-1">
               <p className="text-label-lg text-fg">{item.title}</p>
               <p className="text-caption text-fg-muted">
-                {formatClassDate(item.date)}
-                {item.attended !== null ? ` · ${item.attended} attended` : ""}
+                {formatClassDate(item.date, isEs)}
+                {item.attended !== null
+                  ? isEs
+                    ? ` · ${item.attended} asistieron`
+                    : ` · ${item.attended} attended`
+                  : ""}
               </p>
               <p className="mt-stack-xs flex items-center gap-inline-xs text-caption text-fg-secondary">
                 {item.rating > 0 ? (
@@ -502,7 +571,13 @@ function RecentLiveClasses({
                   </>
                 ) : null}
                 <Badge tone={recordings[item.id] ? "success" : "neutral"}>
-                  {recordings[item.id] ? "Published" : "Not published"}
+                  {recordings[item.id]
+                    ? isEs
+                      ? "Publicada"
+                      : "Published"
+                    : isEs
+                      ? "No publicada"
+                      : "Not published"}
                 </Badge>
               </p>
             </div>
@@ -513,12 +588,22 @@ function RecentLiveClasses({
                 appearance="fill-stroke"
                 size="small"
                 aria-label={
-                  recordings[item.id]
-                    ? `Edit ${item.title} recording`
-                    : `Publish ${item.title} recording`
+                  isEs
+                    ? recordings[item.id]
+                      ? `Editar la grabación de ${item.title}`
+                      : `Publicar la grabación de ${item.title}`
+                    : recordings[item.id]
+                      ? `Edit ${item.title} recording`
+                      : `Publish ${item.title} recording`
                 }
               >
-                {recordings[item.id] ? "Edit" : "Publish"}
+                {recordings[item.id]
+                  ? isEs
+                    ? "Editar"
+                    : "Edit"
+                  : isEs
+                    ? "Publicar"
+                    : "Publish"}
               </Button>
             ) : (
               <Button
@@ -526,15 +611,25 @@ function RecentLiveClasses({
                 appearance="fill-stroke"
                 size="small"
                 disabled={!recordings[item.id]}
-                title={recordings[item.id] ? undefined : "Not posted yet"}
-                aria-label={`Watch ${item.title} recording`}
+                title={
+                  recordings[item.id]
+                    ? undefined
+                    : isEs
+                      ? "Aún no publicada"
+                      : "Not posted yet"
+                }
+                aria-label={
+                  isEs
+                    ? `Ver la grabación de ${item.title}`
+                    : `Watch ${item.title} recording`
+                }
                 onClick={() => {
                   const link = recordings[item.id];
                   if (isSafeLinkUrl(link))
                     window.open(link, "_blank", "noopener,noreferrer");
                 }}
               >
-                Watch
+                {isEs ? "Ver" : "Watch"}
               </Button>
             )}
           </li>
@@ -549,7 +644,7 @@ function RecentLiveClasses({
           fullWidth
           className="mt-stack-lg"
         >
-          View All Recordings
+          {isEs ? "Ver todas las grabaciones" : "View All Recordings"}
         </Button>
       ) : null}
     </Card>
@@ -559,24 +654,38 @@ function RecentLiveClasses({
 /* No server figure exists for these two yet (Phase 13 design §2.5,
    MISSING-BACKEND): the cards stay, and say so. */
 function RegistrationSources() {
+  const isEs = useIsEs();
   return (
     <Card as="section" padding="small">
-      <PanelHeading title="Registration Sources" />
+      <PanelHeading
+        title={isEs ? "Fuentes de inscripción" : "Registration Sources"}
+      />
       <EmptyState
-        title="No data yet"
-        description="Registration sources are not recorded yet."
+        title={isEs ? "Aún no hay datos" : "No data yet"}
+        description={
+          isEs
+            ? "Aún no se registran las fuentes de inscripción."
+            : "Registration sources are not recorded yet."
+        }
       />
     </Card>
   );
 }
 
 function AttendanceTrend() {
+  const isEs = useIsEs();
   return (
     <Card as="section" padding="small">
-      <PanelHeading title="Attendance Trend" />
+      <PanelHeading
+        title={isEs ? "Tendencia de asistencia" : "Attendance Trend"}
+      />
       <EmptyState
-        title="No data yet"
-        description="Attendance by month is not recorded yet."
+        title={isEs ? "Aún no hay datos" : "No data yet"}
+        description={
+          isEs
+            ? "Aún no se registra la asistencia por mes."
+            : "Attendance by month is not recorded yet."
+        }
       />
     </Card>
   );
@@ -589,40 +698,47 @@ function LiveClassSettings({
   values: Record<SettingId, SettingValues>;
   onManage: (id: SettingId, title: string) => void;
 }) {
+  const isEs = useIsEs();
   return (
     <Card as="section" padding="small" className="h-full">
-      <PanelHeading title="Live Class Settings" />
+      <PanelHeading
+        title={isEs ? "Configuración de clases en vivo" : "Live Class Settings"}
+      />
       <ul className="grid gap-4 sm:grid-cols-2">
-        {settings.map((item) => (
-          <li
-            key={item.id}
-            className="flex items-center gap-inline-lg rounded-control border border-line-subtle p-inset-sm"
-          >
-            <span
-              aria-hidden="true"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-surface-sunken text-fg-secondary [&_svg]:h-5 [&_svg]:w-5"
+        {settings.map((item) => {
+          const title = isEs ? item.titleEs : item.title;
+          return (
+            <li
+              key={item.id}
+              className="flex items-center gap-inline-lg rounded-control border border-line-subtle p-inset-sm"
             >
-              {SETTING_ICONS[item.id]}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-label-lg text-fg">{item.title}</p>
-              {/* What is actually switched on, when anything is — more use
+              <span
+                aria-hidden="true"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-surface-sunken text-fg-secondary [&_svg]:h-5 [&_svg]:w-5"
+              >
+                {SETTING_ICONS[item.id]}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-label-lg text-fg">{title}</p>
+                {/* What is actually switched on, when anything is — more use
                   than repeating the card's own description back. */}
-              <p className="text-body-sm text-fg-muted">
-                {settingSummary(item.id, values[item.id]) ?? item.description}
-              </p>
-            </div>
-            <Button
-              onClick={() => onManage(item.id, item.title)}
-              variant="neutral"
-              appearance="fill-stroke"
-              size="small"
-              aria-label={`Manage ${item.title}`}
-            >
-              Manage
-            </Button>
-          </li>
-        ))}
+                <p className="text-body-sm text-fg-muted">
+                  {settingSummary(item.id, values[item.id], isEs) ??
+                    (isEs ? item.descriptionEs : item.description)}
+                </p>
+              </div>
+              <Button
+                onClick={() => onManage(item.id, title)}
+                variant="neutral"
+                appearance="fill-stroke"
+                size="small"
+                aria-label={isEs ? `Administrar ${title}` : `Manage ${title}`}
+              >
+                {isEs ? "Administrar" : "Manage"}
+              </Button>
+            </li>
+          );
+        })}
       </ul>
     </Card>
   );
@@ -641,6 +757,7 @@ export default function ClinicLiveClass({
 }) {
   const live = useLiveClasses({ manage });
   const past = live.past;
+  const isEs = useIsEs();
 
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [editing, setEditing] = useState<ManagedClass | null>(null);
@@ -666,11 +783,13 @@ export default function ClinicLiveClass({
           manage ? (
             <Button size="small" onClick={() => openSchedule(null)}>
               <Plus className="h-4 w-4" />
-              Schedule New Class
+              {isEs ? "Programar nueva clase" : "Schedule New Class"}
             </Button>
           ) : (
             <span className="text-body-sm text-fg-muted">
-              Classes are hosted by NephroReach
+              {isEs
+                ? "NephroReach imparte las clases"
+                : "Classes are hosted by NephroReach"}
             </span>
           )
         }
@@ -679,15 +798,27 @@ export default function ClinicLiveClass({
       {live.saveError ? (
         <Alert tone="danger" onDismiss={live.dismissSaveError}>
           {live.saveError.message ||
-            "That change did not save. Please try again."}
+            (isEs
+              ? "No se pudo guardar el cambio. Inténtelo de nuevo."
+              : "That change did not save. Please try again.")}
         </Alert>
       ) : null}
 
       <AsyncSection
         pending={live.isPending}
         error={live.error}
-        errorTitle={errorTitleFor(live.error, "Live classes did not load")}
-        errorMessage={errorMessageFor(live.error, undefined)}
+        errorTitle={errorTitleFor(
+          live.error,
+          isEs
+            ? "No se cargaron las clases en vivo"
+            : "Live classes did not load",
+          isEs ? "es" : "en",
+        )}
+        errorMessage={errorMessageFor(
+          live.error,
+          undefined,
+          isEs ? "es" : "en",
+        )}
         onRetry={canRetry(live.error) ? live.refetch : undefined}
         skeleton={<Skeleton height={560} className="rounded-card" />}
       >

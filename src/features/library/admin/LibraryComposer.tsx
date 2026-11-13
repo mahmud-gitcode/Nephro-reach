@@ -21,6 +21,7 @@ import {
 import type { LibraryCategory, LibraryResource } from "../library.types";
 import { Button, Chip, ChipGroup, Modal, Select } from "@/components/ui";
 import { useCollabText } from "@/features/community/collabText";
+import { useLanguageCode } from "@/context/LanguageContext";
 
 /* ==========================================================================
    The Library composer
@@ -102,6 +103,7 @@ export function LibraryComposer({
   authorName?: string;
 }) {
   const t = useCollabText();
+  const isEs = useLanguageCode() === "ES";
   const [draft, setDraft] = useState<LibraryDraft>(() =>
     resource ? draftFrom(resource) : emptyDraft(),
   );
@@ -144,14 +146,32 @@ export function LibraryComposer({
       open
       onClose={onClose}
       size="big"
-      title={resource ? "Edit post" : "Create post"}
+      title={
+        resource
+          ? isEs
+            ? "Editar publicación"
+            : "Edit post"
+          : isEs
+            ? "Crear publicación"
+            : "Create post"
+      }
       footer={
         <Button
           className="w-full"
           onClick={() => onPost(composeResource(draft, resource))}
           disabled={!ready || saving}
         >
-          {saving ? "Posting…" : resource ? "Save changes" : "Post"}
+          {saving
+            ? isEs
+              ? "Publicando…"
+              : "Posting…"
+            : resource
+              ? isEs
+                ? "Guardar cambios"
+                : "Save changes"
+              : isEs
+                ? "Publicar"
+                : "Post"}
         </Button>
       }
     >
@@ -167,7 +187,7 @@ export function LibraryComposer({
             <div>
               <p className="text-label-md text-fg">{authorName}</p>
               <p className="text-body-sm text-fg-muted">
-                Posting to My Library
+                {isEs ? "Publicando en Mi Biblioteca" : "Posting to My Library"}
               </p>
             </div>
           </div>
@@ -175,7 +195,9 @@ export function LibraryComposer({
 
         <div>
           <label htmlFor="library-caption" className="sr-only">
-            What do you want to share with members?
+            {isEs
+              ? "¿Qué desea compartir con los miembros?"
+              : "What do you want to share with members?"}
           </label>
           <textarea
             id="library-caption"
@@ -183,12 +205,18 @@ export function LibraryComposer({
             rows={6}
             value={draft.caption}
             onChange={(event) => set({ caption: event.target.value })}
-            placeholder="What do you want to share with members?"
+            placeholder={
+              isEs
+                ? "¿Qué desea compartir con los miembros?"
+                : "What do you want to share with members?"
+            }
             className="w-full resize-y border-0 bg-transparent p-0 text-body-lg text-fg outline-none placeholder:text-fg-muted focus:ring-0"
           />
           {/* Said once, quietly, rather than as three labelled fields. */}
           <p className="text-body-sm text-fg-subtle">
-            The first line becomes the title members see.
+            {isEs
+              ? "La primera línea será el título que verán los miembros."
+              : "The first line becomes the title members see."}
           </p>
         </div>
 
@@ -199,7 +227,7 @@ export function LibraryComposer({
                 htmlFor="library-caption-es"
                 className="text-label-sm text-fg-secondary"
               >
-                Spanish version
+                {isEs ? "Versión en español" : "Spanish version"}
               </label>
               <button
                 type="button"
@@ -208,7 +236,11 @@ export function LibraryComposer({
                   set({ captionEs: "" });
                 }}
                 className="cursor-pointer rounded-control-small p-1 text-fg-muted transition-colors duration-150 ease-standard hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                aria-label="Remove the Spanish version"
+                aria-label={
+                  isEs
+                    ? "Quitar la versión en español"
+                    : "Remove the Spanish version"
+                }
               >
                 <X aria-hidden="true" className="h-4 w-4" />
               </button>
@@ -245,7 +277,9 @@ export function LibraryComposer({
               <button
                 type="button"
                 onClick={removeAttachment}
-                aria-label="Remove attachment"
+                aria-label={
+                  isEs ? "Quitar archivo adjunto" : "Remove attachment"
+                }
                 className="shrink-0 cursor-pointer rounded-control-small p-1 text-fg-muted transition-colors duration-150 ease-standard hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
                 <X aria-hidden="true" className="h-4 w-4" />
@@ -277,7 +311,7 @@ export function LibraryComposer({
               htmlFor="library-topic"
               className="text-label-sm text-fg-secondary"
             >
-              Topic
+              {isEs ? "Tema" : "Topic"}
             </label>
             <Select
               id="library-topic"
@@ -289,7 +323,7 @@ export function LibraryComposer({
             >
               {LIBRARY_CATEGORIES.map((entry) => (
                 <option key={entry.key} value={entry.key}>
-                  {entry.labelEn}
+                  {isEs ? entry.labelEs : entry.labelEn}
                 </option>
               ))}
             </Select>
@@ -297,8 +331,13 @@ export function LibraryComposer({
         ) : null}
 
         <div className="rounded-card border border-line p-inset-sm">
-          <p className="text-label-sm text-fg-secondary">Add to your post</p>
-          <ChipGroup label="Add to your post" className="mt-stack-sm">
+          <p className="text-label-sm text-fg-secondary">
+            {isEs ? "Agregar a su publicación" : "Add to your post"}
+          </p>
+          <ChipGroup
+            label={isEs ? "Agregar a su publicación" : "Add to your post"}
+            className="mt-stack-sm"
+          >
             <AttachButton
               icon={Video}
               label="Video"
@@ -308,21 +347,21 @@ export function LibraryComposer({
             />
             <AttachButton
               icon={FileText}
-              label="Document"
+              label={isEs ? "Documento" : "Document"}
               accept=".pdf,.doc,.docx,application/pdf"
               onPick={noUpload}
               disabled
             />
             <AttachButton
               icon={ImageIcon}
-              label="Image post"
+              label={isEs ? "Publicación con imagen" : "Image post"}
               accept="image/*"
               onPick={noUpload}
               disabled
             />
             <AttachButton
               icon={ImageIcon}
-              label="Cover image"
+              label={isEs ? "Imagen de portada" : "Cover image"}
               accept="image/*"
               onPick={noUpload}
               disabled
@@ -333,15 +372,18 @@ export function LibraryComposer({
               onClick={() => setShowTopic((current) => !current)}
             >
               {draft.category === "general"
-                ? "Topic"
-                : (topic?.labelEn ?? "Topic")}
+                ? isEs
+                  ? "Tema"
+                  : "Topic"
+                : ((isEs ? topic?.labelEs : topic?.labelEn) ??
+                  (isEs ? "Tema" : "Topic"))}
             </Chip>
             <Chip
               selected={showSpanish}
               icon={<Globe aria-hidden="true" />}
               onClick={() => setShowSpanish((current) => !current)}
             >
-              Spanish
+              {isEs ? "Español" : "Spanish"}
             </Chip>
           </ChipGroup>
           <p

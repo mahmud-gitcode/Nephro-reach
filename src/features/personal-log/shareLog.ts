@@ -37,6 +37,7 @@ export function emailBody(
   title: string,
   table: LogTable,
   footer = "Sent from my NephroReach personal log.",
+  isEs = false,
 ): string {
   const lines = table.rows.map((row) =>
     table.header.map((h, i) => `${h}: ${row[i] ?? ""}`).join(" | "),
@@ -54,7 +55,12 @@ export function emailBody(
     "",
     ...kept,
     ...(more > 0
-      ? ["", `…and ${more} more entries in the attached CSV download.`]
+      ? [
+          "",
+          isEs
+            ? `…y ${more} entradas más en la descarga CSV adjunta.`
+            : `…and ${more} more entries in the attached CSV download.`,
+        ]
       : []),
     "",
     footer,

@@ -5,8 +5,10 @@ import { Clock, ShieldCheck } from "lucide-react";
 import { Modal, Badge, Button, Skeleton } from "@/components/ui";
 import { isSafeFileUrl } from "@/lib/utils/safeUrl";
 import { Testimonial } from "./testimonials.types";
+import { memberRoleLabel } from "./testimonials.rules";
 import { useTestimonialVideo } from "./useTestimonials";
 import { useCollabText } from "@/features/community/collabText";
+import { useLanguageCode } from "@/context/LanguageContext";
 
 interface VideoPlayerModalProps {
   testimonial: Testimonial | null;
@@ -40,6 +42,7 @@ export default function VideoPlayerModal({
   moderator = false,
 }: VideoPlayerModalProps) {
   const t = useCollabText();
+  const isEs = useLanguageCode() === "ES";
   /* An uploaded video plays from a short-lived link fetched on open
      (Phase 12); an external link (YouTube, Vimeo) embeds as before. */
   const uploaded = Boolean(
@@ -64,10 +67,10 @@ export default function VideoPlayerModal({
       open={open}
       onClose={onClose}
       title={testimonial.title}
-      description={`${testimonial.memberName} • ${testimonial.role}`}
+      description={`${testimonial.memberName} • ${memberRoleLabel(testimonial.role, isEs)}`}
       footer={
         <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
-          Close
+          {isEs ? "Cerrar" : "Close"}
         </Button>
       }
     >
@@ -91,7 +94,9 @@ export default function VideoPlayerModal({
                 className="h-full w-full object-cover"
                 poster={poster}
               >
-                Your browser does not support HTML video playback.
+                {isEs
+                  ? "Su navegador no admite la reproducción de video HTML."
+                  : "Your browser does not support HTML video playback."}
               </video>
             </div>
           ) : uploaded && link.isPending ? (
@@ -114,7 +119,9 @@ export default function VideoPlayerModal({
                 <p className="text-label-md font-semibold text-fg">
                   {testimonial.memberName}
                 </p>
-                <p className="text-caption text-fg-muted">{testimonial.role}</p>
+                <p className="text-caption text-fg-muted">
+                  {memberRoleLabel(testimonial.role, isEs)}
+                </p>
               </div>
             </div>
 
@@ -127,7 +134,9 @@ export default function VideoPlayerModal({
               )}
               <Badge tone="success" variant="soft" className="gap-1">
                 <ShieldCheck className="size-3.5" />
-                Verified Member Story
+                {isEs
+                  ? "Historia de miembro verificada"
+                  : "Verified Member Story"}
               </Badge>
             </div>
           </div>

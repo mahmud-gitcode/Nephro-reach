@@ -46,6 +46,22 @@ export const STATUS_CARD_ORDER: readonly MemberStatus[] = [
 ];
 
 /** Statuses with no source yet (NEW-2): their card shows "—", not 0. */
+/* Spanish labels for the member statuses. The English names stay the
+   values (filters, links); only what is drawn is translated. */
+const MEMBER_STATUS_ES: Record<string, string> = {
+  "On Track": "Al día",
+  "Need Follow-Up": "Requiere seguimiento",
+  "Attention Needed": "Requiere atención",
+  "Not Started": "Sin comenzar",
+  Completed: "Completado",
+  "All Statuses": "Todos los estados",
+};
+
+/** The label to draw for a member status (or the "All Statuses" choice). */
+export function memberStatusLabel(status: string, isEs = false): string {
+  return isEs ? (MEMBER_STATUS_ES[status] ?? status) : status;
+}
+
 export const UNSOURCED_STATUSES: readonly MemberStatus[] = ["Attention Needed"];
 
 export type StatusCardData = {
@@ -82,6 +98,30 @@ export const performance = [
   { label: "Weekly Engagement", value: 84 },
   { label: "Live Class Attendance", value: 76 },
 ];
+
+/* Spanish labels for `performance` and the sample chart rows below. */
+const CHART_LABELS_ES: Record<string, string> = {
+  "Average Curriculum Completion": "Finalización promedio del currículo",
+  "Weekly Engagement": "Participación semanal",
+  "Live Class Attendance": "Asistencia a clases en vivo",
+  "Not Started": "Sin comenzar",
+  "Day 1–5": "Día 1–5",
+  "Day 6–10": "Día 6–10",
+  "Day 11–15": "Día 11–15",
+  "Day 16–21": "Día 16–21",
+  Completed: "Completado",
+  "BP Log": "Registro de presión arterial",
+  "Weight / Fluid / EDW": "Peso / Líquidos / Peso seco (EDW)",
+  "Medication Tracker": "Control de medicamentos",
+  "Lab Results": "Resultados de laboratorio",
+  "Appointment Reminders": "Recordatorios de citas",
+  "Symptom Log": "Registro de síntomas",
+};
+
+/** A chart row's label, in Spanish when asked. */
+export function chartLabel(label: string, isEs = false): string {
+  return isEs ? (CHART_LABELS_ES[label] ?? label) : label;
+}
 
 /* ------------------------------------------------------------------ links
 

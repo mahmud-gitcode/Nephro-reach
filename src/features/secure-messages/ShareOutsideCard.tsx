@@ -16,7 +16,7 @@ import {
   Textarea,
   type BadgeTone,
 } from "@/components/ui";
-import { useLanguage } from "@/context/LanguageContext";
+import { useLanguage, useLanguageCode } from "@/context/LanguageContext";
 import { useDialysisClinic } from "@/features/travel/useDialysisClinic";
 import { useCareContacts } from "@/features/profile/useCareContacts";
 import { isNetworkClinic } from "@/features/profile/clinicEnrollment";
@@ -25,7 +25,12 @@ import { downscaleToFile } from "@/features/personal-log/dialysis/useAccessPhoto
 import { usePatientAreaLevel } from "@/features/messaging/useConversations";
 import { LoadMore } from "@/features/profile/LoadMore";
 import { saveErrorText } from "@/features/profile/saveError";
-import { checkUpload, uploadErrorMessage, UploadError } from "@/lib/api/upload";
+import {
+  checkUpload,
+  uploadErrorMessage,
+  UploadError,
+  type UploadErrorReason,
+} from "@/lib/api/upload";
 import {
   canRetry,
   errorMessageFor,
@@ -74,6 +79,16 @@ const STATUS: Record<ShareStatus, { en: string; es: string; tone: BadgeTone }> =
       tone: "warning",
     },
   };
+
+/* The upload refusals in Spanish (lib/api/upload's messages are English). */
+const UPLOAD_ERROR_ES: Record<UploadErrorReason, string> = {
+  type_not_allowed:
+    "No se puede subir este tipo de archivo. Use una foto, PDF, documento, video o audio.",
+  too_large: "Este archivo pesa más de 10 MB.",
+  empty: "Este archivo está vacío.",
+  bad_upload_url: "No se pudo iniciar la carga. Intente de nuevo.",
+  storage_failed: "La carga no terminó. Intente de nuevo.",
+};
 
 type Office = { name: string; kind: string };
 
@@ -202,7 +217,7 @@ function ShareModal({
       open
       onClose={onClose}
       title={
-        isEs ? "Compartir Fuera de NephroReach" : "Share Outside NephroReach"
+        isEs ? "Compartir fuera de NephroReach" : "Share Outside NephroReach"
       }
       description={
         isEs
@@ -227,7 +242,7 @@ function ShareModal({
                     kind,
                     recipientEmail: email,
                     recipientOrg,
-                    subject: subject.trim() || kindLabel(kind),
+                    subject: subject.trim() || kindLabel(kind, isEs),
                     body,
                     attachment,
                   })
@@ -253,7 +268,9 @@ function ShareModal({
         {create.error ? (
           <Alert tone="danger">
             {create.error instanceof UploadError
-              ? uploadErrorMessage(create.error)
+              ? isEs
+                ? UPLOAD_ERROR_ES[create.error.reason]
+                : uploadErrorMessage(create.error)
               : saveErrorText(create.error, isEs ? "es" : "en")}
           </Alert>
         ) : null}
@@ -543,7 +560,7 @@ function ShareRow({
         <ol className="space-y-0.5">
           {share.events.map((entry) => (
             <li key={entry.id} className="text-caption text-fg-secondary">
-              {eventLabel(entry.event)}
+              {eventLabel(entry.event, isEs)}
               {entry.event === "verified" ? ` (${entry.by})` : ""} ·{" "}
               <span className="text-fg-muted">{when(entry.at, isEs)}</span>
             </li>
@@ -577,7 +594,9 @@ function MySharesModal({
       onClose={onClose}
       title={
         sender
-          ? "Sent Outside NephroReach"
+          ? isEs
+            ? "Enviado fuera de NephroReach"
+            : "Sent Outside NephroReach"
           : isEs
             ? "Lo que compartí"
             : "What I've Shared"
@@ -645,7 +664,7 @@ export function ShareOutsideCard() {
         <div className="min-w-0">
           <h2 className="text-heading-5 text-fg">
             {isEs
-              ? "Compartir Fuera de NephroReach"
+              ? "Compartir fuera de NephroReach"
               : "Share Outside NephroReach"}
           </h2>
           <p className="mt-0.5 text-body-sm text-fg-secondary">
@@ -698,6 +717,7 @@ export function ShareOutsideCard() {
  * other office inboxes (client, 2026-10-18).
  */
 export function OfficeShareOutside({ sender }: { sender: string }) {
+  const isEs = useLanguageCode() === "ES";
   const owner = useShareOwner(true);
   const list = useOutsideShares(owner);
   const count = list.total;
@@ -712,7 +732,7 @@ export function OfficeShareOutside({ sender }: { sender: string }) {
           appearance="ghost"
           onClick={() => setViewing(true)}
         >
-          Sent outside ({count})
+          {isEs ? `Enviado fuera (${count})` : <>Sent outside ({count})</>}
         </Button>
       ) : null}
       <Button
@@ -721,18 +741,20 @@ export function OfficeShareOutside({ sender }: { sender: string }) {
         leadingIcon={<Share2 aria-hidden="true" />}
         onClick={() => setSharing(true)}
       >
-        Message Outside NephroReach
+        {isEs
+          ? "Enviar mensaje fuera de NephroReach"
+          : "Message Outside NephroReach"}
       </Button>
       {sharing ? (
         <ShareModal
-          isEs={false}
+          isEs={isEs}
           sender={sender}
           onClose={() => setSharing(false)}
         />
       ) : null}
       {viewing ? (
         <MySharesModal
-          isEs={false}
+          isEs={isEs}
           sender={sender}
           canRevoke
           onClose={() => setViewing(false)}

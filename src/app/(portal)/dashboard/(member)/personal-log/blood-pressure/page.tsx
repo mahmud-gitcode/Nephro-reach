@@ -200,7 +200,11 @@ function DailyBloodPressureList() {
                                 variant: "neutral",
                                 appearance: "fill-stroke",
                               })}
-                              aria-label={`Edit reading from ${dateLabel} at ${time}`}
+                              aria-label={
+                                isEs
+                                  ? `Editar la lectura del ${dateLabel} a las ${time}`
+                                  : `Edit reading from ${dateLabel} at ${time}`
+                              }
                             >
                               <Edit3 />
                             </Link>
@@ -209,7 +213,11 @@ function DailyBloodPressureList() {
                               size="small"
                               variant="danger"
                               appearance="fill-stroke"
-                              aria-label={`Delete reading from ${dateLabel} at ${time}`}
+                              aria-label={
+                                isEs
+                                  ? `Eliminar la lectura del ${dateLabel} a las ${time}`
+                                  : `Delete reading from ${dateLabel} at ${time}`
+                              }
                               onClick={() => setDeleting(reading)}
                             >
                               <Trash2 />
@@ -328,7 +336,11 @@ function DailyBloodPressureList() {
                                 variant: "neutral",
                                 appearance: "fill-stroke",
                               })}
-                              aria-label={`Edit reading from ${dateLabel} at ${time}`}
+                              aria-label={
+                                isEs
+                                  ? `Editar la lectura del ${dateLabel} a las ${time}`
+                                  : `Edit reading from ${dateLabel} at ${time}`
+                              }
                             >
                               <Edit3 />
                             </Link>
@@ -337,7 +349,11 @@ function DailyBloodPressureList() {
                               size="small"
                               variant="danger"
                               appearance="fill-stroke"
-                              aria-label={`Delete reading from ${dateLabel} at ${time}`}
+                              aria-label={
+                                isEs
+                                  ? `Eliminar la lectura del ${dateLabel} a las ${time}`
+                                  : `Delete reading from ${dateLabel} at ${time}`
+                              }
                               onClick={() => setDeleting(reading)}
                             >
                               <Trash2 />

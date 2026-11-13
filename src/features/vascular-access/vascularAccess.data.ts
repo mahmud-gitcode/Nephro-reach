@@ -394,17 +394,33 @@ const MONTHS = [
 ];
 
 /** "2026-10-05" → "Oct 5, 2026". Parsed by hand so no time zone shifts it. */
-export function formatDay(key: string): string {
+const MONTHS_ES = [
+  "ene",
+  "feb",
+  "mar",
+  "abr",
+  "may",
+  "jun",
+  "jul",
+  "ago",
+  "sept",
+  "oct",
+  "nov",
+  "dic",
+];
+
+export function formatDay(key: string, isEs = false): string {
   const [y, m, d] = key.split("-").map(Number);
   if (!y || !m || !d) return "—";
+  if (isEs) return `${d} ${MONTHS_ES[m - 1]} ${y}`;
   return `${MONTHS[m - 1]} ${d}, ${y}`;
 }
 
 /** "2026-10-05" → { month: "OCT", day: "5", year: "2026" } for a date tile. */
-export function dayParts(key: string) {
+export function dayParts(key: string, isEs = false) {
   const [y, m, d] = key.split("-").map(Number);
   return {
-    month: (MONTHS[m - 1] ?? "").toUpperCase(),
+    month: ((isEs ? MONTHS_ES : MONTHS)[m - 1] ?? "").toUpperCase(),
     day: String(d ?? ""),
     year: String(y ?? ""),
   };
@@ -558,4 +574,38 @@ export function sortReferrals(referrals: AccessReferral[]): AccessReferral[] {
       Number(b.urgent) - Number(a.urgent) ||
       b.sentAt.localeCompare(a.sentAt),
   );
+}
+
+/* ------------------------------------------------------ Spanish display */
+
+/* Spanish display text for the server's fixed access lists (the same terms
+   as the clinic screens). The values sent to the server stay English; text
+   from the server that is not in a list is shown as it came. */
+const APPOINTMENT_TITLE_ES: Record<string, string> = {
+  "Access Follow-Up": "Seguimiento del acceso",
+  "Ultrasound (Access)": "Ecografía (acceso)",
+  Fistulogram: "Fistulografía",
+  "Access Check": "Revisión del acceso",
+  "Catheter Exchange": "Cambio de catéter",
+  "Surgical Consult": "Consulta quirúrgica",
+  "Access Placement Surgery": "Cirugía de colocación del acceso",
+  "PD Catheter Placement": "Colocación de catéter de DP",
+};
+
+const ACCESS_TYPE_ES: Record<string, string> = {
+  "AV Fistula": "Fístula AV",
+  "AV Graft": "Injerto AV",
+  "Tunneled Catheter": "Catéter tunelizado",
+  "PD Catheter": "Catéter de DP",
+  TBD: "Por determinar",
+};
+
+/** An appointment title as the member reads it. */
+export function appointmentTitleLabel(title: string, isEs = false): string {
+  return isEs ? (APPOINTMENT_TITLE_ES[title] ?? title) : title;
+}
+
+/** An access type as the member reads it. */
+export function accessTypeLabel(type: string, isEs = false): string {
+  return isEs ? (ACCESS_TYPE_ES[type] ?? type) : type;
 }

@@ -32,6 +32,35 @@ export type RosterStatus = (typeof MEMBER_STATUSES)[number];
 
 export { statusTone };
 
+/* Spanish for the status and filter labels this portal shows. The English
+   values stay the identities (filters, URLs, tone maps); only the text a
+   person reads changes. Anything not listed shows as given. */
+const LABEL_ES: Record<string, string> = {
+  "On Track": "Al día",
+  "Need Follow-Up": "Requiere seguimiento",
+  "Needs Follow-Up": "Requiere seguimiento",
+  "Attention Needed": "Requiere atención",
+  "Not Started": "Sin iniciar",
+  "Not started": "Sin iniciar",
+  Completed: "Completado",
+  "In Progress": "En curso",
+  Overdue: "Atrasado",
+  "All Programs": "Todos los programas",
+  "All Statuses": "Todos los estados",
+  Other: "Otros",
+};
+
+/** The label a person reads for a status or filter value. */
+export function statusLabel(value: string, isEs = false): string {
+  return isEs ? (LABEL_ES[value] ?? value) : value;
+}
+
+/** "3 of 21 classes" in the reader's language. */
+export function currentModuleLabel(text: string, isEs = false): string {
+  if (!isEs) return text;
+  return text.replace(/^(\d+) of (\d+) classes$/, "$1 de $2 clases");
+}
+
 type Tracking = {
   /** null: no program, so nothing to say ("—"). */
   status: MemberStatus | null;
@@ -216,6 +245,7 @@ const ATTENTION_RANK: Partial<Record<MemberStatus, number>> = {
 export function needsAttention(
   list: RosterMember[],
   activity: readonly ActivityEvent[],
+  isEs = false,
 ): AttentionItem[] {
   const byId = new Map<string, AttentionItem>();
   const entry = (member: RosterMember, rank: number) => {
@@ -234,8 +264,12 @@ export function needsAttention(
     if (rank === undefined) continue;
     const reason =
       member.status === "Not Started"
-        ? "Has not started the program"
-        : `${member.status} · last active ${member.lastActivity.toLowerCase()}`;
+        ? isEs
+          ? "No ha iniciado el programa"
+          : "Has not started the program"
+        : isEs
+          ? `${statusLabel(member.status ?? "", true)} · última actividad: ${member.lastActivity.toLowerCase()}`
+          : `${member.status} · last active ${member.lastActivity.toLowerCase()}`;
     entry(member, rank).reasons.push(reason);
   }
 
@@ -243,7 +277,11 @@ export function needsAttention(
     if (event.kind !== "missed") continue;
     const member = list.find((m) => m.id === event.patientId);
     if (!member) continue;
-    entry(member, 1).reasons.unshift(`Missed check-in · ${event.when}`);
+    entry(member, 1).reasons.unshift(
+      isEs
+        ? `Registro omitido · ${event.when}`
+        : `Missed check-in · ${event.when}`,
+    );
   }
 
   return [...byId.values()].sort(

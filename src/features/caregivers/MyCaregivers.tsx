@@ -45,15 +45,18 @@ import {
   type CaregiverPreset,
   type CaregiverRelationship,
 } from "./caregivers.api";
+import { useLanguageCode } from "@/context/LanguageContext";
 import {
-  AREA_LABELS,
-  LEVEL_LABELS,
-  NEVER_COVERED,
-  PRESET_DESCRIPTIONS,
-  PRESET_LABELS,
   activityLabel,
+  areaLabel,
   areaLevel,
   emptyCustomMap,
+  levelLabel,
+  neverCovered,
+  outcomeLabel,
+  presetDescription,
+  presetLabel,
+  relationshipLabel,
 } from "./caregivers.mapping";
 import { useCaregiverActivity, useMyCaregivers } from "./useCaregivers";
 
@@ -85,19 +88,40 @@ const SAVE_ERRORS: Record<string, string> = {
     "Choose at least one area for custom access.",
 };
 
+const SAVE_ERRORS_ES: Record<string, string> = {
+  "invitations.cannot_invite_yourself":
+    "Este es su propio correo electrónico. Use el de la otra persona.",
+  "invitations.invitation_already_pending":
+    "Ya hay una invitación pendiente para este correo electrónico. Reenvíela en su lugar.",
+  "invitations.already_a_caregiver": "Esta persona ya es su cuidador.",
+  "invitations.permissions_only_for_custom":
+    "Elija el acceso Personalizado para definir cada área usted mismo.",
+  "invitations.custom_permissions_required":
+    "Elija al menos un área para el acceso personalizado.",
+};
+
 /** What a refused change says: the server's reason by code, or a generic
  *  line (a 403 means this account may not do it). */
-export function saveErrorText(error: unknown): string {
-  if (!isApiError(error)) return "That change did not save. Try again.";
-  if (error.code && SAVE_ERRORS[error.code]) return SAVE_ERRORS[error.code];
-  if (error.status === 403) return "Your account can't make this change.";
+export function saveErrorText(error: unknown, isEs = false): string {
+  const generic = isEs
+    ? "Ese cambio no se guardó. Intente de nuevo."
+    : "That change did not save. Try again.";
+  if (!isApiError(error)) return generic;
+  const known = isEs ? SAVE_ERRORS_ES : SAVE_ERRORS;
+  if (error.code && known[error.code]) return known[error.code];
+  if (error.status === 403)
+    return isEs
+      ? "Su cuenta no puede hacer este cambio."
+      : "Your account can't make this change.";
   if (error.status === 409)
-    return "This changed in the meantime. The list has been refreshed.";
-  return error.messages[0] ?? "That change did not save. Try again.";
+    return isEs
+      ? "Esto cambió mientras tanto. La lista se ha actualizado."
+      : "This changed in the meantime. The list has been refreshed.";
+  return error.messages[0] ?? generic;
 }
 
-function when(iso: string): string {
-  return new Date(iso).toLocaleString("en-US", {
+function when(iso: string, isEs = false): string {
+  return new Date(iso).toLocaleString(isEs ? "es-US" : "en-US", {
     month: "short",
     day: "numeric",
     hour: "numeric",
@@ -105,8 +129,8 @@ function when(iso: string): string {
   });
 }
 
-function day(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
+function day(iso: string, isEs = false): string {
+  return new Date(iso).toLocaleDateString(isEs ? "es-US" : "en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -115,6 +139,7 @@ function day(iso: string): string {
 
 export default function MyCaregivers() {
   const mine = useMyCaregivers();
+  const isEs = useLanguageCode() === "ES";
   const [inviting, setInviting] = useState(false);
   const [removing, setRemoving] = useState<CaregiverGrant | null>(null);
   const [editing, setEditing] = useState<CaregiverGrant | null>(null);
@@ -130,7 +155,7 @@ export default function MyCaregivers() {
       await action();
       return true;
     } catch (cause) {
-      setActionError(saveErrorText(cause));
+      setActionError(saveErrorText(cause, isEs));
       return false;
     }
   };
@@ -143,16 +168,15 @@ export default function MyCaregivers() {
         href={HREF}
         action={
           <Button leadingIcon={<Plus />} onClick={() => setInviting(true)}>
-            Invite caregiver
+            {isEs ? "Invitar cuidador" : "Invite caregiver"}
           </Button>
         }
       />
 
       <Alert tone="info" icon={<HandHeart />} live={false}>
-        A caregiver signs in with their own account and sees only what you
-        choose. They can never change your password, your security settings or
-        who your caregivers are, and everything they do is recorded under their
-        own name. Remove them at any time.
+        {isEs
+          ? "Un cuidador inicia sesión con su propia cuenta y solo ve lo que usted elija. Nunca puede cambiar su contraseña, su configuración de seguridad ni quiénes son sus cuidadores, y todo lo que hace queda registrado a su propio nombre. Puede quitarlo en cualquier momento."
+          : "A caregiver signs in with their own account and sees only what you choose. They can never change your password, your security settings or who your caregivers are, and everything they do is recorded under their own name. Remove them at any time."}
       </Alert>
 
       {actionError ? (
@@ -164,32 +188,46 @@ export default function MyCaregivers() {
       <AsyncSection
         pending={mine.isPending}
         error={mine.error}
-        errorTitle={errorTitleFor(mine.error, undefined)}
-        errorMessage={errorMessageFor(mine.error, undefined)}
+        errorTitle={errorTitleFor(mine.error, undefined, isEs ? "es" : "en")}
+        errorMessage={errorMessageFor(
+          mine.error,
+          undefined,
+          isEs ? "es" : "en",
+        )}
         onRetry={canRetry(mine.error) ? mine.refetch : undefined}
         isEmpty={nothing}
         skeleton={<Skeleton height={240} />}
         empty={
           <EmptyState
             icon={<HandHeart />}
-            title="No caregivers yet"
-            description="Invite a family member or friend who helps with your care."
+            title={isEs ? "Aún no tiene cuidadores" : "No caregivers yet"}
+            description={
+              isEs
+                ? "Invite a un familiar o amigo que le ayude con su atención."
+                : "Invite a family member or friend who helps with your care."
+            }
             action={
               <Button leadingIcon={<Plus />} onClick={() => setInviting(true)}>
-                Invite caregiver
+                {isEs ? "Invitar cuidador" : "Invite caregiver"}
               </Button>
             }
           />
         }
       >
         {mine.grants.length > 0 ? (
-          <section aria-label="Your caregivers" className="space-y-stack-md">
-            <h2 className="text-heading-4 text-fg">Your caregivers</h2>
+          <section
+            aria-label={isEs ? "Sus cuidadores" : "Your caregivers"}
+            className="space-y-stack-md"
+          >
+            <h2 className="text-heading-4 text-fg">
+              {isEs ? "Sus cuidadores" : "Your caregivers"}
+            </h2>
             <div className="grid grid-cols-1 gap-stack-lg xl:grid-cols-2">
               {mine.grants.map((g) => (
                 <CaregiverCard
                   key={g.id}
                   grant={g}
+                  isEs={isEs}
                   busy={mine.isSaving}
                   onEdit={() => setEditing(g)}
                   onRemove={() => setRemoving(g)}
@@ -201,16 +239,26 @@ export default function MyCaregivers() {
         ) : null}
 
         {mine.invitations.length > 0 ? (
-          <Card as="section" aria-label="Waiting invitations">
+          <Card
+            as="section"
+            aria-label={
+              isEs ? "Invitaciones pendientes" : "Waiting invitations"
+            }
+          >
             <CardHeader
-              title="Waiting invitations"
-              description="Each link works once and expires. Resending sends a new link and the old one stops working."
+              title={isEs ? "Invitaciones pendientes" : "Waiting invitations"}
+              description={
+                isEs
+                  ? "Cada enlace funciona una sola vez y vence. Al reenviar se envía un enlace nuevo y el anterior deja de funcionar."
+                  : "Each link works once and expires. Resending sends a new link and the old one stops working."
+              }
             />
             <ul className="mt-stack-md divide-y divide-line">
               {mine.invitations.map((inv) => (
                 <InvitationRow
                   key={inv.id}
                   invitation={inv}
+                  isEs={isEs}
                   busy={mine.isSaving}
                   onResend={() => void run(() => mine.resendInvitation(inv.id))}
                   onRevoke={() => void run(() => mine.revokeInvitation(inv.id))}
@@ -223,6 +271,7 @@ export default function MyCaregivers() {
 
       {inviting ? (
         <InviteModal
+          isEs={isEs}
           onClose={() => setInviting(false)}
           onSend={async (body) => {
             await mine.invite(body);
@@ -233,6 +282,7 @@ export default function MyCaregivers() {
       {editing ? (
         <AccessModal
           grant={editing}
+          isEs={isEs}
           onClose={() => setEditing(null)}
           onSave={async (preset, map) => {
             await mine.changeAccess(editing, preset, map);
@@ -246,14 +296,22 @@ export default function MyCaregivers() {
           size="small"
           onClose={() => setJournal(null)}
           title={
-            journal.open
-              ? `Let ${nameOf(journal.grant)} read your private journal?`
-              : `Stop sharing your journal with ${nameOf(journal.grant)}?`
+            isEs
+              ? journal.open
+                ? `¿Permitir que ${nameOf(journal.grant, true)} lea su diario privado?`
+                : `¿Dejar de compartir su diario con ${nameOf(journal.grant, true)}?`
+              : journal.open
+                ? `Let ${nameOf(journal.grant)} read your private journal?`
+                : `Stop sharing your journal with ${nameOf(journal.grant)}?`
           }
           description={
-            journal.open
-              ? "Your journal is private. This is a separate permission from their other access: they will be able to read your entries, not change them. You can turn it off at any time."
-              : "They will no longer be able to read your journal. What they already read cannot be taken back."
+            isEs
+              ? journal.open
+                ? "Su diario es privado. Este es un permiso separado de su otro acceso: podrá leer sus entradas, no cambiarlas. Puede desactivarlo en cualquier momento."
+                : "Ya no podrá leer su diario. Lo que ya leyó no se puede deshacer."
+              : journal.open
+                ? "Your journal is private. This is a separate permission from their other access: they will be able to read your entries, not change them. You can turn it off at any time."
+                : "They will no longer be able to read your journal. What they already read cannot be taken back."
           }
           footer={
             <>
@@ -262,7 +320,7 @@ export default function MyCaregivers() {
                 appearance="fill-stroke"
                 onClick={() => setJournal(null)}
               >
-                Cancel
+                {isEs ? "Cancelar" : "Cancel"}
               </Button>
               <Button
                 variant={journal.open ? "primary" : "danger"}
@@ -273,7 +331,13 @@ export default function MyCaregivers() {
                   await run(() => mine.setJournal(target.grant, target.open));
                 }}
               >
-                {journal.open ? "Allow journal access" : "Stop sharing"}
+                {isEs
+                  ? journal.open
+                    ? "Permitir acceso al diario"
+                    : "Dejar de compartir"
+                  : journal.open
+                    ? "Allow journal access"
+                    : "Stop sharing"}
               </Button>
             </>
           }
@@ -285,8 +349,16 @@ export default function MyCaregivers() {
           open
           size="small"
           onClose={() => setRemoving(null)}
-          title={`Remove ${nameOf(removing)}?`}
-          description="They lose access to your account straight away. What they already saw cannot be taken back, and anything they changed stays in your records under their name."
+          title={
+            isEs
+              ? `¿Quitar a ${nameOf(removing, true)}?`
+              : `Remove ${nameOf(removing)}?`
+          }
+          description={
+            isEs
+              ? "Perderá el acceso a su cuenta de inmediato. Lo que ya vio no se puede deshacer, y todo lo que cambió permanece en sus registros a su nombre."
+              : "They lose access to your account straight away. What they already saw cannot be taken back, and anything they changed stays in your records under their name."
+          }
           footer={
             <>
               <Button
@@ -294,7 +366,7 @@ export default function MyCaregivers() {
                 appearance="fill-stroke"
                 onClick={() => setRemoving(null)}
               >
-                Cancel
+                {isEs ? "Cancelar" : "Cancel"}
               </Button>
               <Button
                 variant="danger"
@@ -305,7 +377,7 @@ export default function MyCaregivers() {
                   await run(() => mine.revokeGrant(target.id));
                 }}
               >
-                Remove caregiver
+                {isEs ? "Quitar cuidador" : "Remove caregiver"}
               </Button>
             </>
           }
@@ -315,20 +387,32 @@ export default function MyCaregivers() {
   );
 }
 
-const nameOf = (g: CaregiverGrant) =>
-  g.caregiverName || g.caregiverEmail || "your caregiver";
+const nameOf = (g: CaregiverGrant, isEs = false) =>
+  g.caregiverName ||
+  g.caregiverEmail ||
+  (isEs ? "su cuidador" : "your caregiver");
 
-function AccessList({ permissions }: { permissions: CaregiverPermissions }) {
+function AccessList({
+  permissions,
+  isEs,
+}: {
+  permissions: CaregiverPermissions;
+  isEs: boolean;
+}) {
   const open = CAREGIVER_AREAS.filter((a) => areaLevel(permissions, a) > 0);
   if (open.length === 0)
-    return <p className="text-body-sm text-fg-muted">No areas shared.</p>;
+    return (
+      <p className="text-body-sm text-fg-muted">
+        {isEs ? "No se comparte ninguna área." : "No areas shared."}
+      </p>
+    );
   return (
     <ul className="grid grid-cols-1 gap-x-inline-lg gap-y-stack-xs sm:grid-cols-2">
       {open.map((a) => (
         <li key={a} className="flex justify-between gap-inline-sm text-body-sm">
-          <span className="text-fg">{AREA_LABELS[a]}</span>
+          <span className="text-fg">{areaLabel(a, isEs)}</span>
           <span className="shrink-0 text-fg-muted">
-            {LEVEL_LABELS[areaLevel(permissions, a)]}
+            {levelLabel(areaLevel(permissions, a), isEs)}
           </span>
         </li>
       ))}
@@ -338,12 +422,14 @@ function AccessList({ permissions }: { permissions: CaregiverPermissions }) {
 
 function CaregiverCard({
   grant,
+  isEs,
   busy,
   onEdit,
   onRemove,
   onJournal,
 }: {
   grant: CaregiverGrant;
+  isEs: boolean;
   busy: boolean;
   onEdit: () => void;
   onRemove: () => void;
@@ -353,17 +439,15 @@ function CaregiverCard({
   return (
     <Card>
       <CardHeader
-        title={nameOf(grant)}
-        description={`${grant.relationship}${grant.caregiverEmail ? ` · ${grant.caregiverEmail}` : ""}`}
-        action={
-          <Badge tone="success">
-            {PRESET_LABELS[grant.preset] ?? grant.preset}
-          </Badge>
-        }
+        title={nameOf(grant, isEs)}
+        description={`${relationshipLabel(grant.relationship, isEs)}${grant.caregiverEmail ? ` · ${grant.caregiverEmail}` : ""}`}
+        action={<Badge tone="success">{presetLabel(grant.preset, isEs)}</Badge>}
       />
-      <h3 className="mt-stack-lg text-label-md text-fg">What they can use</h3>
+      <h3 className="mt-stack-lg text-label-md text-fg">
+        {isEs ? "Lo que puede usar" : "What they can use"}
+      </h3>
       <div className="mt-stack-xs">
-        <AccessList permissions={grant.permissions} />
+        <AccessList permissions={grant.permissions} isEs={isEs} />
       </div>
 
       <SwitchRow
@@ -374,17 +458,21 @@ function CaregiverCard({
         title={
           <span className="inline-flex items-center gap-inline-sm">
             <BookLock aria-hidden="true" className="size-4" />
-            Private journal
+            {isEs ? "Diario privado" : "Private journal"}
           </span>
         }
         description={
-          journalOpen
-            ? "They can read your journal entries."
-            : "Not shared. This needs your separate permission."
+          isEs
+            ? journalOpen
+              ? "Puede leer las entradas de su diario."
+              : "No se comparte. Esto requiere su permiso por separado."
+            : journalOpen
+              ? "They can read your journal entries."
+              : "Not shared. This needs your separate permission."
         }
       />
 
-      <ActivityList grantId={grant.id} />
+      <ActivityList grantId={grant.id} isEs={isEs} />
 
       <div className="mt-stack-lg flex flex-wrap justify-end gap-inline-sm">
         <Button
@@ -393,7 +481,7 @@ function CaregiverCard({
           leadingIcon={<SlidersHorizontal />}
           onClick={onEdit}
         >
-          Change access
+          {isEs ? "Cambiar acceso" : "Change access"}
         </Button>
         <Button
           variant="danger"
@@ -401,27 +489,38 @@ function CaregiverCard({
           leadingIcon={<Trash2 />}
           onClick={onRemove}
         >
-          Remove caregiver
+          {isEs ? "Quitar cuidador" : "Remove caregiver"}
         </Button>
       </div>
     </Card>
   );
 }
 
-function ActivityList({ grantId }: { grantId: string }) {
+function ActivityList({ grantId, isEs }: { grantId: string; isEs: boolean }) {
   const [page, setPage] = useState(1);
   const activity = useCaregiverActivity(grantId, page);
   return (
-    <section aria-label="Recent activity" className="mt-stack-lg">
-      <h3 className="text-label-md text-fg">Recent activity</h3>
+    <section
+      aria-label={isEs ? "Actividad reciente" : "Recent activity"}
+      className="mt-stack-lg"
+    >
+      <h3 className="text-label-md text-fg">
+        {isEs ? "Actividad reciente" : "Recent activity"}
+      </h3>
       {activity.error ? (
         <p className="mt-stack-xs text-body-sm text-fg-muted">
-          {errorTitleFor(activity.error, "Activity did not load.")}
+          {errorTitleFor(
+            activity.error,
+            isEs ? "La actividad no se cargó." : "Activity did not load.",
+            isEs ? "es" : "en",
+          )}
         </p>
       ) : activity.isPending ? (
         <Skeleton height={60} className="mt-stack-xs" />
       ) : activity.rows.length === 0 ? (
-        <p className="mt-stack-xs text-body-sm text-fg-muted">Nothing yet.</p>
+        <p className="mt-stack-xs text-body-sm text-fg-muted">
+          {isEs ? "Nada todavía." : "Nothing yet."}
+        </p>
       ) : (
         <ul className="mt-stack-xs space-y-stack-xs">
           {activity.rows.map((a, i) => (
@@ -430,11 +529,13 @@ function ActivityList({ grantId }: { grantId: string }) {
               className="flex justify-between gap-inline-md text-body-sm"
             >
               <span className="text-fg">
-                {activityLabel(a)}
-                {a.outcome !== "SUCCESS" ? ` (${a.outcome.toLowerCase()})` : ""}
+                {activityLabel(a, isEs)}
+                {a.outcome !== "SUCCESS"
+                  ? ` (${outcomeLabel(a.outcome, isEs)})`
+                  : ""}
               </span>
               <span className="shrink-0 text-fg-muted tabular-nums">
-                {when(a.createdAt)}
+                {when(a.createdAt, isEs)}
               </span>
             </li>
           ))}
@@ -449,7 +550,7 @@ function ActivityList({ grantId }: { grantId: string }) {
               appearance="ghost"
               onClick={() => setPage((p) => p - 1)}
             >
-              Newer
+              {isEs ? "Más recientes" : "Newer"}
             </Button>
           ) : null}
           {activity.hasMore ? (
@@ -459,7 +560,7 @@ function ActivityList({ grantId }: { grantId: string }) {
               appearance="ghost"
               onClick={() => setPage((p) => p + 1)}
             >
-              Older
+              {isEs ? "Anteriores" : "Older"}
             </Button>
           ) : null}
         </div>
@@ -470,11 +571,13 @@ function ActivityList({ grantId }: { grantId: string }) {
 
 function InvitationRow({
   invitation,
+  isEs,
   busy,
   onResend,
   onRevoke,
 }: {
   invitation: CaregiverInvitation;
+  isEs: boolean;
   busy: boolean;
   onResend: () => void;
   onRevoke: () => void;
@@ -484,9 +587,9 @@ function InvitationRow({
       <div className="min-w-0">
         <p className="truncate text-label-md text-fg">{invitation.email}</p>
         <p className="text-caption text-fg-muted">
-          {invitation.relationship} ·{" "}
-          {PRESET_LABELS[invitation.preset] ?? invitation.preset} · Expires{" "}
-          {day(invitation.expiresAt)}
+          {relationshipLabel(invitation.relationship, isEs)} ·{" "}
+          {presetLabel(invitation.preset, isEs)} · {isEs ? "Vence" : "Expires"}{" "}
+          {day(invitation.expiresAt, isEs)}
         </p>
       </div>
       <div className="flex gap-inline-sm">
@@ -498,7 +601,7 @@ function InvitationRow({
           disabled={busy}
           onClick={onResend}
         >
-          Resend
+          {isEs ? "Reenviar" : "Resend"}
         </Button>
         <Button
           size="small"
@@ -507,7 +610,7 @@ function InvitationRow({
           disabled={busy}
           onClick={onRevoke}
         >
-          Withdraw
+          {isEs ? "Retirar" : "Withdraw"}
         </Button>
       </div>
     </li>
@@ -518,14 +621,18 @@ function InvitationRow({
 
 function CustomEditor({
   value,
+  isEs,
   onChange,
 }: {
   value: CaregiverPermissions;
+  isEs: boolean;
   onChange: (next: CaregiverPermissions) => void;
 }) {
   return (
     <fieldset className="space-y-stack-xs">
-      <legend className="text-label-md text-fg">Each area</legend>
+      <legend className="text-label-md text-fg">
+        {isEs ? "Cada área" : "Each area"}
+      </legend>
       {CAREGIVER_AREAS.map((area) => {
         const level = areaLevel(value, area);
         return (
@@ -534,7 +641,7 @@ function CustomEditor({
             className="flex items-center justify-between gap-inline-md"
           >
             <label htmlFor={`cg-area-${area}`} className="text-body-sm text-fg">
-              {AREA_LABELS[area]}
+              {areaLabel(area, isEs)}
             </label>
             <Select
               id={`cg-area-${area}`}
@@ -544,12 +651,14 @@ function CustomEditor({
                 onChange({ ...value, [area]: Number(e.target.value) })
               }
             >
-              <option value="0">None</option>
-              <option value="1">View</option>
-              <option value="2">Edit</option>
+              <option value="0">{levelLabel(0, isEs)}</option>
+              <option value="1">{levelLabel(1, isEs)}</option>
+              <option value="2">{levelLabel(2, isEs)}</option>
               {/* Level 3 is offered only to keep what the server already
                   holds; its meaning for a caregiver is still open (D1). */}
-              {level === 3 ? <option value="3">Manage</option> : null}
+              {level === 3 ? (
+                <option value="3">{levelLabel(3, isEs)}</option>
+              ) : null}
             </Select>
           </div>
         );
@@ -560,14 +669,16 @@ function CustomEditor({
 
 function PresetChoice({
   value,
+  isEs,
   onChange,
 }: {
   value: CaregiverPreset | "";
+  isEs: boolean;
   onChange: (preset: CaregiverPreset) => void;
 }) {
   return (
     <RadioGroup
-      label="What they can use"
+      label={isEs ? "Lo que puede usar" : "What they can use"}
       value={value}
       onChange={(v) => onChange(v as CaregiverPreset)}
     >
@@ -575,8 +686,8 @@ function PresetChoice({
         <RadioCard
           key={p}
           value={p}
-          title={PRESET_LABELS[p]}
-          description={PRESET_DESCRIPTIONS[p]}
+          title={presetLabel(p, isEs)}
+          description={presetDescription(p, isEs)}
         />
       ))}
     </RadioGroup>
@@ -585,34 +696,41 @@ function PresetChoice({
 
 /** The D1 authorization step for Full Access: what it covers, what it
  *  never covers. Nothing is sent until the patient confirms here. */
-export function FullAccessAuthorization() {
+export function FullAccessAuthorization({
+  isEs = false,
+}: { isEs?: boolean } = {}) {
   return (
     <div className="space-y-stack-md">
       <Alert tone="warning" icon={<ShieldCheck />} live={false}>
-        Full Access lets them view and update your profile, personal logs,
-        nutrition, check-ins, ER visits, dialysis, medications, labs and your
-        messages with your care team, for you.
+        {isEs
+          ? "El Acceso completo le permite ver y actualizar, en su nombre, su perfil, registros personales, nutrición, chequeos, visitas a la sala de emergencias, diálisis, medicamentos, laboratorios y sus mensajes con su equipo de atención."
+          : "Full Access lets them view and update your profile, personal logs, nutrition, check-ins, ER visits, dialysis, medications, labs and your messages with your care team, for you."}
       </Alert>
       <div>
-        <h3 className="text-label-md text-fg">It never covers</h3>
+        <h3 className="text-label-md text-fg">
+          {isEs ? "Nunca incluye" : "It never covers"}
+        </h3>
         <ul className="mt-stack-xs list-disc space-y-stack-xs pl-5 text-body-sm text-fg-secondary">
-          {NEVER_COVERED.map((item) => (
+          {neverCovered(isEs).map((item) => (
             <li key={item}>{item}</li>
           ))}
         </ul>
       </div>
       <p className="text-body-sm text-fg-muted">
-        Everything they do is recorded under their own name. You can change
-        their access or remove them at any time.
+        {isEs
+          ? "Todo lo que haga queda registrado a su propio nombre. Puede cambiar su acceso o quitarlo en cualquier momento."
+          : "Everything they do is recorded under their own name. You can change their access or remove them at any time."}
       </p>
     </div>
   );
 }
 
 function InviteModal({
+  isEs,
   onSend,
   onClose,
 }: {
+  isEs: boolean;
   onSend: (body: {
     email: string;
     relationship: CaregiverRelationship;
@@ -653,7 +771,7 @@ function InviteModal({
       setSent(true);
     } catch (cause) {
       setAuthorizing(false);
-      setError(saveErrorText(cause));
+      setError(saveErrorText(cause, isEs));
     } finally {
       setSending(false);
     }
@@ -665,9 +783,13 @@ function InviteModal({
         open
         size="small"
         onClose={onClose}
-        title="Invitation sent"
-        description={`We emailed ${email.trim()} a link. They sign in or create their own account with that email, then accept. The link works once and expires in 7 days.`}
-        footer={<Button onClick={onClose}>Done</Button>}
+        title={isEs ? "Invitación enviada" : "Invitation sent"}
+        description={
+          isEs
+            ? `Enviamos un enlace a ${email.trim()}. Esa persona inicia sesión o crea su propia cuenta con ese correo electrónico y luego acepta. El enlace funciona una sola vez y vence en 7 días.`
+            : `We emailed ${email.trim()} a link. They sign in or create their own account with that email, then accept. The link works once and expires in 7 days.`
+        }
+        footer={<Button onClick={onClose}>{isEs ? "Listo" : "Done"}</Button>}
       />
     );
   }
@@ -677,8 +799,14 @@ function InviteModal({
       <Modal
         open
         onClose={onClose}
-        title="Authorize Full Access?"
-        description={`For ${email.trim()} (${relationship}).`}
+        title={
+          isEs ? "¿Autorizar el Acceso completo?" : "Authorize Full Access?"
+        }
+        description={
+          isEs
+            ? `Para ${email.trim()} (${relationshipLabel(relationship, true)}).`
+            : `For ${email.trim()} (${relationship}).`
+        }
         footer={
           <>
             <Button
@@ -686,15 +814,15 @@ function InviteModal({
               appearance="fill-stroke"
               onClick={() => setAuthorizing(false)}
             >
-              Back
+              {isEs ? "Atrás" : "Back"}
             </Button>
             <Button disabled={sending} onClick={() => void send()}>
-              I authorize Full Access
+              {isEs ? "Autorizo el Acceso completo" : "I authorize Full Access"}
             </Button>
           </>
         }
       >
-        <FullAccessAuthorization />
+        <FullAccessAuthorization isEs={isEs} />
       </Modal>
     );
   }
@@ -704,12 +832,16 @@ function InviteModal({
       open
       onClose={onClose}
       size="wide"
-      title="Invite a caregiver"
-      description="Someone who helps with your care, such as a family member. You choose exactly what they can use."
+      title={isEs ? "Invitar a un cuidador" : "Invite a caregiver"}
+      description={
+        isEs
+          ? "Alguien que le ayuda con su atención, como un familiar. Usted elige exactamente lo que puede usar."
+          : "Someone who helps with your care, such as a family member. You choose exactly what they can use."
+      }
       footer={
         <>
           <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
-            Cancel
+            {isEs ? "Cancelar" : "Cancel"}
           </Button>
           <Button
             leadingIcon={<Mail />}
@@ -721,7 +853,13 @@ function InviteModal({
               else void send();
             }}
           >
-            {preset === "full" ? "Continue" : "Send invitation"}
+            {preset === "full"
+              ? isEs
+                ? "Continuar"
+                : "Continue"
+              : isEs
+                ? "Enviar invitación"
+                : "Send invitation"}
           </Button>
         </>
       }
@@ -730,9 +868,15 @@ function InviteModal({
         {error ? <Alert tone="danger">{error}</Alert> : null}
         <div className="grid grid-cols-1 gap-stack-md sm:grid-cols-2">
           <FormField
-            label="Their email"
+            label={isEs ? "Su correo electrónico" : "Their email"}
             required
-            error={tried && !emailOk ? "Enter a valid email." : undefined}
+            error={
+              tried && !emailOk
+                ? isEs
+                  ? "Ingrese un correo electrónico válido."
+                  : "Enter a valid email."
+                : undefined
+            }
           >
             {(field) => (
               <Input
@@ -745,9 +889,15 @@ function InviteModal({
             )}
           </FormField>
           <FormField
-            label="Relationship"
+            label={isEs ? "Parentesco" : "Relationship"}
             required
-            error={tried && relationship === "" ? "Choose one." : undefined}
+            error={
+              tried && relationship === ""
+                ? isEs
+                  ? "Elija una opción."
+                  : "Choose one."
+                : undefined
+            }
           >
             {(field) => (
               <Select
@@ -758,29 +908,29 @@ function InviteModal({
                 }
               >
                 <option value="" disabled>
-                  Choose…
+                  {isEs ? "Elija…" : "Choose…"}
                 </option>
                 {CAREGIVER_RELATIONSHIPS.map((r) => (
                   <option key={r} value={r}>
-                    {r}
+                    {relationshipLabel(r, isEs)}
                   </option>
                 ))}
               </Select>
             )}
           </FormField>
         </div>
-        <PresetChoice value={preset} onChange={setPreset} />
+        <PresetChoice value={preset} isEs={isEs} onChange={setPreset} />
         {tried && preset === "" ? (
           <p className="text-body-sm text-danger" role="alert">
-            Choose what they can use.
+            {isEs ? "Elija lo que puede usar." : "Choose what they can use."}
           </p>
         ) : null}
         {preset === "custom" ? (
           <>
-            <CustomEditor value={custom} onChange={setCustom} />
+            <CustomEditor value={custom} isEs={isEs} onChange={setCustom} />
             {tried && !customOk ? (
               <p className="text-body-sm text-danger" role="alert">
-                Open at least one area.
+                {isEs ? "Abra al menos un área." : "Open at least one area."}
               </p>
             ) : null}
           </>
@@ -792,10 +942,12 @@ function InviteModal({
 
 function AccessModal({
   grant,
+  isEs,
   onSave,
   onClose,
 }: {
   grant: CaregiverGrant;
+  isEs: boolean;
   onSave: (
     preset: CaregiverPreset,
     map?: CaregiverPermissions,
@@ -822,7 +974,7 @@ function AccessModal({
       onClose();
     } catch (cause) {
       setAuthorizing(false);
-      setError(saveErrorText(cause));
+      setError(saveErrorText(cause, isEs));
     } finally {
       setSaving(false);
     }
@@ -833,8 +985,12 @@ function AccessModal({
       <Modal
         open
         onClose={onClose}
-        title="Authorize Full Access?"
-        description={`For ${nameOf(grant)}.`}
+        title={
+          isEs ? "¿Autorizar el Acceso completo?" : "Authorize Full Access?"
+        }
+        description={
+          isEs ? `Para ${nameOf(grant, true)}.` : `For ${nameOf(grant)}.`
+        }
         footer={
           <>
             <Button
@@ -842,15 +998,15 @@ function AccessModal({
               appearance="fill-stroke"
               onClick={() => setAuthorizing(false)}
             >
-              Back
+              {isEs ? "Atrás" : "Back"}
             </Button>
             <Button disabled={saving} onClick={() => void save()}>
-              I authorize Full Access
+              {isEs ? "Autorizo el Acceso completo" : "I authorize Full Access"}
             </Button>
           </>
         }
       >
-        <FullAccessAuthorization />
+        <FullAccessAuthorization isEs={isEs} />
       </Modal>
     );
   }
@@ -860,12 +1016,20 @@ function AccessModal({
       open
       onClose={onClose}
       size="wide"
-      title={`Change what ${nameOf(grant)} can use`}
-      description="The change applies to their next request."
+      title={
+        isEs
+          ? `Cambiar lo que ${nameOf(grant, true)} puede usar`
+          : `Change what ${nameOf(grant)} can use`
+      }
+      description={
+        isEs
+          ? "El cambio se aplica a su próxima solicitud."
+          : "The change applies to their next request."
+      }
       footer={
         <>
           <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
-            Cancel
+            {isEs ? "Cancelar" : "Cancel"}
           </Button>
           <Button
             disabled={saving}
@@ -876,21 +1040,22 @@ function AccessModal({
               else void save();
             }}
           >
-            Save
+            {isEs ? "Guardar" : "Save"}
           </Button>
         </>
       }
     >
       <div className="space-y-stack-md">
         {error ? <Alert tone="danger">{error}</Alert> : null}
-        <PresetChoice value={preset} onChange={setPreset} />
+        <PresetChoice value={preset} isEs={isEs} onChange={setPreset} />
         {preset === "custom" ? (
-          <CustomEditor value={custom} onChange={setCustom} />
+          <CustomEditor value={custom} isEs={isEs} onChange={setCustom} />
         ) : null}
         {preset !== "custom" && areaLevel(grant.permissions, "journal") > 0 ? (
           <Alert tone="warning" live={false}>
-            A named access level never includes your private journal: saving it
-            stops sharing your journal with them.
+            {isEs
+              ? "Un nivel de acceso predefinido nunca incluye su diario privado: al guardarlo, deja de compartir su diario con esa persona."
+              : "A named access level never includes your private journal: saving it stops sharing your journal with them."}
           </Alert>
         ) : null}
       </div>

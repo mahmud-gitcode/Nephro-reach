@@ -30,7 +30,11 @@ import {
 import { cn } from "@/lib/utils/cn";
 import { LoadMore } from "@/features/profile/LoadMore";
 import { saveErrorText } from "@/features/profile/saveError";
-import { uploadErrorMessage, UploadError } from "@/lib/api/upload";
+import {
+  uploadErrorMessage,
+  UploadError,
+  type UploadErrorReason,
+} from "@/lib/api/upload";
 import {
   canRetry,
   errorMessageFor,
@@ -94,6 +98,20 @@ import type {
    Below `xl` the rail folds under the panes; below `lg` the list and the
    thread take turns, with a back button returning to the list.
    ========================================================================== */
+
+/** lib/api/upload's refusals, in Spanish, by reason. */
+const UPLOAD_ERROR_ES: Record<UploadErrorReason, string> = {
+  type_not_allowed:
+    "Este tipo de archivo no se puede subir. Usa una foto, un PDF, un documento, un video o un audio.",
+  too_large: "Este archivo pesa más de 10 MB.",
+  empty: "Este archivo está vacío.",
+  bad_upload_url: "La carga no pudo empezar. Inténtalo de nuevo.",
+  storage_failed: "La carga no terminó. Inténtalo de nuevo.",
+};
+
+function uploadErrorText(error: UploadError, isEs: boolean): string {
+  return isEs ? UPLOAD_ERROR_ES[error.reason] : uploadErrorMessage(error);
+}
 
 /** The centre's own number, shown where a member may need a human now. */
 const URGENT_PHONE = "(803) 555-0187";
@@ -366,7 +384,7 @@ export default function MemberMessages() {
           title={isEs ? "Tu mensaje no se envió" : "Your message was not sent"}
         >
           {writeError instanceof UploadError
-            ? uploadErrorMessage(writeError)
+            ? uploadErrorText(writeError, isEs)
             : saveErrorText(writeError, lang)}
         </Alert>
       ) : null}
@@ -608,7 +626,7 @@ export default function MemberMessages() {
           sendError={
             messaging.start.error
               ? messaging.start.error instanceof UploadError
-                ? uploadErrorMessage(messaging.start.error)
+                ? uploadErrorText(messaging.start.error, isEs)
                 : saveErrorText(messaging.start.error, lang)
               : undefined
           }

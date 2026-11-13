@@ -247,9 +247,9 @@ export function missedEntry(
 }
 
 /** "Wednesday, Jun 24, 2026". */
-export function displayDate(iso: string): string {
+export function displayDate(iso: string, isEs = false): string {
   const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("en-US", {
+  return new Date(y, m - 1, d).toLocaleDateString(isEs ? "es-US" : "en-US", {
     weekday: "long",
     month: "short",
     day: "numeric",

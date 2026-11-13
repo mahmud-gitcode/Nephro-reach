@@ -209,7 +209,11 @@ export default function JourneyDayList({
         </p>
         <Progress
           value={overallPercent}
-          label={`${completedCount} of ${totalDays} complete`}
+          label={
+            isEs
+              ? `${completedCount} de ${totalDays} completados`
+              : `${completedCount} of ${totalDays} complete`
+          }
           tone="success"
           className="mt-stack-sm"
         />

@@ -8,11 +8,13 @@ import { PageTitle } from "@/components/layout/PageTitle";
 import { signOut } from "@/lib/data/session";
 import { invitationErrorKey } from "@/features/portal/InvitationPage";
 import { usePortalText } from "@/features/portal/portalText";
+import { useLanguageCode } from "@/context/LanguageContext";
 import {
-  AREA_LABELS,
-  LEVEL_LABELS,
-  PRESET_LABELS,
+  areaLabel,
   areaLevel,
+  levelLabel,
+  presetLabel,
+  relationshipLabel,
   type CaregivingPatient,
 } from "./caregivers.mapping";
 import { CAREGIVER_AREAS } from "./caregivers.api";
@@ -35,7 +37,13 @@ import { PatientAvatar } from "./CaregiverBar";
 
 const HREF = "/dashboard/caregiver";
 
-function SharedAreas({ patient }: { patient: CaregivingPatient }) {
+function SharedAreas({
+  patient,
+  isEs,
+}: {
+  patient: CaregivingPatient;
+  isEs: boolean;
+}) {
   const open = CAREGIVER_AREAS.filter(
     (a) => areaLevel(patient.permissions, a) > 0,
   );
@@ -43,14 +51,20 @@ function SharedAreas({ patient }: { patient: CaregivingPatient }) {
   return (
     <span className="block text-caption text-fg-muted">
       {open.length === 0
-        ? "Nothing shared yet"
+        ? isEs
+          ? "Aún no se ha compartido nada"
+          : "Nothing shared yet"
         : open
             .map(
               (a) =>
-                `${AREA_LABELS[a]} (${LEVEL_LABELS[areaLevel(patient.permissions, a)].toLowerCase()})`,
+                `${areaLabel(a, isEs)} (${levelLabel(areaLevel(patient.permissions, a), isEs).toLowerCase()})`,
             )
             .join(", ")}
-      {journal ? ", private journal (view)" : ""}
+      {journal
+        ? isEs
+          ? ", diario privado (ver)"
+          : ", private journal (view)"
+        : ""}
     </span>
   );
 }
@@ -62,6 +76,7 @@ export default function CaregiverHome() {
   const leave = useLeaveCaregiving();
   const router = useRouter();
   const t = usePortalText();
+  const isEs = useLanguageCode() === "ES";
   const [leaving, setLeaving] = useState<CaregivingPatient | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -81,7 +96,9 @@ export default function CaregiverHome() {
 
       {invites.invitations.length > 0 ? (
         <Card>
-          <h2 className="text-heading-5 text-fg">Invitations</h2>
+          <h2 className="text-heading-5 text-fg">
+            {isEs ? "Invitaciones" : "Invitations"}
+          </h2>
           <ul className="mt-stack-md divide-y divide-line">
             {invites.invitations.map((inv) => (
               <li
@@ -89,7 +106,20 @@ export default function CaregiverHome() {
                 className="flex flex-col gap-stack-sm py-stack-sm sm:flex-row sm:items-center sm:justify-between"
               >
                 <p className="text-body-sm text-fg">
-                  {inv.kind === "STAFF" ? (
+                  {isEs ? (
+                    inv.kind === "STAFF" ? (
+                      <>
+                        <strong>{inv.organizationName}</strong> lo invitó a
+                        unirse como {inv.role}.
+                      </>
+                    ) : (
+                      <>
+                        <strong>{inv.inviterFirstName ?? "Un paciente"}</strong>{" "}
+                        lo invitó a ser su cuidador (
+                        {presetLabel(inv.preset ?? "", true)}).
+                      </>
+                    )
+                  ) : inv.kind === "STAFF" ? (
                     <>
                       <strong>{inv.organizationName}</strong> invited you to
                       join as {inv.role}.
@@ -98,7 +128,7 @@ export default function CaregiverHome() {
                     <>
                       <strong>{inv.inviterFirstName ?? "A patient"}</strong>{" "}
                       invited you to be their caregiver (
-                      {PRESET_LABELS[inv.preset ?? ""] ?? inv.preset}).
+                      {presetLabel(inv.preset ?? "") || inv.preset}).
                     </>
                   )}
                 </p>
@@ -114,7 +144,7 @@ export default function CaregiverHome() {
                       )
                     }
                   >
-                    Decline
+                    {isEs ? "Rechazar" : "Decline"}
                   </Button>
                   <Button
                     leadingIcon={<Check />}
@@ -143,7 +173,7 @@ export default function CaregiverHome() {
                       )
                     }
                   >
-                    Accept
+                    {isEs ? "Aceptar" : "Accept"}
                   </Button>
                 </div>
               </li>
@@ -155,18 +185,27 @@ export default function CaregiverHome() {
       {patients.length === 0 && invites.invitations.length === 0 ? (
         <EmptyState
           icon={<HandHeart />}
-          title="No one has invited you yet"
-          description="When a patient invites you by email, their invitation appears here."
+          title={
+            isEs ? "Nadie lo ha invitado todavía" : "No one has invited you yet"
+          }
+          description={
+            isEs
+              ? "Cuando un paciente lo invite por correo electrónico, su invitación aparecerá aquí."
+              : "When a patient invites you by email, their invitation appears here."
+          }
         />
       ) : null}
 
       {patients.length > 0 ? (
         <Card>
           {/* An h2 under the page's h1 (CardHeader is an h3). */}
-          <h2 className="text-heading-5 text-fg">People you care for</h2>
+          <h2 className="text-heading-5 text-fg">
+            {isEs ? "Personas que usted cuida" : "People you care for"}
+          </h2>
           <p className="mt-stack-xs text-body-sm text-fg-muted">
-            Open a patient to use NephroReach for them. You can switch at any
-            time from the bar at the top of every page.
+            {isEs
+              ? "Abra un paciente para usar NephroReach en su nombre. Puede cambiar en cualquier momento desde la barra en la parte superior de cada página."
+              : "Open a patient to use NephroReach for them. You can switch at any time from the bar at the top of every page."}
           </p>
           <ul className="mt-stack-md space-y-stack-xs">
             {patients.map((p) => {
@@ -182,13 +221,16 @@ export default function CaregiverHome() {
                       <span className="flex items-center gap-inline-sm text-label-lg text-fg">
                         <span className="truncate">{p.patientName}</span>
                         {current ? (
-                          <Badge tone="success">Open now</Badge>
+                          <Badge tone="success">
+                            {isEs ? "Abierto ahora" : "Open now"}
+                          </Badge>
                         ) : null}
                       </span>
                       <span className="block text-caption text-fg-muted">
-                        {p.relationship} · {PRESET_LABELS[p.preset] ?? p.preset}
+                        {relationshipLabel(p.relationship, isEs)} ·{" "}
+                        {presetLabel(p.preset, isEs)}
                       </span>
-                      <SharedAreas patient={p} />
+                      <SharedAreas patient={p} isEs={isEs} />
                     </span>
                   </div>
                   <div className="flex shrink-0 gap-inline-sm">
@@ -199,15 +241,25 @@ export default function CaregiverHome() {
                       leadingIcon={<LogOut />}
                       onClick={() => setLeaving(p)}
                     >
-                      Leave
+                      {isEs ? "Dejar" : "Leave"}
                     </Button>
                     <Button
                       size="small"
                       trailingIcon={<ArrowRight />}
-                      aria-label={`Open ${p.patientName}`}
+                      aria-label={
+                        isEs
+                          ? `Abrir ${p.patientName}`
+                          : `Open ${p.patientName}`
+                      }
                       onClick={() => open(p)}
                     >
-                      {current ? "Continue" : "Open"}
+                      {current
+                        ? isEs
+                          ? "Continuar"
+                          : "Continue"
+                        : isEs
+                          ? "Abrir"
+                          : "Open"}
                     </Button>
                   </div>
                 </li>
@@ -222,8 +274,16 @@ export default function CaregiverHome() {
           open
           size="small"
           onClose={() => setLeaving(null)}
-          title={`Stop caring for ${leaving.patientName}?`}
-          description="You lose access to their account straight away. They can invite you again later."
+          title={
+            isEs
+              ? `¿Dejar de cuidar a ${leaving.patientName}?`
+              : `Stop caring for ${leaving.patientName}?`
+          }
+          description={
+            isEs
+              ? "Perderá el acceso a su cuenta de inmediato. Podrá invitarlo de nuevo más adelante."
+              : "You lose access to their account straight away. They can invite you again later."
+          }
           footer={
             <>
               <Button
@@ -231,7 +291,7 @@ export default function CaregiverHome() {
                 appearance="fill-stroke"
                 onClick={() => setLeaving(null)}
               >
-                Cancel
+                {isEs ? "Cancelar" : "Cancel"}
               </Button>
               <Button
                 variant="danger"
@@ -240,11 +300,16 @@ export default function CaregiverHome() {
                   const target = leaving;
                   setLeaving(null);
                   leave.mutate(target.grantId, {
-                    onError: () => setError("That did not work. Try again."),
+                    onError: () =>
+                      setError(
+                        isEs
+                          ? "Eso no funcionó. Intente de nuevo."
+                          : "That did not work. Try again.",
+                      ),
                   });
                 }}
               >
-                Leave
+                {isEs ? "Dejar" : "Leave"}
               </Button>
             </>
           }

@@ -16,6 +16,7 @@ import {
   Skeleton,
   Textarea,
 } from "@/components/ui";
+import { useLanguageCode } from "@/context/LanguageContext";
 import { isApiError } from "@/lib/api/client";
 import { orgKey } from "@/lib/data/queryKeys";
 import { useOptionalAuth } from "@/features/auth/AuthContext";
@@ -34,6 +35,7 @@ import {
   orderColleagues,
   sendTeamMessage,
   SOMEONE,
+  SOMEONE_ES,
   TEAM_MESSAGE_MAX,
   viewTeamMessages,
   type Colleague,
@@ -57,16 +59,24 @@ import {
 const STAFF_PAGE = { page: 1, limit: 150 } as const;
 
 const NOT_AVAILABLE_ID = "team-messages-not-available";
-const NOT_AVAILABLE =
-  "Not available yet: starting a message needs the office's staff list, which your role cannot view. You can reply to messages sent to you.";
+const NOT_AVAILABLE = {
+  en: "Not available yet: starting a message needs the office's staff list, which your role cannot view. You can reply to messages sent to you.",
+  es: "Aún no disponible: para iniciar un mensaje se necesita la lista del personal del consultorio, que su rol no puede ver. Puede responder a los mensajes que le envíen.",
+};
 /* Why "Message a Physician" is disabled in the other cases (QA-SEC P15c
    round 2, L1): a disabled button always says why. */
-const READ_ONLY =
-  "Your role can read team messages but not send them. Ask the account owner if you need to write to colleagues.";
-const NO_COLLEAGUE =
-  "No other active colleague in this office to message yet. You can reply to messages sent to you.";
-const STAFF_UNREAD =
-  "The office's staff list did not load, so no colleague can be chosen right now. You can reply to messages sent to you.";
+const READ_ONLY = {
+  en: "Your role can read team messages but not send them. Ask the account owner if you need to write to colleagues.",
+  es: "Su rol puede leer los mensajes del equipo, pero no enviarlos. Pídale permiso al propietario de la cuenta si necesita escribir a sus colegas.",
+};
+const NO_COLLEAGUE = {
+  en: "No other active colleague in this office to message yet. You can reply to messages sent to you.",
+  es: "Todavía no hay otro colega activo en este consultorio a quien escribir. Puede responder a los mensajes que le envíen.",
+};
+const STAFF_UNREAD = {
+  en: "The office's staff list did not load, so no colleague can be chosen right now. You can reply to messages sent to you.",
+  es: "La lista del personal del consultorio no se cargó, así que por ahora no se puede elegir a un colega. Puede responder a los mensajes que le envíen.",
+};
 
 function useTeamMessages(orgId: string | null) {
   const queryClient = useQueryClient();
@@ -104,7 +114,11 @@ function useTeamMessages(orgId: string | null) {
 }
 
 /** The office's active colleagues, when this role may read the staff list. */
-function useColleagues(orgId: string | null, allowed: boolean) {
+function useColleagues(
+  orgId: string | null,
+  allowed: boolean,
+  someone: string = SOMEONE,
+) {
   const query = useQuery({
     queryKey: orgId
       ? staffKeys.staff(orgId, STAFF_PAGE)
@@ -116,7 +130,7 @@ function useColleagues(orgId: string | null, allowed: boolean) {
     .filter((m) => m.status === "ACTIVE")
     .map((m) => ({
       userId: m.userId,
-      name: m.name ?? m.email ?? SOMEONE,
+      name: m.name ?? m.email ?? someone,
       role: m.role,
     }));
   return {
@@ -128,19 +142,23 @@ function useColleagues(orgId: string | null, allowed: boolean) {
 
 export function TeamMessages() {
   const user = useOptionalAuth()?.user;
+  const isEs = useLanguageCode() === "ES";
+  const lang = isEs ? "es" : "en";
+  const someone = isEs ? SOMEONE_ES : SOMEONE;
   const { orgId } = useOfficeOrg();
   const { permissions } = useAdminContext();
   const canSend = canLevel(permissions, "team_messages", 2);
   const canListStaff = canLevel(permissions, "staff", 1);
   const team = useTeamMessages(orgId);
-  const staff = useColleagues(orgId, canListStaff);
+  const staff = useColleagues(orgId, canListStaff, someone);
   const [writing, setWriting] = useState<{ to: string } | null>(null);
   if (!user || !orgId) return null;
 
   const me = {
     userId: user.id,
     name: user.name,
-    role: user.staffRole ?? "Account owner",
+    role:
+      user.staffRole ?? (isEs ? "Propietario de la cuenta" : "Account owner"),
   };
   const colleagues = orderColleagues(
     staff.colleagues.filter((c) => c.userId !== me.userId),
@@ -149,6 +167,7 @@ export function TeamMessages() {
     team.list.data?.items ?? [],
     me,
     staff.colleagues,
+    someone,
   );
   const unread = (team.unread.data?.items ?? []).length;
   const notShared =
@@ -160,14 +179,14 @@ export function TeamMessages() {
     ? null
     : !canSend
       ? canLevel(permissions, "team_messages", 1)
-        ? READ_ONLY
+        ? READ_ONLY[lang]
         : null
       : !canListStaff
-        ? NOT_AVAILABLE
+        ? NOT_AVAILABLE[lang]
         : staff.failed
-          ? STAFF_UNREAD
+          ? STAFF_UNREAD[lang]
           : !staff.isPending && colleagues.length === 0
-            ? NO_COLLEAGUE
+            ? NO_COLLEAGUE[lang]
             : null;
   const writeError = team.send.error ?? team.markRead.error;
 
@@ -175,14 +194,28 @@ export function TeamMessages() {
     <Card as="section" padding="small">
       <div className="mb-stack-lg flex flex-wrap items-start justify-between gap-inline-lg">
         <div className="min-w-0">
-          <h2 className="text-heading-4 text-fg">Team Messages</h2>
+          <h2 className="text-heading-4 text-fg">
+            {isEs ? "Mensajes del equipo" : "Team Messages"}
+          </h2>
           <p className="mt-stack-xs text-body-sm text-fg-muted">
-            Message the physicians and colleagues in your office. Patients
-            can&apos;t message physicians directly.
+            {isEs ? (
+              "Envíe mensajes a los médicos y colegas de su consultorio. Los pacientes no pueden enviar mensajes directamente a los médicos."
+            ) : (
+              <>
+                Message the physicians and colleagues in your office. Patients
+                can&apos;t message physicians directly.
+              </>
+            )}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-inline-md">
-          {unread > 0 ? <Badge tone="info">{unread} new</Badge> : null}
+          {unread > 0 ? (
+            <Badge tone="info">
+              {isEs
+                ? `${unread} ${unread === 1 ? "nuevo" : "nuevos"}`
+                : `${unread} new`}
+            </Badge>
+          ) : null}
           <Button
             size="small"
             variant="neutral"
@@ -192,7 +225,7 @@ export function TeamMessages() {
             aria-describedby={startReason ? NOT_AVAILABLE_ID : undefined}
             onClick={() => setWriting({ to: colleagues[0]?.userId ?? "" })}
           >
-            Message a Physician
+            {isEs ? "Escribir a un médico" : "Message a Physician"}
           </Button>
           {unread > 0 ? (
             <Button
@@ -202,7 +235,7 @@ export function TeamMessages() {
               disabled={team.markRead.isPending}
               onClick={() => team.markRead.mutate()}
             >
-              Mark read
+              {isEs ? "Marcar como leídos" : "Mark read"}
             </Button>
           ) : null}
         </div>
@@ -225,7 +258,7 @@ export function TeamMessages() {
             team.markRead.reset();
           }}
         >
-          {actionErrorText(writeError)}
+          {actionErrorText(writeError, isEs)}
         </Alert>
       ) : null}
 
@@ -233,8 +266,12 @@ export function TeamMessages() {
         <ErrorState
           title={
             notShared
-              ? "Team messages are not available to your role"
-              : "Team messages could not be loaded"
+              ? isEs
+                ? "Los mensajes del equipo no están disponibles para su rol"
+                : "Team messages are not available to your role"
+              : isEs
+                ? "Los mensajes del equipo no se cargaron"
+                : "Team messages could not be loaded"
           }
           error={team.list.error}
           onRetry={() => void team.list.refetch()}
@@ -244,8 +281,14 @@ export function TeamMessages() {
       ) : mine.length === 0 ? (
         <EmptyState
           variant="bare"
-          title="No team messages yet"
-          description="Messages between you and your office's physicians appear here."
+          title={
+            isEs ? "Aún no hay mensajes del equipo" : "No team messages yet"
+          }
+          description={
+            isEs
+              ? "Aquí aparecen los mensajes entre usted y los médicos de su consultorio."
+              : "Messages between you and your office's physicians appear here."
+          }
         />
       ) : (
         <ul className="divide-y divide-line-subtle">
@@ -263,7 +306,7 @@ export function TeamMessages() {
                   {m.to}
                   {m.isNew ? (
                     <Badge tone="info" className="ml-inline-sm">
-                      New
+                      {isEs ? "Nuevo" : "New"}
                     </Badge>
                   ) : null}
                 </p>
@@ -271,7 +314,7 @@ export function TeamMessages() {
                   {m.body}
                 </p>
                 <p className="mt-stack-xs text-caption text-fg-muted">
-                  {new Date(m.sentAt).toLocaleString("en-US", {
+                  {new Date(m.sentAt).toLocaleString(isEs ? "es-US" : "en-US", {
                     month: "short",
                     day: "numeric",
                     hour: "numeric",
@@ -285,10 +328,12 @@ export function TeamMessages() {
                   variant="neutral"
                   appearance="fill-stroke"
                   leadingIcon={<Reply aria-hidden="true" />}
-                  aria-label={`Reply to ${m.from}`}
+                  aria-label={
+                    isEs ? `Responder a ${m.from}` : `Reply to ${m.from}`
+                  }
                   onClick={() => setWriting({ to: m.fromId })}
                 >
-                  Reply
+                  {isEs ? "Responder" : "Reply"}
                 </Button>
               ) : null}
             </li>
@@ -314,7 +359,7 @@ export function TeamMessages() {
                     value: writing.to,
                     label:
                       mine.find((m) => m.fromId === writing.to)?.from ??
-                      SOMEONE,
+                      someone,
                   },
                 ]),
           ]}
@@ -345,24 +390,33 @@ function WriteModal({
   onSend: (to: string, body: string) => void;
   onClose: () => void;
 }) {
+  const isEs = useLanguageCode() === "ES";
   const [to, setTo] = useState(initialTo);
   const [body, setBody] = useState("");
   const [tried, setTried] = useState(false);
   const error = !body.trim()
-    ? "Write your message."
+    ? isEs
+      ? "Escriba su mensaje."
+      : "Write your message."
     : body.trim().length > TEAM_MESSAGE_MAX
-      ? `Keep it under ${TEAM_MESSAGE_MAX} characters.`
+      ? isEs
+        ? `Use menos de ${TEAM_MESSAGE_MAX} caracteres.`
+        : `Keep it under ${TEAM_MESSAGE_MAX} characters.`
       : undefined;
   return (
     <Modal
       open
       onClose={onClose}
-      title="Team Message"
-      description="Only staff in your office can read it."
+      title={isEs ? "Mensaje del equipo" : "Team Message"}
+      description={
+        isEs
+          ? "Solo el personal de su consultorio puede leerlo."
+          : "Only staff in your office can read it."
+      }
       footer={
         <>
           <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
-            Cancel
+            {isEs ? "Cancelar" : "Cancel"}
           </Button>
           <Button
             leadingIcon={<Send aria-hidden="true" />}
@@ -373,13 +427,13 @@ function WriteModal({
               onSend(to, body.trim());
             }}
           >
-            Send
+            {isEs ? "Enviar" : "Send"}
           </Button>
         </>
       }
     >
       <div className="space-y-stack-md">
-        <FormField label="To" required>
+        <FormField label={isEs ? "Para" : "To"} required>
           {(field) => (
             <Select
               {...field}
@@ -394,7 +448,11 @@ function WriteModal({
             </Select>
           )}
         </FormField>
-        <FormField label="Message" required error={tried ? error : undefined}>
+        <FormField
+          label={isEs ? "Mensaje" : "Message"}
+          required
+          error={tried ? error : undefined}
+        >
           {(field) => (
             <Textarea
               {...field}

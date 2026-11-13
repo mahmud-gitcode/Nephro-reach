@@ -13,11 +13,13 @@ import {
 } from "@/components/ui";
 import { CAREGIVER_HOME } from "@/features/auth/auth";
 import { useAuth } from "@/features/auth/AuthContext";
+import { useLanguageCode } from "@/context/LanguageContext";
 import { availableContexts } from "@/features/auth/auth.mapping";
 import { labelFor } from "@/features/portal/portalContext";
 import { usePortalText } from "@/features/portal/portalText";
 import { useDismiss } from "@/lib/utils/useDismiss";
 import { cn } from "@/lib/utils/cn";
+import { relationshipLabel } from "./caregivers.mapping";
 import { useCaregiverView } from "./useCaregivers";
 
 /* ==========================================================================
@@ -98,6 +100,7 @@ function PortalLine() {
 
 export function CaregiverBar() {
   const { user } = useAuth();
+  const isEs = useLanguageCode() === "ES";
   const { grant, patients, choose, isCaregiver } = useCaregiverView();
   const pathname = usePathname();
   const router = useRouter();
@@ -117,18 +120,32 @@ export function CaregiverBar() {
         <Card
           as="section"
           padding="small"
-          aria-label="Patient you are caring for"
+          aria-label={
+            isEs ? "Paciente a quien cuida" : "Patient you are caring for"
+          }
           className="mb-stack-lg flex items-center gap-inline-md"
         >
           <PatientAvatar name={grant.patientName} />
           <div className="min-w-0 flex-1">
-            <p className="text-caption text-fg-muted">You are caring for</p>
+            <p className="text-caption text-fg-muted">
+              {isEs ? "Usted cuida a" : "You are caring for"}
+            </p>
             <p className="truncate text-label-lg text-fg">
               {grant.patientName}
             </p>
             <p className="hidden truncate text-caption text-fg-muted sm:block">
-              Signed in as {user?.name} · changes save to {grant.patientName}
-              &apos;s account, under your name
+              {isEs ? (
+                <>
+                  Sesión iniciada como {user?.name} · los cambios se guardan en
+                  la cuenta de {grant.patientName}, a su nombre
+                </>
+              ) : (
+                <>
+                  Signed in as {user?.name} · changes save to{" "}
+                  {grant.patientName}
+                  &apos;s account, under your name
+                </>
+              )}
             </p>
           </div>
 
@@ -152,21 +169,24 @@ export function CaregiverBar() {
                 onClick={() => setOpen((current) => !current)}
               >
                 <span>
-                  Switch<span className="max-sm:hidden"> patient</span>
+                  {isEs ? "Cambiar" : "Switch"}
+                  <span className="max-sm:hidden">
+                    {isEs ? " de paciente" : " patient"}
+                  </span>
                 </span>
               </Button>
 
               {open ? (
                 <div
                   role="menu"
-                  aria-label="Switch patient"
+                  aria-label={isEs ? "Cambiar de paciente" : "Switch patient"}
                   className={cn(
                     menuStyles,
                     "right-0 w-72 max-w-[calc(100vw-2rem)]",
                   )}
                 >
                   <p className="px-3 pt-1.5 pb-2 text-caption text-fg-muted">
-                    Switch to
+                    {isEs ? "Cambiar a" : "Switch to"}
                   </p>
                   {patients.map((p) => {
                     const current = p.grantId === grant.grantId;
@@ -192,7 +212,7 @@ export function CaregiverBar() {
                             {p.patientName}
                           </span>
                           <span className="block truncate text-caption text-fg-muted">
-                            {p.relationship}
+                            {relationshipLabel(p.relationship, isEs)}
                           </span>
                         </span>
                         {current ? (
@@ -215,7 +235,7 @@ export function CaregiverBar() {
                       )}
                     >
                       <Users aria-hidden="true" className="size-4 shrink-0" />
-                      My Patients
+                      {isEs ? "Mis pacientes" : "My Patients"}
                     </Link>
                   </div>
                 </div>

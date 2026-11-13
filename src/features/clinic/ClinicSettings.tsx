@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 import { PageTitle } from "@/components/layout/PageTitle";
-import { sidebarItems } from "@/components/layout/navigation";
+import { getNavLabel, sidebarItems } from "@/components/layout/navigation";
 import {
   Alert,
   AsyncSection,
@@ -74,7 +74,8 @@ import { DataSharingModal, HipaaModal } from "./SettingsModals";
    two-factor page. The logo has no server field yet (INT-16).
    ========================================================================== */
 
-const NOT_AVAILABLE = "Not available yet";
+const notAvailable = (isEs: boolean) =>
+  isEs ? "Aún no disponible" : "Not available yet";
 
 /* The landing page can be any screen in the office's own sidebar, so the
    list is read from the sidebar rather than copied. */
@@ -156,6 +157,9 @@ function OrganizationProfileCard({
 }) {
   /* Null until the first keystroke, so the form shows what is stored until
      someone actually edits it. */
+  const { language } = useLanguage();
+  const isEs = language === "ES";
+  const NOT_AVAILABLE = notAvailable(isEs);
   const [draft, setDraft] = useState<OrganizationProfile | null>(null);
   const [attempted, setAttempted] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
@@ -163,7 +167,7 @@ function OrganizationProfileCard({
   const profile = draft ?? saved;
   const patch = draft ? profilePatch(saved, draft) : {};
   const dirty = Object.keys(patch).length > 0;
-  const errors = attempted ? validateProfile(profile) : {};
+  const errors = attempted ? validateProfile(profile, isEs) : {};
   const knownZone = TIME_ZONES.some((zone) => zone.iana === profile.timeZone);
 
   function edit(field: keyof OrganizationProfile, value: string) {
@@ -191,12 +195,18 @@ function OrganizationProfileCard({
     <Card as="section" padding="small">
       {/* noValidate: the field errors below say what is wrong in words. */}
       <form onSubmit={save} noValidate>
-        <SectionHeading title="Organization Profile" />
+        <SectionHeading
+          title={isEs ? "Perfil de la organización" : "Organization Profile"}
+        />
 
         <div className="space-y-stack-md">
           <FormField
-            label="Organization Name"
-            hint="Only NephroReach can change the organization name."
+            label={isEs ? "Nombre de la organización" : "Organization Name"}
+            hint={
+              isEs
+                ? "Solo NephroReach puede cambiar el nombre de la organización."
+                : "Only NephroReach can change the organization name."
+            }
           >
             {(props) => (
               <Input
@@ -208,7 +218,10 @@ function OrganizationProfileCard({
               />
             )}
           </FormField>
-          <FormField label="Address" error={errors.address}>
+          <FormField
+            label={isEs ? "Dirección" : "Address"}
+            error={errors.address}
+          >
             {(props) => (
               <Input
                 {...props}
@@ -221,7 +234,7 @@ function OrganizationProfileCard({
             )}
           </FormField>
           <div className="grid gap-stack-md sm:grid-cols-2 xl:grid-cols-1">
-            <FormField label="Phone" error={errors.phone}>
+            <FormField label={isEs ? "Teléfono" : "Phone"} error={errors.phone}>
               {(props) => (
                 <Input
                   {...props}
@@ -235,7 +248,11 @@ function OrganizationProfileCard({
               )}
             </FormField>
             <div ref={emailRef}>
-              <FormField label="Email" required error={errors.email}>
+              <FormField
+                label={isEs ? "Correo electrónico" : "Email"}
+                required
+                error={errors.email}
+              >
                 {(props) => (
                   <Input
                     {...props}
@@ -249,7 +266,7 @@ function OrganizationProfileCard({
               </FormField>
             </div>
           </div>
-          <FormField label="Time Zone">
+          <FormField label={isEs ? "Zona horaria" : "Time Zone"}>
             {(props) => (
               <Select
                 {...props}
@@ -259,12 +276,12 @@ function OrganizationProfileCard({
               >
                 {knownZone ? null : (
                   <option value={profile.timeZone}>
-                    {timeZoneLabel(profile.timeZone)}
+                    {timeZoneLabel(profile.timeZone, isEs)}
                   </option>
                 )}
                 {TIME_ZONES.map((zone) => (
                   <option key={zone.iana} value={zone.iana}>
-                    {zone.label}
+                    {isEs ? zone.labelEs : zone.label}
                   </option>
                 ))}
               </Select>
@@ -272,11 +289,13 @@ function OrganizationProfileCard({
           </FormField>
 
           <div>
-            <p className="text-label-lg text-fg">Logo</p>
+            <p className="text-label-lg text-fg">
+              {isEs ? "Logotipo" : "Logo"}
+            </p>
             <div className="mt-stack-xs flex flex-wrap items-center gap-inline-lg">
               <span
                 role="img"
-                aria-label="Current logo"
+                aria-label={isEs ? "Logotipo actual" : "Current logo"}
                 className="flex h-16 w-16 items-center justify-center rounded-control bg-surface-brand-subtle text-heading-4 text-brand-600"
               >
                 {initials(profile.name) || "?"}
@@ -294,7 +313,7 @@ function OrganizationProfileCard({
                   aria-describedby="logo-not-available"
                 >
                   <Upload className="h-4 w-4" />
-                  Change Logo
+                  {isEs ? "Cambiar logotipo" : "Change Logo"}
                 </Button>
                 <Button
                   type="button"
@@ -305,7 +324,7 @@ function OrganizationProfileCard({
                   title={NOT_AVAILABLE}
                   aria-describedby="logo-not-available"
                 >
-                  Remove
+                  {isEs ? "Quitar" : "Remove"}
                 </Button>
               </div>
               <p
@@ -320,7 +339,7 @@ function OrganizationProfileCard({
 
         <div className="mt-stack-lg flex flex-wrap items-center gap-inline-md border-t border-line-subtle pt-inset-sm">
           <Button type="submit" size="small" disabled={!dirty || saving}>
-            Save Changes
+            {isEs ? "Guardar cambios" : "Save Changes"}
           </Button>
           {draft !== null ? (
             <Button
@@ -330,11 +349,15 @@ function OrganizationProfileCard({
               size="small"
               onClick={cancel}
             >
-              Cancel
+              {isEs ? "Cancelar" : "Cancel"}
             </Button>
           ) : null}
           <p role="status" className="text-body-sm text-fg-muted">
-            {justSaved && !dirty ? "Changes saved." : ""}
+            {justSaved && !dirty
+              ? isEs
+                ? "Cambios guardados."
+                : "Changes saved."
+              : ""}
           </p>
         </div>
       </form>
@@ -351,9 +374,15 @@ function NotificationCard({
   onToggle: (id: NotificationId, on: boolean) => void;
   onEditEmail: () => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   return (
     <Card as="section" padding="small" className="flex flex-col">
-      <SectionHeading title="Notification Preferences" />
+      <SectionHeading
+        title={
+          isEs ? "Preferencias de notificación" : "Notification Preferences"
+        }
+      />
 
       {/* Each switch saves as it flips, and only that toggle is sent. */}
       <ul className="divide-y divide-line-subtle">
@@ -365,9 +394,11 @@ function NotificationCard({
               className="flex items-center justify-between gap-inline-lg py-inset-xs"
             >
               <span id={labelId} className="text-body-sm text-fg">
-                {item.label}
+                {isEs ? item.labelEs : item.label}
                 {"optional" in item ? (
-                  <span className="text-fg-muted"> (optional)</span>
+                  <span className="text-fg-muted">
+                    {isEs ? " (opcional)" : " (optional)"}
+                  </span>
                 ) : null}
               </span>
               <Switch
@@ -384,7 +415,9 @@ function NotificationCard({
       <div className="mt-auto flex items-end justify-between gap-inline-lg border-t border-line-subtle pt-inset-sm">
         <div className="min-w-0">
           <p className="text-body-sm text-fg-muted">
-            Email notifications will be sent to:
+            {isEs
+              ? "Las notificaciones por correo se enviarán a:"
+              : "Email notifications will be sent to:"}
           </p>
           <p className="text-label-md break-all text-fg">
             {settings.profile.email || "—"}
@@ -399,7 +432,7 @@ function NotificationCard({
           size="small"
           onClick={onEditEmail}
         >
-          Edit
+          {isEs ? "Editar" : "Edit"}
         </Button>
       </div>
     </Card>
@@ -413,6 +446,9 @@ function SecurityCard({
   mfaEnabled: boolean;
   mfaHref: string;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
+  const NOT_AVAILABLE = notAvailable(isEs);
   const disabledButton = (label: string, noteId: string) => (
     <Button
       variant="neutral"
@@ -428,21 +464,36 @@ function SecurityCard({
   );
   return (
     <Card as="section" padding="small">
-      <SectionHeading title="Security Settings" />
+      <SectionHeading
+        title={isEs ? "Configuración de seguridad" : "Security Settings"}
+      />
       <ul className="divide-y divide-line-subtle">
         <ActionRow
           icon={<KeyRound />}
-          title="Change Password"
+          title={isEs ? "Cambiar contraseña" : "Change Password"}
           note={NOT_AVAILABLE}
           noteId="security-password-na"
-          action={disabledButton("Change", "security-password-na")}
+          action={disabledButton(
+            isEs ? "Cambiar" : "Change",
+            "security-password-na",
+          )}
         />
         <ActionRow
           icon={<Smartphone />}
-          title="Two-Factor Authentication (2FA)"
+          title={
+            isEs
+              ? "Autenticación de dos factores (2FA)"
+              : "Two-Factor Authentication (2FA)"
+          }
           status={
             <Badge tone={mfaEnabled ? "success" : "neutral"}>
-              {mfaEnabled ? "On" : "Off"}
+              {mfaEnabled
+                ? isEs
+                  ? "Activada"
+                  : "On"
+                : isEs
+                  ? "Desactivada"
+                  : "Off"}
             </Badge>
           }
           action={
@@ -454,23 +505,29 @@ function SecurityCard({
                 size: "small",
               })}
             >
-              {mfaEnabled ? "Manage" : "Enable"}
+              {mfaEnabled
+                ? isEs
+                  ? "Administrar"
+                  : "Manage"
+                : isEs
+                  ? "Activar"
+                  : "Enable"}
             </Link>
           }
         />
         <ActionRow
           icon={<Laptop />}
-          title="Active Sessions"
+          title={isEs ? "Sesiones activas" : "Active Sessions"}
           note={NOT_AVAILABLE}
           noteId="security-sessions-na"
-          action={disabledButton("View", "security-sessions-na")}
+          action={disabledButton(isEs ? "Ver" : "View", "security-sessions-na")}
         />
         <ActionRow
           icon={<Activity />}
-          title="Login Activity"
+          title={isEs ? "Actividad de inicio de sesión" : "Login Activity"}
           note={NOT_AVAILABLE}
           noteId="security-activity-na"
-          action={disabledButton("View", "security-activity-na")}
+          action={disabledButton(isEs ? "Ver" : "View", "security-activity-na")}
         />
       </ul>
     </Card>
@@ -501,6 +558,7 @@ function OfficePreferencesCard({
   landingPages: ReturnType<typeof landingPagesFor>;
 }) {
   const { language, setLanguage } = useLanguage();
+  const isEs = language === "ES";
   const [phone, setPhone] = useState<string | null>(null);
   const [phoneError, setPhoneError] = useState("");
   const shownPhone = phone ?? displayPhone(office.onCallPhone);
@@ -517,7 +575,11 @@ function OfficePreferencesCard({
     if (phone === null) return;
     const e164 = toE164(phone);
     if (e164 === undefined) {
-      setPhoneError("Enter a phone number like (803) 555-0100.");
+      setPhoneError(
+        isEs
+          ? "Ingrese un número de teléfono como (803) 555-0100."
+          : "Enter a phone number like (803) 555-0100.",
+      );
       return;
     }
     setPhoneError("");
@@ -527,9 +589,15 @@ function OfficePreferencesCard({
 
   return (
     <Card as="section" padding="small">
-      <SectionHeading title="Office Preferences" />
+      <SectionHeading
+        title={isEs ? "Preferencias del consultorio" : "Office Preferences"}
+      />
       <div className="space-y-stack-md">
-        <FormField label="Default Landing Page">
+        <FormField
+          label={
+            isEs ? "Página de inicio predeterminada" : "Default Landing Page"
+          }
+        >
           {(props) => (
             <Select
               {...props}
@@ -541,18 +609,18 @@ function OfficePreferencesCard({
             >
               {knownLanding ? null : (
                 <option value={office.landingPage}>
-                  {office.landingPage || "Not set"}
+                  {office.landingPage || (isEs ? "Sin definir" : "Not set")}
                 </option>
               )}
               {landingPages.map((page) => (
                 <option key={page.href} value={page.href}>
-                  {page.label}
+                  {getNavLabel(page.href, page.label, language)}
                 </option>
               ))}
             </Select>
           )}
         </FormField>
-        <FormField label="Items Per Page">
+        <FormField label={isEs ? "Elementos por página" : "Items Per Page"}>
           {(props) => (
             <Select
               {...props}
@@ -568,7 +636,7 @@ function OfficePreferencesCard({
             </Select>
           )}
         </FormField>
-        <FormField label="Date Format">
+        <FormField label={isEs ? "Formato de fecha" : "Date Format"}>
           {(props) => (
             <Select
               {...props}
@@ -584,7 +652,7 @@ function OfficePreferencesCard({
         </FormField>
         {/* Office hours and on-call (client, 2026-10-07). */}
         <div className="grid grid-cols-1 gap-inline-md sm:grid-cols-2">
-          <FormField label="Office Opens">
+          <FormField label={isEs ? "Apertura del consultorio" : "Office Opens"}>
             {(props) => (
               <Input
                 {...props}
@@ -598,7 +666,7 @@ function OfficePreferencesCard({
               />
             )}
           </FormField>
-          <FormField label="Office Closes">
+          <FormField label={isEs ? "Cierre del consultorio" : "Office Closes"}>
             {(props) => (
               <Input
                 {...props}
@@ -614,14 +682,22 @@ function OfficePreferencesCard({
           </FormField>
         </div>
         <p className="text-caption text-fg-muted">
-          Patients who message outside these hours get an automatic reply
-          telling them when the team reviews messages and to call 911 in an
-          emergency.
+          {isEs
+            ? "Los pacientes que envíen mensajes fuera de este horario reciben una respuesta automática que les indica cuándo el equipo revisa los mensajes y que llamen al 911 en caso de emergencia."
+            : "Patients who message outside these hours get an automatic reply telling them when the team reviews messages and to call 911 in an emergency."}
         </p>
         <FormField
-          label="On-Call Nurse Manager Phone"
+          label={
+            isEs
+              ? "Teléfono del gerente de enfermería de guardia"
+              : "On-Call Nurse Manager Phone"
+          }
           error={phoneError || undefined}
-          hint="If an after-hours message is still unread, NephroReach alerts this number. Saved when you leave the field."
+          hint={
+            isEs
+              ? "Si un mensaje fuera de horario sigue sin leer, NephroReach avisa a este número. Se guarda al salir del campo."
+              : "If an after-hours message is still unread, NephroReach alerts this number. Saved when you leave the field."
+          }
         >
           {(props) => (
             <Input
@@ -636,7 +712,7 @@ function OfficePreferencesCard({
           )}
         </FormField>
         {/* The app's own language setting, not a copy of it. */}
-        <FormField label="Language">
+        <FormField label={isEs ? "Idioma" : "Language"}>
           {(props) => (
             <Select
               {...props}
@@ -668,36 +744,59 @@ function DataPrivacyCard({
   onSharing: () => void;
   onHipaa: () => void;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   return (
     <Card as="section" padding="small">
-      <SectionHeading title="Data & Privacy" />
+      <SectionHeading title={isEs ? "Datos y privacidad" : "Data & Privacy"} />
       <div className="grid gap-inset-md lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <ul className="divide-y divide-line-subtle">
           <ActionRow
             icon={<Download />}
-            title="Download Your Data"
-            action={<RowButton label="Download" onClick={onDownload} />}
+            title={isEs ? "Descargar sus datos" : "Download Your Data"}
+            action={
+              <RowButton
+                label={isEs ? "Descargar" : "Download"}
+                onClick={onDownload}
+              />
+            }
           />
           <ActionRow
             icon={<Share2 />}
-            title="Data Sharing Preferences"
-            action={<RowButton label="Manage" onClick={onSharing} />}
+            title={
+              isEs
+                ? "Preferencias para compartir datos"
+                : "Data Sharing Preferences"
+            }
+            action={
+              <RowButton
+                label={isEs ? "Administrar" : "Manage"}
+                onClick={onSharing}
+              />
+            }
           />
           <ActionRow
             icon={<FileLock2 />}
-            title="HIPAA & Security Information"
-            action={<RowButton label="View" onClick={onHipaa} />}
+            title={
+              isEs
+                ? "Información de HIPAA y seguridad"
+                : "HIPAA & Security Information"
+            }
+            action={
+              <RowButton label={isEs ? "Ver" : "View"} onClick={onHipaa} />
+            }
           />
         </ul>
         <Alert
           tone="success"
           live={false}
           icon={<ShieldCheck />}
-          title="Your data is secure."
+          title={isEs ? "Sus datos están seguros." : "Your data is secure."}
           className="self-start"
         >
-          NephroReach uses industry-standard security measures to protect your
-          information.
+          {isEs
+            ? "NephroReach utiliza medidas de seguridad estándar de la industria para proteger su información."
+            : "NephroReach uses industry-standard security measures to protect your information."}
         </Alert>
       </div>
     </Card>
@@ -711,6 +810,8 @@ export default function ClinicSettings({
    *  nephrology office's (client, 2026-10-09). */
   href?: string;
 }) {
+  const { language } = useLanguage();
+  const isEs = language === "ES";
   const office = useClinicSettings();
   const settings = office.settings;
   const emailRef = useRef<HTMLDivElement>(null);
@@ -752,18 +853,20 @@ export default function ClinicSettings({
       {office.saveError ? (
         <Alert
           tone="danger"
-          title="That change was not saved."
+          title={
+            isEs ? "Ese cambio no se guardó." : "That change was not saved."
+          }
           action={
             <Button
               size="small"
               variant="neutral"
               onClick={office.dismissSaveError}
             >
-              Dismiss
+              {isEs ? "Descartar" : "Dismiss"}
             </Button>
           }
         >
-          {actionErrorText(office.saveError)}
+          {actionErrorText(office.saveError, isEs)}
         </Alert>
       ) : null}
 
@@ -772,9 +875,16 @@ export default function ClinicSettings({
         error={office.error}
         errorTitle={errorTitleFor(
           office.error,
-          "Your saved settings could not be loaded.",
+          isEs
+            ? "No se pudo cargar su configuración guardada."
+            : "Your saved settings could not be loaded.",
+          isEs ? "es" : "en",
         )}
-        errorMessage={errorMessageFor(office.error, undefined)}
+        errorMessage={errorMessageFor(
+          office.error,
+          undefined,
+          isEs ? "es" : "en",
+        )}
         onRetry={canRetry(office.error) ? office.refetch : undefined}
         skeleton={<Skeleton height={480} className="rounded-card" />}
       >

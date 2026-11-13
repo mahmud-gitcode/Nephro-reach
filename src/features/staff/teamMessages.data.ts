@@ -86,6 +86,7 @@ export type TeamMessageView = {
 export type Colleague = { userId: string; name: string; role: string };
 
 export const SOMEONE = "A colleague";
+export const SOMEONE_ES = "Un colega";
 
 /** Names the people in each message: the caller is themselves, a colleague
  *  from the staff list, anyone else (no staff list for this role, or a
@@ -94,10 +95,11 @@ export function viewTeamMessages(
   rows: ApiTeamMessage[],
   me: { userId: string; name: string; role: string },
   colleagues: Colleague[],
+  someone: string = SOMEONE,
 ): TeamMessageView[] {
   const byId = new Map(colleagues.map((c) => [c.userId, c]));
   const nameOf = (id: string) =>
-    id === me.userId ? me.name : (byId.get(id)?.name ?? SOMEONE);
+    id === me.userId ? me.name : (byId.get(id)?.name ?? someone);
   const roleOf = (id: string) =>
     id === me.userId ? me.role : (byId.get(id)?.role ?? null);
   return [...rows]

@@ -119,8 +119,8 @@ export function dayLabel(iso: string, now: number, isEs = false): string {
 }
 
 /** The clock time on a bubble. */
-export function timeLabel(iso: string): string {
-  return new Date(iso).toLocaleTimeString(undefined, {
+export function timeLabel(iso: string, isEs = false): string {
+  return new Date(iso).toLocaleTimeString(isEs ? "es" : undefined, {
     hour: "numeric",
     minute: "2-digit",
   });
@@ -143,7 +143,8 @@ export function inboxTimeLabel(
 ): string {
   const locale = isEs ? "es" : undefined;
   const key = localDayKey(iso);
-  if (key === localDayKey(new Date(now).toISOString())) return timeLabel(iso);
+  if (key === localDayKey(new Date(now).toISOString()))
+    return timeLabel(iso, isEs);
   if (key === localDayKey(new Date(now - DAY).toISOString()))
     return isEs ? "Ayer" : "Yesterday";
   const elapsed = now - new Date(iso).getTime();
@@ -158,13 +159,13 @@ export function inboxTimeLabel(
 }
 
 /** The short elapsed form. Kept for anywhere a compact figure is wanted. */
-export function relativeLabel(iso: string, now: number): string {
+export function relativeLabel(iso: string, now: number, isEs = false): string {
   const elapsed = now - new Date(iso).getTime();
-  if (elapsed < MINUTE) return "Just now";
+  if (elapsed < MINUTE) return isEs ? "Justo ahora" : "Just now";
   if (elapsed < HOUR) return `${Math.floor(elapsed / MINUTE)}m`;
   if (elapsed < DAY) return `${Math.floor(elapsed / HOUR)}h`;
   if (elapsed < 7 * DAY) return `${Math.floor(elapsed / DAY)}d`;
-  return new Date(iso).toLocaleDateString(undefined, {
+  return new Date(iso).toLocaleDateString(isEs ? "es" : undefined, {
     day: "numeric",
     month: "short",
   });

@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui";
 import { PageTitle } from "@/components/layout/PageTitle";
+import { useLanguageCode } from "@/context/LanguageContext";
 import {
   canRetry,
   errorMessageFor,
@@ -34,6 +35,7 @@ import {
   educationStatus,
   type EnrollmentStatus,
   type HospitalEnrollment,
+  programNameOf,
 } from "./hospital.data";
 import {
   DayDots,
@@ -61,6 +63,7 @@ import {
 const HREF = "/dashboard/hospital/patients";
 
 export default function HospitalPatients() {
+  const isEs = useLanguageCode() === "ES";
   const canEnroll = useCan("hospital.enroll");
   const canAssign = useCan("hospital.education.assign");
   const [query, setQuery] = useState("");
@@ -103,7 +106,7 @@ export default function HospitalPatients() {
         action={
           canEnroll && canAssign ? (
             <Button leadingIcon={<Plus />} onClick={() => setEnrolling(true)}>
-              Enroll patient
+              {isEs ? "Inscribir paciente" : "Enroll patient"}
             </Button>
           ) : null
         }
@@ -112,41 +115,65 @@ export default function HospitalPatients() {
       <Card padding="none" className="overflow-hidden">
         <div className="flex flex-col gap-inline-md p-card sm:flex-row sm:flex-wrap sm:items-end">
           <SearchField
-            label="Search patients"
-            placeholder="Name or MRN…"
+            label={isEs ? "Buscar pacientes" : "Search patients"}
+            placeholder={isEs ? "Nombre o MRN…" : "Name or MRN…"}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="sm:w-72"
           />
           <Select
-            aria-label="Enrollment status"
+            aria-label={isEs ? "Estado de la inscripción" : "Enrollment status"}
             value={status}
             onChange={(e) => setStatus(e.target.value)}
             className="sm:w-60"
           >
-            <option value="all">All enrollment statuses</option>
-            <option value="admitted">Admitted</option>
-            <option value="discharged">Discharged</option>
-            <option value="withdrawn">Withdrawn</option>
+            <option value="all">
+              {isEs
+                ? "Todos los estados de inscripción"
+                : "All enrollment statuses"}
+            </option>
+            <option value="admitted">
+              {isEs ? "Hospitalizado" : "Admitted"}
+            </option>
+            <option value="discharged">
+              {isEs ? "Dado de alta" : "Discharged"}
+            </option>
+            <option value="withdrawn">{isEs ? "Retirado" : "Withdrawn"}</option>
           </Select>
           <Select
-            aria-label="Education status"
+            aria-label={isEs ? "Estado educativo" : "Education status"}
             value={education}
             onChange={(e) => setEducation(e.target.value)}
             className="sm:w-60"
           >
-            <option value="all">All education statuses</option>
-            <option value="not-started">Not started</option>
-            <option value="in-progress">In progress</option>
-            <option value="completed">Completed</option>
+            <option value="all">
+              {isEs ? "Todos los estados educativos" : "All education statuses"}
+            </option>
+            <option value="not-started">
+              {isEs ? "Sin comenzar" : "Not started"}
+            </option>
+            <option value="in-progress">
+              {isEs ? "En progreso" : "In progress"}
+            </option>
+            <option value="completed">
+              {isEs ? "Completado" : "Completed"}
+            </option>
           </Select>
         </div>
 
         <AsyncSection
           pending={hospital.isPending}
           error={hospital.error}
-          errorTitle={errorTitleFor(hospital.error, "Patients did not load")}
-          errorMessage={errorMessageFor(hospital.error, undefined)}
+          errorTitle={errorTitleFor(
+            hospital.error,
+            isEs ? "Los pacientes no se cargaron" : "Patients did not load",
+            isEs ? "es" : "en",
+          )}
+          errorMessage={errorMessageFor(
+            hospital.error,
+            undefined,
+            isEs ? "es" : "en",
+          )}
           onRetry={canRetry(hospital.error) ? hospital.refetch : undefined}
           isEmpty={rows.length === 0}
           skeleton={
@@ -156,11 +183,15 @@ export default function HospitalPatients() {
           }
           empty={
             <EmptyState
-              title="No patients here"
+              title={isEs ? "No hay pacientes aquí" : "No patients here"}
               description={
                 hospital.enrollments.length === 0
-                  ? "Enroll a patient to start their education."
-                  : "No patient matches these filters."
+                  ? isEs
+                    ? "Inscriba a un paciente para comenzar su educación."
+                    : "Enroll a patient to start their education."
+                  : isEs
+                    ? "Ningún paciente coincide con estos filtros."
+                    : "No patient matches these filters."
               }
             />
           }
@@ -168,16 +199,32 @@ export default function HospitalPatients() {
           <Table minWidth={980}>
             <TableHead>
               <TableRow>
-                <TableHeaderCell>Patient</TableHeaderCell>
-                <TableHeaderCell>Kidney status</TableHeaderCell>
-                <TableHeaderCell>Program</TableHeaderCell>
-                <TableHeaderCell>Enrolled</TableHeaderCell>
-                <TableHeaderCell>Enrollment</TableHeaderCell>
-                <TableHeaderCell>Education</TableHeaderCell>
-                <TableHeaderCell>Access until</TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Paciente" : "Patient"}
+                </TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Estado renal" : "Kidney status"}
+                </TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Programa" : "Program"}
+                </TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Inscrito" : "Enrolled"}
+                </TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Inscripción" : "Enrollment"}
+                </TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Educación" : "Education"}
+                </TableHeaderCell>
+                <TableHeaderCell>
+                  {isEs ? "Acceso hasta" : "Access until"}
+                </TableHeaderCell>
                 {canAssign ? (
                   <TableHeaderCell>
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">
+                      {isEs ? "Acciones" : "Actions"}
+                    </span>
                   </TableHeaderCell>
                 ) : null}
               </TableRow>
@@ -194,9 +241,9 @@ export default function HospitalPatients() {
                   <TableCell>
                     <DiagnosisBadge diagnosis={e.diagnosis} />
                   </TableCell>
-                  <TableCell>{e.programName}</TableCell>
+                  <TableCell>{programNameOf(e, isEs)}</TableCell>
                   <TableCell className="whitespace-nowrap tabular-nums">
-                    {shortDay(e.enrolledAt)}
+                    {shortDay(e.enrolledAt, isEs)}
                   </TableCell>
                   <TableCell>
                     <EnrollmentBadge status={e.status} />
@@ -209,10 +256,14 @@ export default function HospitalPatients() {
                   </TableCell>
                   <TableCell className="whitespace-nowrap tabular-nums">
                     {e.status === "admitted"
-                      ? "While admitted"
+                      ? isEs
+                        ? "Mientras esté hospitalizado"
+                        : "While admitted"
                       : e.status === "withdrawn"
-                        ? "Ended"
-                        : shortDay(e.accessUntil)}
+                        ? isEs
+                          ? "Terminado"
+                          : "Ended"
+                        : shortDay(e.accessUntil, isEs)}
                   </TableCell>
                   {canAssign ? (
                     <TableCell>
@@ -221,7 +272,11 @@ export default function HospitalPatients() {
                         variant="neutral"
                         appearance="fill-stroke"
                         iconOnly
-                        aria-label={`Update ${e.patientName}`}
+                        aria-label={
+                          isEs
+                            ? `Actualizar a ${e.patientName}`
+                            : `Update ${e.patientName}`
+                        }
                         onClick={() => setEditing(e)}
                       >
                         <Pencil />
@@ -241,7 +296,7 @@ export default function HospitalPatients() {
                 disabled={hospital.isLoadingMore}
                 onClick={hospital.loadMore}
               >
-                Show more patients
+                {isEs ? "Ver más pacientes" : "Show more patients"}
               </Button>
             </div>
           ) : null}

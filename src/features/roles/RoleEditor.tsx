@@ -36,11 +36,12 @@ import {
   useStaffAdmin,
 } from "@/features/staff/useStaffAccounts";
 import { adminErrorText } from "@/features/staff/staffErrors";
+import { useLanguageCode } from "@/context/LanguageContext";
 import {
   LEVELS,
-  LEVEL_NAMES,
   SENSITIVE_RESOURCES,
   changedResources,
+  levelName,
   mapLevel,
   permissionsBody,
   resourceLabel,
@@ -62,12 +63,20 @@ import {
    the server is shown as it came.
    ========================================================================== */
 
-function originLabel(role: api.OrgRole): string {
-  if (role.isCustom) return "Custom";
+function originLabel(role: api.OrgRole, isEs = false): string {
+  if (role.isCustom) return isEs ? "Personalizado" : "Custom";
+  if (isEs)
+    return role.isOverridden ? "Predeterminado, modificado" : "Predeterminado";
   return role.isOverridden ? "Built-in, changed" : "Built-in";
 }
 
+function peopleWord(count: number, isEs: boolean): string {
+  if (isEs) return count === 1 ? "persona" : "personas";
+  return count === 1 ? "person" : "people";
+}
+
 export function RoleEditor() {
+  const isEs = useLanguageCode() === "ES";
   const { permissions: mine } = useAdminContext();
   const canRead = canLevel(mine, "roles", 1);
   const canManage = canLevel(mine, "roles", 3);
@@ -102,8 +111,16 @@ export function RoleEditor() {
     return (
       <EmptyState
         icon={<ShieldAlert />}
-        title="Roles are not available to you"
-        description="Your role can't view this organization's roles. Ask an administrator."
+        title={
+          isEs
+            ? "Los roles no están disponibles para usted"
+            : "Roles are not available to you"
+        }
+        description={
+          isEs
+            ? "Su rol no puede ver los roles de esta organización. Consulte a un administrador."
+            : "Your role can't view this organization's roles. Ask an administrator."
+        }
         variant="bare"
       />
     );
@@ -111,8 +128,14 @@ export function RoleEditor() {
   if (roles.error) {
     return (
       <ErrorState
-        title={errorTitleFor(roles.error, "Roles could not be loaded")}
-        message={errorMessageFor(roles.error, undefined)}
+        title={errorTitleFor(
+          roles.error,
+          isEs
+            ? "No se pudieron cargar los roles"
+            : "Roles could not be loaded",
+          isEs ? "es" : "en",
+        )}
+        message={errorMessageFor(roles.error, undefined, isEs ? "es" : "en")}
         onRetry={canRetry(roles.error) ? roles.refetch : undefined}
       />
     );
@@ -138,9 +161,13 @@ export function RoleEditor() {
         ),
       );
       setDraft(null);
-      setNotice(`${role.name} saved. Everyone with this role was signed out.`);
+      setNotice(
+        isEs
+          ? `${role.name} se guardó. Se cerró la sesión de todas las personas con este rol.`
+          : `${role.name} saved. Everyone with this role was signed out.`,
+      );
     } catch (cause) {
-      setError(adminErrorText(cause));
+      setError(adminErrorText(cause, isEs));
     }
   };
 
@@ -158,7 +185,7 @@ export function RoleEditor() {
       ) : null}
 
       <div className="flex flex-wrap items-end gap-inline-md">
-        <FormField label="Role" className="min-w-60 flex-1">
+        <FormField label={isEs ? "Rol" : "Role"} className="min-w-60 flex-1">
           {(field) => (
             <Select
               {...field}
@@ -181,7 +208,7 @@ export function RoleEditor() {
             leadingIcon={<Plus />}
             onClick={() => setCreating(true)}
           >
-            New role
+            {isEs ? "Nuevo rol" : "New role"}
           </Button>
         ) : null}
         {canManage && (role.isCustom || role.isOverridden) ? (
@@ -192,24 +219,34 @@ export function RoleEditor() {
             leadingIcon={role.isCustom ? <Trash2 /> : <RotateCcw />}
             onClick={() => setRemoving(role)}
           >
-            {role.isCustom ? "Delete role" : "Reset to default"}
+            {role.isCustom
+              ? isEs
+                ? "Eliminar rol"
+                : "Delete role"
+              : isEs
+                ? "Restablecer valores predeterminados"
+                : "Reset to default"}
           </Button>
         ) : null}
       </div>
 
       <p className="text-body-sm text-fg-muted">
-        {originLabel(role)} · {role.memberCount}{" "}
-        {role.memberCount === 1 ? "person" : "people"} ·{" "}
+        {originLabel(role, isEs)} · {role.memberCount}{" "}
+        {peopleWord(role.memberCount, isEs)} ·{" "}
         {canManage
-          ? "Levels above your own can't be granted."
-          : "View only: your role can't change roles."}
+          ? isEs
+            ? "No se pueden otorgar niveles superiores al suyo."
+            : "Levels above your own can't be granted."
+          : isEs
+            ? "Solo lectura: su rol no puede cambiar roles."
+            : "View only: your role can't change roles."}
       </p>
 
       <Table minWidth={520}>
         <TableHead>
           <TableRow>
-            <TableHeaderCell>Area</TableHeaderCell>
-            <TableHeaderCell>Level</TableHeaderCell>
+            <TableHeaderCell>{isEs ? "Área" : "Area"}</TableHeaderCell>
+            <TableHeaderCell>{isEs ? "Nivel" : "Level"}</TableHeaderCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -221,15 +258,21 @@ export function RoleEditor() {
               <TableRow key={resource}>
                 <TableCell emphasis>
                   <span className="inline-flex flex-wrap items-center gap-inline-sm">
-                    {resourceLabel(resource)}
+                    {resourceLabel(resource, isEs)}
                     {SENSITIVE_RESOURCES.includes(resource) ? (
-                      <Badge tone="warning">Separate permission</Badge>
+                      <Badge tone="warning">
+                        {isEs ? "Permiso aparte" : "Separate permission"}
+                      </Badge>
                     ) : null}
                   </span>
                 </TableCell>
                 <TableCell>
                   <Select
-                    aria-label={`${resourceLabel(resource)} level`}
+                    aria-label={
+                      isEs
+                        ? `Nivel de ${resourceLabel(resource, isEs)}`
+                        : `${resourceLabel(resource)} level`
+                    }
                     className="w-40"
                     value={String(value)}
                     disabled={
@@ -251,7 +294,7 @@ export function RoleEditor() {
                           options.find((o) => o.level === level)?.disabled
                         }
                       >
-                        {LEVEL_NAMES[level]}
+                        {levelName(level, isEs)}
                       </option>
                     ))}
                   </Select>
@@ -266,7 +309,9 @@ export function RoleEditor() {
         <div className="flex flex-wrap items-center justify-end gap-inline-sm">
           {changes.length > 0 ? (
             <p className="mr-auto text-body-sm text-fg-muted">
-              {changes.length} change{changes.length === 1 ? "" : "s"} not saved
+              {isEs
+                ? `${changes.length} ${changes.length === 1 ? "cambio sin guardar" : "cambios sin guardar"}`
+                : `${changes.length} change${changes.length === 1 ? "" : "s"} not saved`}
             </p>
           ) : null}
           <Button
@@ -275,13 +320,13 @@ export function RoleEditor() {
             disabled={changes.length === 0}
             onClick={() => setDraft(null)}
           >
-            Discard
+            {isEs ? "Descartar" : "Discard"}
           </Button>
           <Button
             disabled={changes.length === 0 || admin.isSaving}
             onClick={() => setConfirming(true)}
           >
-            Save role
+            {isEs ? "Guardar rol" : "Save role"}
           </Button>
         </div>
       ) : null}
@@ -291,8 +336,12 @@ export function RoleEditor() {
           open
           size="small"
           onClose={() => setConfirming(false)}
-          title={`Save ${role.name}?`}
-          description={`${role.memberCount} ${role.memberCount === 1 ? "person" : "people"} with this role will be signed out and sign in again with the new access.`}
+          title={isEs ? `¿Guardar ${role.name}?` : `Save ${role.name}?`}
+          description={
+            isEs
+              ? `Se cerrará la sesión de ${role.memberCount} ${peopleWord(role.memberCount, true)} con este rol, que deberán iniciar sesión de nuevo con el nuevo acceso.`
+              : `${role.memberCount} ${role.memberCount === 1 ? "person" : "people"} with this role will be signed out and sign in again with the new access.`
+          }
           footer={
             <>
               <Button
@@ -300,23 +349,27 @@ export function RoleEditor() {
                 appearance="fill-stroke"
                 onClick={() => setConfirming(false)}
               >
-                Cancel
+                {isEs ? "Cancelar" : "Cancel"}
               </Button>
-              <Button onClick={() => void save()}>Save and sign out</Button>
+              <Button onClick={() => void save()}>
+                {isEs ? "Guardar y cerrar sesiones" : "Save and sign out"}
+              </Button>
             </>
           }
         >
           {!reachable ? (
             <Alert tone="warning" live={false}>
-              Some of these levels are above your own. The server will refuse
-              them.
+              {isEs
+                ? "Algunos de estos niveles son superiores al suyo. El servidor los rechazará."
+                : "Some of these levels are above your own. The server will refuse them."}
             </Alert>
           ) : null}
           <ul className="space-y-stack-xs text-body-sm">
             {changes.map((r) => (
               <li key={r}>
-                {resourceLabel(r)}: {LEVEL_NAMES[mapLevel(original, r) as 0]} →{" "}
-                {LEVEL_NAMES[mapLevel(edited, r) as 0]}
+                {resourceLabel(r, isEs)}:{" "}
+                {levelName(mapLevel(original, r), isEs)} →{" "}
+                {levelName(mapLevel(edited, r), isEs)}
               </li>
             ))}
           </ul>
@@ -341,13 +394,21 @@ export function RoleEditor() {
           onClose={() => setRemoving(null)}
           title={
             removing.isCustom
-              ? `Delete ${removing.name}?`
-              : `Reset ${removing.name} to its default?`
+              ? isEs
+                ? `¿Eliminar ${removing.name}?`
+                : `Delete ${removing.name}?`
+              : isEs
+                ? `¿Restablecer ${removing.name} a sus valores predeterminados?`
+                : `Reset ${removing.name} to its default?`
           }
           description={
             removing.isCustom
-              ? "A role that anyone holds, or that a waiting invitation names, can't be deleted."
-              : "Its levels go back to the built-in default. Everyone with this role will be signed out."
+              ? isEs
+                ? "No se puede eliminar un rol que alguien tenga asignado o que figure en una invitación pendiente."
+                : "A role that anyone holds, or that a waiting invitation names, can't be deleted."
+              : isEs
+                ? "Sus niveles vuelven a los valores predeterminados. Se cerrará la sesión de todas las personas con este rol."
+                : "Its levels go back to the built-in default. Everyone with this role will be signed out."
           }
           footer={
             <>
@@ -356,7 +417,7 @@ export function RoleEditor() {
                 appearance="fill-stroke"
                 onClick={() => setRemoving(null)}
               >
-                Cancel
+                {isEs ? "Cancelar" : "Cancel"}
               </Button>
               <Button
                 variant="danger"
@@ -374,11 +435,17 @@ export function RoleEditor() {
                         : target.name,
                     );
                   } catch (cause) {
-                    setError(adminErrorText(cause));
+                    setError(adminErrorText(cause, isEs));
                   }
                 }}
               >
-                {removing.isCustom ? "Delete role" : "Reset role"}
+                {removing.isCustom
+                  ? isEs
+                    ? "Eliminar rol"
+                    : "Delete role"
+                  : isEs
+                    ? "Restablecer rol"
+                    : "Reset role"}
               </Button>
             </>
           }
@@ -397,6 +464,7 @@ function CreateRoleModal({
   onCreate: (name: string) => Promise<void>;
   onClose: () => void;
 }) {
+  const isEs = useLanguageCode() === "ES";
   const [name, setName] = useState("");
   const [tried, setTried] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -404,23 +472,33 @@ function CreateRoleModal({
   const problem = roleNameProblem(name, taken);
   const text =
     problem === "empty"
-      ? "Enter a name."
+      ? isEs
+        ? "Escriba un nombre."
+        : "Enter a name."
       : problem === "long"
-        ? "At most 60 characters."
+        ? isEs
+          ? "Como máximo 60 caracteres."
+          : "At most 60 characters."
         : problem === "taken"
-          ? "That name is already used."
+          ? isEs
+            ? "Ese nombre ya está en uso."
+            : "That name is already used."
           : undefined;
   return (
     <Modal
       open
       size="small"
       onClose={onClose}
-      title="New role"
-      description="It starts with no access. Set its levels after creating it."
+      title={isEs ? "Nuevo rol" : "New role"}
+      description={
+        isEs
+          ? "Empieza sin acceso. Defina sus niveles después de crearlo."
+          : "It starts with no access. Set its levels after creating it."
+      }
       footer={
         <>
           <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
-            Cancel
+            {isEs ? "Cancelar" : "Cancel"}
           </Button>
           <Button
             disabled={saving}
@@ -433,19 +511,23 @@ function CreateRoleModal({
                 await onCreate(name.trim());
                 onClose();
               } catch (cause) {
-                setError(adminErrorText(cause));
+                setError(adminErrorText(cause, isEs));
               } finally {
                 setSaving(false);
               }
             }}
           >
-            Create role
+            {isEs ? "Crear rol" : "Create role"}
           </Button>
         </>
       }
     >
       {error ? <Alert tone="danger">{error}</Alert> : null}
-      <FormField label="Role name" required error={tried ? text : undefined}>
+      <FormField
+        label={isEs ? "Nombre del rol" : "Role name"}
+        required
+        error={tried ? text : undefined}
+      >
         {(field) => (
           <Input
             {...field}

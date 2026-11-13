@@ -13,6 +13,7 @@ import {
   Input,
   Modal,
 } from "@/components/ui";
+import { useLanguageCode } from "@/context/LanguageContext";
 
 /* ==========================================================================
    Category manager
@@ -40,6 +41,7 @@ export function CategoryManager({
   onArchive: (id: string, archived: boolean) => void;
   onClose: () => void;
 }) {
+  const isEs = useLanguageCode() === "ES";
   const [newEn, setNewEn] = useState("");
   const [newEs, setNewEs] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
@@ -72,18 +74,30 @@ export function CategoryManager({
       open
       size="wide"
       onClose={onClose}
-      title="Topics"
-      description="Members browse Table Talk by these. Add your own at any time."
-      footer={<Button onClick={onClose}>Done</Button>}
+      title={isEs ? "Temas" : "Topics"}
+      description={
+        isEs
+          ? "Los miembros exploran Table Talk por estos temas. Agregue los suyos en cualquier momento."
+          : "Members browse Table Talk by these. Add your own at any time."
+      }
+      footer={<Button onClick={onClose}>{isEs ? "Listo" : "Done"}</Button>}
     >
       <div className="space-y-stack-lg">
         <Card tone="flat" padding="small" className="space-y-stack-md">
-          <h3 className="text-heading-4 text-fg">Add a topic</h3>
+          <h3 className="text-heading-4 text-fg">
+            {isEs ? "Agregar un tema" : "Add a topic"}
+          </h3>
           <div className="flex flex-wrap items-end gap-inline-md">
             <FormField
-              label="Name (English)"
+              label={isEs ? "Nombre (inglés)" : "Name (English)"}
               className="flex-1"
-              error={duplicate ? "That topic already exists." : undefined}
+              error={
+                duplicate
+                  ? isEs
+                    ? "Ese tema ya existe."
+                    : "That topic already exists."
+                  : undefined
+              }
             >
               {(props) => (
                 <Input
@@ -101,8 +115,8 @@ export function CategoryManager({
               )}
             </FormField>
             <FormField
-              label="Name (Spanish)"
-              optionalLabel="optional"
+              label={isEs ? "Nombre (español)" : "Name (Spanish)"}
+              optionalLabel={isEs ? "opcional" : "optional"}
               className="flex-1"
             >
               {(props) => (
@@ -116,7 +130,7 @@ export function CategoryManager({
             </FormField>
             <Button onClick={add} disabled={!newEn.trim() || duplicate}>
               <Plus aria-hidden="true" className="size-4 shrink-0" />
-              Add
+              {isEs ? "Agregar" : "Add"}
             </Button>
           </div>
         </Card>
@@ -133,7 +147,10 @@ export function CategoryManager({
               >
                 {isEditing ? (
                   <div className="flex flex-wrap items-end gap-inline-md">
-                    <FormField label="Name (English)" className="flex-1">
+                    <FormField
+                      label={isEs ? "Nombre (inglés)" : "Name (English)"}
+                      className="flex-1"
+                    >
                       {(props) => (
                         <Input
                           {...props}
@@ -142,7 +159,10 @@ export function CategoryManager({
                         />
                       )}
                     </FormField>
-                    <FormField label="Name (Spanish)" className="flex-1">
+                    <FormField
+                      label={isEs ? "Nombre (español)" : "Name (Spanish)"}
+                      className="flex-1"
+                    >
                       {(props) => (
                         <Input
                           {...props}
@@ -157,14 +177,14 @@ export function CategoryManager({
                         setEditing(null);
                       }}
                     >
-                      Save
+                      {isEs ? "Guardar" : "Save"}
                     </Button>
                     <Button
                       variant="neutral"
                       appearance="fill-stroke"
                       onClick={() => setEditing(null)}
                     >
-                      Cancel
+                      {isEs ? "Cancelar" : "Cancel"}
                     </Button>
                   </div>
                 ) : (
@@ -181,11 +201,19 @@ export function CategoryManager({
                         <p className="text-body-sm text-fg-muted">
                           {category.labelEs}
                           {" · "}
-                          {count} episode{count === 1 ? "" : "s"}
+                          {isEs ? (
+                            `${count} episodio${count === 1 ? "" : "s"}`
+                          ) : (
+                            <>
+                              {count} episode{count === 1 ? "" : "s"}
+                            </>
+                          )}
                         </p>
                       </div>
                       {category.archived ? (
-                        <Badge tone="neutral">Archived</Badge>
+                        <Badge tone="neutral">
+                          {isEs ? "Archivado" : "Archived"}
+                        </Badge>
                       ) : null}
                     </div>
 
@@ -204,7 +232,7 @@ export function CategoryManager({
                           aria-hidden="true"
                           className="size-4 shrink-0"
                         />
-                        Rename
+                        {isEs ? "Cambiar nombre" : "Rename"}
                       </Button>
                       <Button
                         size="small"
@@ -220,7 +248,7 @@ export function CategoryManager({
                               aria-hidden="true"
                               className="size-4 shrink-0"
                             />
-                            Restore
+                            {isEs ? "Restaurar" : "Restore"}
                           </>
                         ) : (
                           <>
@@ -228,7 +256,7 @@ export function CategoryManager({
                               aria-hidden="true"
                               className="size-4 shrink-0"
                             />
-                            Archive
+                            {isEs ? "Archivar" : "Archive"}
                           </>
                         )}
                       </Button>
@@ -241,8 +269,9 @@ export function CategoryManager({
         </ul>
 
         <Alert tone="info">
-          Archiving hides a topic from the filters and from new episodes.
-          Episodes already using it keep it, so nothing loses its topic.
+          {isEs
+            ? "Archivar oculta un tema de los filtros y de los episodios nuevos. Los episodios que ya lo usan lo conservan, así que ninguno pierde su tema."
+            : "Archiving hides a topic from the filters and from new episodes. Episodes already using it keep it, so nothing loses its topic."}
         </Alert>
       </div>
     </Modal>

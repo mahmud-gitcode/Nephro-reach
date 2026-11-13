@@ -29,6 +29,7 @@ import {
   X,
 } from "lucide-react";
 import { collabText } from "@/features/community/collabText";
+import { memberRoleLabel } from "@/features/testimonials/testimonials.rules";
 
 /* Phase 12: the queue is the server's (GET /platform/content/reviews, platform
    content Manage). Approve and decline are its two decisions; a decline needs
@@ -208,7 +209,7 @@ export default function AdminReviewsPage() {
                         {rev.userName}
                       </h3>
                       <span className="rounded-control-small bg-primary-soft px-2.5 py-0.5 text-caption font-bold text-fg-brand">
-                        {rev.role}
+                        {memberRoleLabel(rev.role, isEs)}
                       </span>
                       {rev.personalInfoDetected ? (
                         <Badge tone="warning">

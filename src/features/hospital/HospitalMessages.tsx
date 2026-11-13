@@ -3,6 +3,7 @@
 import React from "react";
 import ClinicMessages from "@/features/clinic/ClinicMessages";
 import type { CareTeamContact } from "@/features/messaging/messaging.types";
+import { useLanguageCode } from "@/context/LanguageContext";
 import { useHospitalOffice } from "./useHospital";
 
 /* ==========================================================================
@@ -17,10 +18,13 @@ import { useHospitalOffice } from "./useHospital";
    ========================================================================== */
 
 export default function HospitalMessages() {
+  const isEs = useLanguageCode() === "ES";
   const { hospitalName } = useHospitalOffice();
   const office: CareTeamContact = {
-    name: hospitalName || "Your hospital",
-    role: "Your Hospital Education Team",
+    name: hospitalName || (isEs ? "Su hospital" : "Your hospital"),
+    role: isEs
+      ? "Su equipo de educación del hospital"
+      : "Your Hospital Education Team",
     kind: "facility",
   };
 

@@ -15,6 +15,7 @@ const state = vi.hoisted(() => ({ saveError: null as unknown }));
 
 vi.mock("@/context/LanguageContext", () => ({
   useLanguage: () => ({ language: "EN", dictionary: null }),
+  useLanguageCode: () => "EN",
 }));
 
 vi.mock("./useEmergencyContact", () => ({

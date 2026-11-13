@@ -23,6 +23,7 @@ import {
   Textarea,
   type BadgeTone,
 } from "@/components/ui";
+import { useLanguageCode } from "@/context/LanguageContext";
 import { isApiError } from "@/lib/api/client";
 import {
   canRetry,
@@ -89,21 +90,50 @@ export const referralTone: Record<ReferralStatus, BadgeTone> = {
   Closed: "neutral",
 };
 
+/** Display text for a referral status; the value sent stays English. */
+export const REFERRAL_STATUS_ES: Record<ReferralStatus, string> = {
+  New: "Nueva",
+  Acknowledged: "Recibida",
+  Scheduled: "Programada",
+  Closed: "Cerrada",
+};
+
+/** Display text for a referral kind; the value sent stays English. */
+export const REFERRAL_KIND_ES: Record<ReferralKind, string> = {
+  "Access Concern": "Inquietud sobre el acceso",
+  "New Access Referral": "Nueva derivación de acceso",
+  "Appointment Request": "Solicitud de cita",
+  "General Message": "Mensaje general",
+};
+
+function statusText(status: ReferralStatus, isEs: boolean) {
+  return isEs ? REFERRAL_STATUS_ES[status] : status;
+}
+
+function kindText(kind: ReferralKind, isEs: boolean) {
+  return isEs ? (REFERRAL_KIND_ES[kind] ?? kind) : kind;
+}
+
 /** Whose screen this is: the access center, or one office. */
 type Side = "access" | ReferralSource;
 
 const focusRing =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
-function findingsLabel(ids: string[]) {
+function findingsLabel(ids: string[], isEs = false) {
   return ids
-    .map((id) => CONCERN_KINDS.find((kind) => kind.id === id)?.en ?? id)
+    .map((id) => {
+      const kind = CONCERN_KINDS.find((k) => k.id === id);
+      return (isEs ? kind?.es : kind?.en) ?? id;
+    })
     .join(", ");
 }
 
 /** The thread's name in a list: its patient, or "General message". */
-function subjectOf(referral: AccessReferral) {
-  return referral.patient?.name || "General message";
+function subjectOf(referral: AccessReferral, isEs = false) {
+  return (
+    referral.patient?.name || (isEs ? "Mensaje general" : "General message")
+  );
 }
 
 /** The office on the other side of the thread from this one. */
@@ -112,16 +142,26 @@ function otherOffice(referral: AccessReferral, side: Side) {
 }
 
 /** Why a send was refused, in words that say what to do. */
-export function referralRefusal(error: unknown, side: Side): string {
+export function referralRefusal(
+  error: unknown,
+  side: Side,
+  isEs = false,
+): string {
   if (isApiError(error, { status: 404 })) {
     if (error.code?.endsWith("referral_patient_not_linked"))
       return side === "access"
-        ? "This patient is not linked to both your center and the office you chose."
-        : "This patient is not linked to your office.";
+        ? isEs
+          ? "Este paciente no está vinculado a su centro y al consultorio que eligió."
+          : "This patient is not linked to both your center and the office you chose."
+        : isEs
+          ? "Este paciente no está vinculado a su consultorio."
+          : "This patient is not linked to your office.";
   }
   return isApiError(error) && error.messages[0]
     ? error.messages[0]
-    : "That did not send. Try again.";
+    : isEs
+      ? "No se envió. Inténtelo de nuevo."
+      : "That did not send. Try again.";
 }
 
 /* ------------------------------------------------------------------ list */
@@ -138,6 +178,7 @@ function ReferralList({
   empty: string;
 }) {
   const now = useNow();
+  const isEs = useLanguageCode() === "ES";
   if (referrals.length === 0) {
     return <p className="text-body-sm text-fg-muted">{empty}</p>;
   }
@@ -164,33 +205,37 @@ function ReferralList({
                       waiting ? "text-fg" : "text-fg-secondary",
                     )}
                   >
-                    {subjectOf(referral)}
+                    {subjectOf(referral, isEs)}
                   </span>
-                  {referral.urgent ? <Badge tone="danger">Urgent</Badge> : null}
+                  {referral.urgent ? (
+                    <Badge tone="danger">{isEs ? "Urgente" : "Urgent"}</Badge>
+                  ) : null}
                 </span>
                 <span className="block text-body-sm text-fg-secondary">
-                  {referral.kind}
+                  {kindText(referral.kind, isEs)}
                   {referral.findings.length > 0
-                    ? ` — ${findingsLabel(referral.findings)}`
+                    ? ` — ${findingsLabel(referral.findings, isEs)}`
                     : ""}
                 </span>
                 <span className="block text-caption text-fg-muted">
                   {side === "access"
                     ? referral.startedByAccess
-                      ? `To ${referral.from.name}`
+                      ? `${isEs ? "Para" : "To"} ${referral.from.name}`
                       : `${referral.from.name}${sentBy ? ` · ${sentBy}` : ""}`
                     : referral.startedByAccess
-                      ? `From ${referral.to.name}`
-                      : `Sent by ${sentBy || referral.from.name}`}
+                      ? `${isEs ? "De" : "From"} ${referral.to.name}`
+                      : `${isEs ? "Enviado por" : "Sent by"} ${sentBy || referral.from.name}`}
                   {" · "}
-                  {messaging.relativeLabel(referral.sentAt, now)}
+                  {messaging.relativeLabel(referral.sentAt, now, isEs)}
                   {referral.replyCount > 0
-                    ? ` · ${referral.replyCount} repl${referral.replyCount === 1 ? "y" : "ies"}`
+                    ? isEs
+                      ? ` · ${referral.replyCount} respuesta${referral.replyCount === 1 ? "" : "s"}`
+                      : ` · ${referral.replyCount} repl${referral.replyCount === 1 ? "y" : "ies"}`
                     : ""}
                 </span>
               </span>
               <Badge tone={referralTone[referral.status]}>
-                {referral.status}
+                {statusText(referral.status, isEs)}
               </Badge>
             </button>
           </li>
@@ -221,13 +266,18 @@ export function ReferralsPanel({
   onSend: () => void;
   onOpen: (id: string) => void;
 }) {
+  const isEs = useLanguageCode() === "ES";
   return (
     <Card as="section" padding="small" className="h-full">
       <div className="mb-stack-sm flex items-center justify-between gap-inline-lg">
         <h2 className="text-heading-4 text-fg">
           {side === "access"
-            ? "Referrals & Requests"
-            : "Access Center Messages"}
+            ? isEs
+              ? "Derivaciones y solicitudes"
+              : "Referrals & Requests"
+            : isEs
+              ? "Mensajes del centro de acceso vascular"
+              : "Access Center Messages"}
         </h2>
         {canSend ? (
           <Button
@@ -237,19 +287,29 @@ export function ReferralsPanel({
             onClick={onSend}
             leadingIcon={<Send aria-hidden="true" />}
           >
-            New
+            {isEs ? "Nuevo" : "New"}
           </Button>
         ) : null}
       </div>
       <p className="mb-stack-md text-caption text-fg-muted">
         {side === "access"
-          ? "Straight from the dialysis center and the nephrology office. Staff only — the patient does not see these."
-          : "Concerns, referrals and messages with the access center. Staff only — the patient does not see these."}
+          ? isEs
+            ? "Directamente del centro de diálisis y del consultorio de nefrología. Solo para el personal: el paciente no los ve."
+            : "Straight from the dialysis center and the nephrology office. Staff only — the patient does not see these."
+          : isEs
+            ? "Inquietudes, derivaciones y mensajes con el centro de acceso vascular. Solo para el personal: el paciente no los ve."
+            : "Concerns, referrals and messages with the access center. Staff only — the patient does not see these."}
       </p>
       {error ? (
         <ErrorState
-          title={errorTitleFor(error, "Referrals could not be loaded")}
-          message={errorMessageFor(error, undefined)}
+          title={errorTitleFor(
+            error,
+            isEs
+              ? "No se pudieron cargar las derivaciones"
+              : "Referrals could not be loaded",
+            isEs ? "es" : "en",
+          )}
+          message={errorMessageFor(error, undefined, isEs ? "es" : "en")}
           error={error}
           onRetry={canRetry(error) ? onRetry : undefined}
         />
@@ -260,8 +320,12 @@ export function ReferralsPanel({
           onOpen={onOpen}
           empty={
             side === "access"
-              ? "No open referrals."
-              : "Nothing open with the access center."
+              ? isEs
+                ? "No hay derivaciones abiertas."
+                : "No open referrals."
+              : isEs
+                ? "No hay nada abierto con el centro de acceso vascular."
+                : "Nothing open with the access center."
           }
         />
       )}
@@ -300,6 +364,7 @@ export function SendReferralModal({
 }) {
   const actions = useReferralActions(orgId);
   const directory = useDirectory();
+  const isEs = useLanguageCode() === "ES";
   /* The access center may start only these two (the server's rule; a
      hint here). */
   const kinds: readonly ReferralKind[] =
@@ -333,9 +398,19 @@ export function SendReferralModal({
   const patientError =
     patient || (general && patientId === "")
       ? undefined
-      : "Choose the patient.";
-  const detailError = detail.trim() ? undefined : "Write your message.";
-  const toError = chosenTo ? undefined : "Choose who it goes to.";
+      : isEs
+        ? "Elija el paciente."
+        : "Choose the patient.";
+  const detailError = detail.trim()
+    ? undefined
+    : isEs
+      ? "Escriba su mensaje."
+      : "Write your message.";
+  const toError = chosenTo
+    ? undefined
+    : isEs
+      ? "Elija el destinatario."
+      : "Choose who it goes to.";
   const targetName = targets.find((t) => t.id === chosenTo)?.name;
 
   function toggle(id: string) {
@@ -348,16 +423,28 @@ export function SendReferralModal({
     <Modal
       open
       onClose={onClose}
-      title={side === "access" ? "New Message" : "Message Access Center"}
+      title={
+        side === "access"
+          ? isEs
+            ? "Nuevo mensaje"
+            : "New Message"
+          : isEs
+            ? "Enviar mensaje al centro de acceso vascular"
+            : "Message Access Center"
+      }
       description={
         side === "access"
-          ? "Goes to the office you choose. The patient does not see it."
-          : `Goes straight to ${targetName ?? "the access center"}. The patient does not see it.`
+          ? isEs
+            ? "Se envía al consultorio que elija. El paciente no lo ve."
+            : "Goes to the office you choose. The patient does not see it."
+          : isEs
+            ? `Se envía directamente a ${targetName ?? "el centro de acceso vascular"}. El paciente no lo ve.`
+            : `Goes straight to ${targetName ?? "the access center"}. The patient does not see it.`
       }
       footer={
         <>
           <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
-            Cancel
+            {isEs ? "Cancelar" : "Cancel"}
           </Button>
           <Button
             leadingIcon={<Send aria-hidden="true" />}
@@ -380,7 +467,7 @@ export function SendReferralModal({
               } else setFailed(true);
             }}
           >
-            Send
+            {isEs ? "Enviar" : "Send"}
           </Button>
         </>
       }
@@ -388,34 +475,51 @@ export function SendReferralModal({
       <div className="space-y-stack-md">
         {failed ? (
           <Alert tone="danger" onDismiss={() => setFailed(null)}>
-            {referralRefusal(actions.error ?? failed, side)}
+            {referralRefusal(actions.error ?? failed, side, isEs)}
           </Alert>
         ) : null}
         {directory.error ? (
           <Alert tone="danger">
             {errorMessageFor(
               directory.error,
-              "The office directory could not be loaded.",
+              isEs
+                ? "No se pudo cargar el directorio de consultorios."
+                : "The office directory could not be loaded.",
+              isEs ? "es" : "en",
             )}
           </Alert>
         ) : null}
         {side === "access" ? (
           <SegmentedChoice
-            label="Send to"
+            label={isEs ? "Enviar a" : "Send to"}
             value={officeKind}
             onChange={(next: ReferralSource) => {
               setOfficeKind(next);
               setToId("");
             }}
             options={[
-              { value: "dialysis", label: "Dialysis Center" },
-              { value: "nephrology", label: "Nephrology Office" },
+              {
+                value: "dialysis",
+                label: isEs ? "Centro de diálisis" : "Dialysis Center",
+              },
+              {
+                value: "nephrology",
+                label: isEs ? "Consultorio de nefrología" : "Nephrology Office",
+              },
             ]}
           />
         ) : null}
         {side === "access" || targets.length !== 1 ? (
           <FormField
-            label={side === "access" ? "Office" : "Access center"}
+            label={
+              side === "access"
+                ? isEs
+                  ? "Consultorio"
+                  : "Office"
+                : isEs
+                  ? "Centro de acceso vascular"
+                  : "Access center"
+            }
             required
             error={tried ? toError : undefined}
           >
@@ -427,7 +531,13 @@ export function SendReferralModal({
               >
                 {targets.length === 0 ? (
                   <option value="">
-                    {directory.isPending ? "Loading…" : "None listed"}
+                    {directory.isPending
+                      ? isEs
+                        ? "Cargando…"
+                        : "Loading…"
+                      : isEs
+                        ? "Ninguno en la lista"
+                        : "None listed"}
                   </option>
                 ) : null}
                 {targets.map((office) => (
@@ -440,7 +550,7 @@ export function SendReferralModal({
           </FormField>
         ) : null}
         <div className="grid gap-stack-md sm:grid-cols-2">
-          <FormField label="Type" required>
+          <FormField label={isEs ? "Tipo" : "Type"} required>
             {(field) => (
               <Select
                 {...field}
@@ -448,13 +558,15 @@ export function SendReferralModal({
                 onChange={(e) => setKind(e.target.value as ReferralKind)}
               >
                 {kinds.map((option) => (
-                  <option key={option}>{option}</option>
+                  <option key={option} value={option}>
+                    {kindText(option, isEs)}
+                  </option>
                 ))}
               </Select>
             )}
           </FormField>
           <FormField
-            label="Patient"
+            label={isEs ? "Paciente" : "Patient"}
             required={!general}
             error={tried ? patientError : undefined}
           >
@@ -466,7 +578,13 @@ export function SendReferralModal({
               >
                 {general || patientId === "" ? (
                   <option value="">
-                    {general ? "No specific patient" : "Choose a patient"}
+                    {general
+                      ? isEs
+                        ? "Ningún paciente específico"
+                        : "No specific patient"
+                      : isEs
+                        ? "Elija un paciente"
+                        : "Choose a patient"}
                   </option>
                 ) : null}
                 {patients.map((p) => (
@@ -483,28 +601,36 @@ export function SendReferralModal({
           <p className="text-caption text-fg-muted">
             {errorMessageFor(
               patientsError,
-              "Your patient list could not be loaded.",
+              isEs
+                ? "No se pudo cargar su lista de pacientes."
+                : "Your patient list could not be loaded.",
+              isEs ? "es" : "en",
             )}
           </p>
         ) : null}
         {kind === "Access Concern" ? (
           <div>
-            <p className="mb-stack-xs text-label-md text-fg">Findings</p>
-            <ChipGroup label="Findings" selection="multiple">
+            <p className="mb-stack-xs text-label-md text-fg">
+              {isEs ? "Hallazgos" : "Findings"}
+            </p>
+            <ChipGroup
+              label={isEs ? "Hallazgos" : "Findings"}
+              selection="multiple"
+            >
               {CONCERN_KINDS.map((option) => (
                 <Chip
                   key={option.id}
                   selected={findings.includes(option.id)}
                   onClick={() => toggle(option.id)}
                 >
-                  {option.en}
+                  {isEs ? option.es : option.en}
                 </Chip>
               ))}
             </ChipGroup>
           </div>
         ) : null}
         <FormField
-          label="Message"
+          label={isEs ? "Mensaje" : "Message"}
           required
           error={tried ? detailError : undefined}
         >
@@ -517,8 +643,12 @@ export function SendReferralModal({
               onChange={(e) => setDetail(e.target.value)}
               placeholder={
                 kind === "Access Concern"
-                  ? "E.g. No thrill or bruit at cannulation this morning. Please evaluate and schedule."
-                  : "Write your message."
+                  ? isEs
+                    ? "Ej.: Sin frémito ni soplo en la canulación de esta mañana. Por favor, evalúe y programe una cita."
+                    : "E.g. No thrill or bruit at cannulation this morning. Please evaluate and schedule."
+                  : isEs
+                    ? "Escriba su mensaje."
+                    : "Write your message."
               }
             />
           )}
@@ -526,8 +656,12 @@ export function SendReferralModal({
         <SwitchRow
           checked={urgent}
           onChange={setUrgent}
-          title="Urgent"
-          description="Puts it at the top of the other office's list."
+          title={isEs ? "Urgente" : "Urgent"}
+          description={
+            isEs
+              ? "Lo coloca al principio de la lista del otro consultorio."
+              : "Puts it at the top of the other office's list."
+          }
         />
       </div>
     </Modal>
@@ -565,15 +699,27 @@ export function ReferralModal({
   const now = useNow();
   const read = useReferral(orgId, referralId);
   const [draft, setDraft] = useState("");
+  const isEs = useLanguageCode() === "ES";
   const referral = read.referral;
 
   if (!referral) {
     return (
-      <Modal open onClose={onClose} size="wide" title="Referral">
+      <Modal
+        open
+        onClose={onClose}
+        size="wide"
+        title={isEs ? "Derivación" : "Referral"}
+      >
         {read.error ? (
           <ErrorState
-            title={errorTitleFor(read.error, "This thread could not be loaded")}
-            message={errorMessageFor(read.error, undefined)}
+            title={errorTitleFor(
+              read.error,
+              isEs
+                ? "No se pudo cargar esta conversación"
+                : "This thread could not be loaded",
+              isEs ? "es" : "en",
+            )}
+            message={errorMessageFor(read.error, undefined, isEs ? "es" : "en")}
             error={read.error}
             onRetry={canRetry(read.error) ? read.refetch : undefined}
           />
@@ -618,9 +764,11 @@ export function ReferralModal({
       open
       onClose={onClose}
       size="wide"
-      title={subjectOf(referral)}
+      title={subjectOf(referral, isEs)}
       description={
-        referral.mrn ? `MRN ${referral.mrn} · ${referral.kind}` : referral.kind
+        referral.mrn
+          ? `MRN ${referral.mrn} · ${kindText(referral.kind, isEs)}`
+          : kindText(referral.kind, isEs)
       }
       footer={
         actionsShown ? (
@@ -634,7 +782,7 @@ export function ReferralModal({
                 if (await actions.setStatus(referral.id, "Closed")) onClose();
               }}
             >
-              Close Thread
+              {isEs ? "Cerrar conversación" : "Close Thread"}
             </Button>
             {referral.status === "New" && referral.waitingOnYou ? (
               <Button
@@ -646,7 +794,7 @@ export function ReferralModal({
                   void actions.setStatus(referral.id, "Acknowledged")
                 }
               >
-                Acknowledge
+                {isEs ? "Confirmar recepción" : "Acknowledge"}
               </Button>
             ) : null}
             {patientId && record && onSchedule ? (
@@ -654,7 +802,7 @@ export function ReferralModal({
                 leadingIcon={<CalendarPlus aria-hidden="true" />}
                 onClick={() => onSchedule(referral)}
               >
-                Schedule Appointment
+                {isEs ? "Programar cita" : "Schedule Appointment"}
               </Button>
             ) : null}
             {patientId && !record && onStartRecord ? (
@@ -662,7 +810,7 @@ export function ReferralModal({
                 leadingIcon={<UserPlus aria-hidden="true" />}
                 onClick={() => onStartRecord(referral)}
               >
-                Start Access Record
+                {isEs ? "Crear registro de acceso" : "Start Access Record"}
               </Button>
             ) : null}
           </>
@@ -672,30 +820,42 @@ export function ReferralModal({
       <div className="space-y-stack-lg">
         {actions.error ? (
           <Alert tone="danger" onDismiss={actions.clearError}>
-            {referralRefusal(actions.error, side)}
+            {referralRefusal(actions.error, side, isEs)}
           </Alert>
         ) : null}
         <dl className="grid gap-stack-sm text-body-sm sm:grid-cols-3">
           <div>
             <dt className="text-caption text-fg-muted">
-              {side === "access" ? "Office" : "With"}
+              {side === "access"
+                ? isEs
+                  ? "Consultorio"
+                  : "Office"
+                : isEs
+                  ? "Con"
+                  : "With"}
             </dt>
             <dd className="text-label-lg text-fg">{other.name}</dd>
           </div>
           <div>
-            <dt className="text-caption text-fg-muted">Status</dt>
+            <dt className="text-caption text-fg-muted">
+              {isEs ? "Estado" : "Status"}
+            </dt>
             <dd className="flex flex-wrap gap-inline-sm">
               <Badge tone={referralTone[referral.status]}>
-                {referral.status}
+                {statusText(referral.status, isEs)}
               </Badge>
-              {referral.urgent ? <Badge tone="danger">Urgent</Badge> : null}
+              {referral.urgent ? (
+                <Badge tone="danger">{isEs ? "Urgente" : "Urgent"}</Badge>
+              ) : null}
             </dd>
           </div>
           {referral.findings.length > 0 ? (
             <div>
-              <dt className="text-caption text-fg-muted">Findings</dt>
+              <dt className="text-caption text-fg-muted">
+                {isEs ? "Hallazgos" : "Findings"}
+              </dt>
               <dd className="text-label-lg text-fg">
-                {findingsLabel(referral.findings)}
+                {findingsLabel(referral.findings, isEs)}
               </dd>
             </div>
           ) : null}
@@ -703,11 +863,13 @@ export function ReferralModal({
 
         {patientId && !record && side === "access" && onStartRecord ? (
           <p className="text-body-sm text-fg-muted">
-            This patient has no access record yet. Start one to schedule.
+            {isEs
+              ? "Este paciente aún no tiene registro de acceso. Cree uno para programar."
+              : "This patient has no access record yet. Start one to schedule."}
           </p>
         ) : null}
 
-        <section aria-label="Thread">
+        <section aria-label={isEs ? "Conversación" : "Thread"}>
           <ol className="space-y-stack-md">
             {thread.map((entry) => (
               <li
@@ -730,7 +892,7 @@ export function ReferralModal({
                   ) : null}
                   {entry.orgName}
                   {" · "}
-                  {messaging.relativeLabel(entry.sentAt, now)}
+                  {messaging.relativeLabel(entry.sentAt, now, isEs)}
                 </p>
                 <p className="mt-stack-xs text-body-sm whitespace-pre-line text-fg">
                   {entry.body}
@@ -740,8 +902,10 @@ export function ReferralModal({
           </ol>
           {referral.handledBy && referral.handledAt ? (
             <p className="mt-stack-sm text-caption text-fg-muted">
-              {referral.status} by {referral.handledBy},{" "}
-              {messaging.relativeLabel(referral.handledAt, now)}
+              {isEs
+                ? `${REFERRAL_STATUS_ES[referral.status]} por ${referral.handledBy},`
+                : `${referral.status} by ${referral.handledBy},`}{" "}
+              {messaging.relativeLabel(referral.handledAt, now, isEs)}
             </p>
           ) : null}
         </section>
@@ -751,14 +915,19 @@ export function ReferralModal({
             value={draft}
             onChange={setDraft}
             sending={actions.isSaving}
-            label={`Reply to ${other.name}`}
-            placeholder={`Reply to ${other.name}…`}
+            label={`${isEs ? "Responder a" : "Reply to"} ${other.name}`}
+            placeholder={`${isEs ? "Responder a" : "Reply to"} ${other.name}…`}
             onSend={async (body) => {
               if (await actions.reply(referral.id, body)) setDraft("");
             }}
           />
         ) : !open ? (
-          <EmptyState variant="bare" title="This thread is closed" />
+          <EmptyState
+            variant="bare"
+            title={
+              isEs ? "Esta conversación está cerrada" : "This thread is closed"
+            }
+          />
         ) : null}
       </div>
     </Modal>
@@ -782,17 +951,26 @@ function MessagePatientModal({
   const [body, setBody] = useState("");
   const [tried, setTried] = useState(false);
   const [failed, setFailed] = useState(false);
-  const error = body.trim() ? undefined : "Write your message.";
+  const isEs = useLanguageCode() === "ES";
+  const error = body.trim()
+    ? undefined
+    : isEs
+      ? "Escriba su mensaje."
+      : "Write your message.";
   return (
     <Modal
       open
       onClose={onClose}
-      title="Message a Patient"
-      description="Goes to the patient's access conversation."
+      title={isEs ? "Enviar mensaje a un paciente" : "Message a Patient"}
+      description={
+        isEs
+          ? "Se envía a la conversación de acceso del paciente."
+          : "Goes to the patient's access conversation."
+      }
       footer={
         <>
           <Button variant="neutral" appearance="fill-stroke" onClick={onClose}>
-            Cancel
+            {isEs ? "Cancelar" : "Cancel"}
           </Button>
           <Button
             leadingIcon={<Send aria-hidden="true" />}
@@ -804,7 +982,7 @@ function MessagePatientModal({
               if (!(await onSend(profileId, body.trim()))) setFailed(true);
             }}
           >
-            Send
+            {isEs ? "Enviar" : "Send"}
           </Button>
         </>
       }
@@ -812,10 +990,12 @@ function MessagePatientModal({
       <div className="space-y-stack-md">
         {failed ? (
           <Alert tone="danger" onDismiss={() => setFailed(false)}>
-            That did not send. Try again.
+            {isEs
+              ? "No se envió. Inténtelo de nuevo."
+              : "That did not send. Try again."}
           </Alert>
         ) : null}
-        <FormField label="Patient" required>
+        <FormField label={isEs ? "Paciente" : "Patient"} required>
           {(field) => (
             <Select
               {...field}
@@ -831,7 +1011,11 @@ function MessagePatientModal({
             </Select>
           )}
         </FormField>
-        <FormField label="Message" required error={tried ? error : undefined}>
+        <FormField
+          label={isEs ? "Mensaje" : "Message"}
+          required
+          error={tried ? error : undefined}
+        >
           {(field) => (
             <Textarea
               {...field}
@@ -863,21 +1047,25 @@ function PatientConversation({
     mrn: row.mrn,
   });
   const record = reads.record;
+  const isEs = useLanguageCode() === "ES";
   return (
     <Modal
       open
       size="wide"
       onClose={onClose}
       title={row.memberName}
-      description={`${row.mrn ? `MRN ${row.mrn} · ` : ""}access conversation`}
+      description={`${row.mrn ? `MRN ${row.mrn} · ` : ""}${isEs ? "conversación de acceso" : "access conversation"}`}
     >
       {reads.error ? (
         <ErrorState
           title={errorTitleFor(
             reads.error,
-            "This conversation could not be loaded",
+            isEs
+              ? "No se pudo cargar esta conversación"
+              : "This conversation could not be loaded",
+            isEs ? "es" : "en",
           )}
-          message={errorMessageFor(reads.error, undefined)}
+          message={errorMessageFor(reads.error, undefined, isEs ? "es" : "en")}
           error={reads.error}
           onRetry={canRetry(reads.error) ? reads.refetch : undefined}
         />
@@ -887,7 +1075,9 @@ function PatientConversation({
         <>
           {actions.error ? (
             <Alert tone="danger" onDismiss={actions.clearError}>
-              That change did not save. Try again.
+              {isEs
+                ? "No se pudo guardar el cambio. Inténtelo de nuevo."
+                : "That change did not save. Try again."}
             </Alert>
           ) : null}
           <AccessConversationView
@@ -895,10 +1085,13 @@ function PatientConversation({
             party={record.party}
             target={target}
             myName={record.memberName}
+            isEs={isEs}
             readOnlyReason={
               canMessagePatients
                 ? undefined
-                : "Your role can read this conversation but not reply."
+                : isEs
+                  ? "Su rol puede leer esta conversación, pero no responder."
+                  : "Your role can read this conversation but not reply."
             }
             sending={actions.isSaving}
             onSend={(body, isPrivate) =>
@@ -932,6 +1125,7 @@ const MESSAGES_HREF: Record<Side, string> = {
  *  sees only its own threads with the access center (the server's list). */
 export function OfficeMessages({ side }: { side: Side }) {
   const { user } = useAuth();
+  const isEs = useLanguageCode() === "ES";
   const orgId = useOfficeOrgId();
   const target = useOfficeTarget();
   /* The access center's own permissions (2026-10-06); the offices keep
@@ -989,8 +1183,14 @@ export function OfficeMessages({ side }: { side: Side }) {
   if (read.error) {
     body = (
       <ErrorState
-        title={errorTitleFor(read.error, "Messages could not be loaded")}
-        message={errorMessageFor(read.error, undefined)}
+        title={errorTitleFor(
+          read.error,
+          isEs
+            ? "No se pudieron cargar los mensajes"
+            : "Messages could not be loaded",
+          isEs ? "es" : "en",
+        )}
+        message={errorMessageFor(read.error, undefined, isEs ? "es" : "en")}
         error={read.error}
         onRetry={canRetry(read.error) ? read.refetch : undefined}
       />
@@ -1001,32 +1201,38 @@ export function OfficeMessages({ side }: { side: Side }) {
     body = (
       <Card as="section" padding="small">
         <Tabs
-          label="Folders"
+          label={isEs ? "Carpetas" : "Folders"}
           value={folder}
           onChange={setFolder}
           className="mb-stack-lg"
           items={[
-            { id: "all", label: `All Open (${count("all")})` },
+            {
+              id: "all",
+              label: `${isEs ? "Todos los abiertos" : "All Open"} (${count("all")})`,
+            },
             ...(side === "access"
               ? [
                   {
                     id: "dialysis" as const,
-                    label: `Dialysis Center (${count("dialysis")})`,
+                    label: `${isEs ? "Centro de diálisis" : "Dialysis Center"} (${count("dialysis")})`,
                   },
                   {
                     id: "nephrology" as const,
-                    label: `Nephrology Office (${count("nephrology")})`,
+                    label: `${isEs ? "Consultorio de nefrología" : "Nephrology Office"} (${count("nephrology")})`,
                   },
                 ]
               : []),
-            { id: "closed", label: `Closed (${count("closed")})` },
+            {
+              id: "closed",
+              label: `${isEs ? "Cerrados" : "Closed"} (${count("closed")})`,
+            },
             /* The access center writes to patients too (client,
                2026-10-06). */
             ...(atAccess
               ? [
                   {
                     id: "patients" as const,
-                    label: `Patients (${roster.total})`,
+                    label: `${isEs ? "Pacientes" : "Patients"} (${roster.total})`,
                   },
                 ]
               : []),
@@ -1037,15 +1243,24 @@ export function OfficeMessages({ side }: { side: Side }) {
             <ErrorState
               title={errorTitleFor(
                 roster.error,
-                "Patient conversations could not be loaded",
+                isEs
+                  ? "No se pudieron cargar las conversaciones con pacientes"
+                  : "Patient conversations could not be loaded",
+                isEs ? "es" : "en",
               )}
-              message={errorMessageFor(roster.error, undefined)}
+              message={errorMessageFor(
+                roster.error,
+                undefined,
+                isEs ? "es" : "en",
+              )}
               error={roster.error}
               onRetry={canRetry(roster.error) ? roster.refetch : undefined}
             />
           ) : patientChats.length === 0 ? (
             <p className="text-body-sm text-fg-muted">
-              No patient conversations yet.
+              {isEs
+                ? "Aún no hay conversaciones con pacientes."
+                : "No patient conversations yet."}
             </p>
           ) : (
             <ul className="divide-y divide-line-subtle">
@@ -1071,7 +1286,10 @@ export function OfficeMessages({ side }: { side: Side }) {
                       </span>
                     </span>
                     {row.unread > 0 ? (
-                      <Badge tone="danger">{row.unread} new</Badge>
+                      <Badge tone="danger">
+                        {row.unread}{" "}
+                        {isEs ? (row.unread === 1 ? "nuevo" : "nuevos") : "new"}
+                      </Badge>
                     ) : null}
                   </button>
                 </li>
@@ -1084,7 +1302,13 @@ export function OfficeMessages({ side }: { side: Side }) {
             side={side}
             onOpen={setOpenId}
             empty={
-              folder === "closed" ? "No closed threads." : "No open messages."
+              folder === "closed"
+                ? isEs
+                  ? "No hay conversaciones cerradas."
+                  : "No closed threads."
+                : isEs
+                  ? "No hay mensajes abiertos."
+                  : "No open messages."
             }
           />
         )}
@@ -1111,7 +1335,7 @@ export function OfficeMessages({ side }: { side: Side }) {
                 onClick={() => setToPatient(true)}
                 leadingIcon={<Send aria-hidden="true" />}
               >
-                Message a Patient
+                {isEs ? "Enviar mensaje a un paciente" : "Message a Patient"}
               </Button>
             ) : null}
             {canReply ? (
@@ -1120,7 +1344,13 @@ export function OfficeMessages({ side }: { side: Side }) {
                 onClick={() => setComposing(true)}
                 leadingIcon={<Send aria-hidden="true" />}
               >
-                {atAccess ? "Message an Office" : "New Message"}
+                {atAccess
+                  ? isEs
+                    ? "Enviar mensaje a un consultorio"
+                    : "Message an Office"
+                  : isEs
+                    ? "Nuevo mensaje"
+                    : "New Message"}
               </Button>
             ) : null}
           </div>
